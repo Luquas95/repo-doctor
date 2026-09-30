@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from functools import cached_property
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, TypeVar
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from repo_doctor.config import Config
 from repo_doctor.discovery import matches_any
@@ -147,12 +147,25 @@ class Check:
             data=data,
         )
 
+    def incomplete(self, what: str) -> Finding:
+        """Nález „nekompletní sken“ – kontrola narazila na časový limit (obří repo)."""
+        return Finding(
+            check_id=INCOMPLETE_ID,
+            severity=Severity.LOW,
+            category=Category.MAINTENANCE,
+            title="Nekompletní sken",
+            message=f"{self.id}: {what}",
+            key=self.id,
+        )
+
+
+INCOMPLETE_ID = "scan-incomplete"
+
 
 REGISTRY: dict[str, type[Check]] = {}
-C = TypeVar("C", bound=type[Check])
 
 
-def register(cls: C) -> C:
+def register[C: type[Check]](cls: C) -> C:
     if cls.id in REGISTRY and REGISTRY[cls.id] is not cls:
         raise ValueError(f"duplicitní id kontroly: {cls.id}")
     REGISTRY[cls.id] = cls
