@@ -141,7 +141,8 @@ def _fake_gitleaks(
     monkeypatch: pytest.MonkeyPatch, report: list[dict[str, Any]], *, timeout: bool = False
 ) -> list[list[str]]:
     calls: list[list[str]] = []
-    monkeypatch.setattr(secrets_scan.shutil, "which", lambda name: "/usr/bin/gitleaks")
+    monkeypatch.setattr(secrets_scan, "gitleaks_available", lambda: True)
+    monkeypatch.setattr("repo_doctor.checks.secrets.gitleaks_available", lambda: True)
 
     def fake_run(cmd: list[str], limit: float) -> None:
         calls.append(cmd)
@@ -184,7 +185,7 @@ def test_gitleaks_integration(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
 def test_gitleaks_timeout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     rb = RepoBuilder.create(tmp_path / "r")
     rb.write("a", "x").commit()
-    _fake_gitleaks(monkeypatch, [], timeout=True)
+    _fake_gitleaks(monkeypatch, report=[], timeout=True)
     assert run("secrets-tree", rb.path)[0].check_id == "scan-incomplete"
     assert run("secrets-history", rb.path)[0].check_id == "scan-incomplete"
 
