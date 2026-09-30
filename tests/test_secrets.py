@@ -159,7 +159,7 @@ def test_gitleaks_integration(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -
     rb = RepoBuilder.create(tmp_path / "r")
     rb.write("app.env", "x").commit()
     secret = fx.fake_github_token()
-    report = [
+    report: list[Any] = [
         {
             "RuleID": "github-pat",
             "Description": "GitHub PAT",

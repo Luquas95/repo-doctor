@@ -9,7 +9,7 @@ from pathlib import PurePosixPath
 
 from repo_doctor.checks.base import Check, RepoContext, register
 from repo_doctor.gitwrap import GitError, GitTimeout
-from repo_doctor.models import Category, Finding, Severity
+from repo_doctor.models import Category, FileChange, Finding, Patch, Severity
 from repo_doctor.secrets_scan import (
     SecretMatch,
     gitleaks_available,
@@ -175,3 +175,27 @@ class EnvCommitted(Check):
             for path in repo.tracked_files
             if is_sensitive_file(path)
         ]
+
+    def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
+        paths = sorted({f.location.path for f in findings if f.location.path})
+        if not paths:
+            return None
+        changes = [
+            FileChange(
+                path=".gitignore",
+                action="append",
+                content="\n".join("/" + p for p in paths),
+                header=f"# repo-doctor: citlivé soubory ({repo.now:%Y-%m-%d})",
+                old=repo.read_text(".gitignore"),
+            )
+        ]
+        changes += [FileChange(path=p, action="untrack", old=None) for p in paths]
+        return Patch(
+            check_id=self.id,
+            title="Přestat verzovat citlivé soubory",
+            summary="git rm --cached " + " ".join(paths) + " (soubory na disku zůstanou)",
+            changes=changes,
+            notes=[
+                "Tajemství z těchto souborů zůstávají v historii – považuj je za prozrazená a rotuj je.",
+            ],
+        )

@@ -178,9 +178,34 @@ class ScanResult(BaseModel):
 
 
 class FileChange(BaseModel):
+    """Jedna změna souboru. Operace se vyhodnocují až nad aktuálním obsahem (kvůli řetězení)."""
+
     path: str
-    old: str | None = None  # None = soubor neexistoval
-    new: str | None = None  # None = odstranit z indexu (soubor na disku zůstává)
+    action: Literal["create", "append", "untrack"]
+    content: str = ""
+    header: str = ""  # komentář nad doplněným blokem (append)
+    old: str | None = None  # obsah v HEAD – pro náhled diffu
+
+    def result(self, current: str | None) -> str | None:
+        """Nový obsah souboru; `None` = odstranit z indexu (soubor na disku zůstává)."""
+        if self.action == "untrack":
+            return None
+        if self.action == "create":
+            return self.content if current is None else current  # existující soubor nepřepisujeme
+        existing = {line.strip() for line in (current or "").splitlines()}
+        additions = [
+            line
+            for line in self.content.splitlines()
+            if line.strip() and line.strip() not in existing
+        ]
+        if not additions:
+            return current if current is not None else ""
+        base = current or ""
+        if base and not base.endswith("\n"):
+            base += "\n"
+        block = ([self.header] if self.header else []) + additions
+        separator = "\n" if base.strip() else ""
+        return base + separator + "\n".join(block) + "\n"
 
 
 class Patch(BaseModel):
@@ -190,8 +215,11 @@ class Patch(BaseModel):
     title: str
     summary: str
     changes: list[FileChange]
-    commit_message: str
     notes: list[str] = Field(default_factory=list)
+
+    @property
+    def commit_message(self) -> str:
+        return f"chore(repo-doctor): {self.check_id}\n\n{self.summary}\n"
 
     def diff(self) -> str:
         from repo_doctor.fixes import render_diff

@@ -4,10 +4,22 @@ from __future__ import annotations
 
 import re
 
+from repo_doctor import templates
 from repo_doctor.checks.base import Check, RepoContext, register
 from repo_doctor.ecosystem import Ecosystem
 from repo_doctor.gitwrap import GitTimeout
-from repo_doctor.models import Category, Finding, Severity
+from repo_doctor.models import Category, FileChange, Finding, Patch, Severity
+
+
+def _create(repo: RepoContext, path: str, content: str) -> FileChange:
+    return FileChange(path=path, action="create", content=content, old=repo.read_text(path))
+
+
+def _primary_ecosystem(repo: RepoContext) -> Ecosystem | None:
+    for eco in (Ecosystem.PYTHON, Ecosystem.NODE, Ecosystem.RUST, Ecosystem.GO):
+        if eco in repo.ecosystems:
+            return eco
+    return None
 
 
 def _top_level_names(repo: RepoContext) -> set[str]:
@@ -28,6 +40,24 @@ class ReadmeMissing(Check):
             return []
         return [self.finding("V kořeni repozitáře není README.", key="readme")]
 
+    def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
+        eco = _primary_ecosystem(repo)
+        install = templates.INSTALL.get(eco, "TODO") if eco else "TODO"
+        content = templates.render(
+            "README.md",
+            templates.README,
+            repo.config.templates_dir,
+            name=repo.name,
+            install=install,
+            ecosystem=str(eco or ""),
+        )
+        return Patch(
+            check_id=self.id,
+            title="Kostra README",
+            summary=f"README.md pro {repo.name}",
+            changes=[_create(repo, "README.md", content)],
+        )
+
 
 @register
 class LicenseMissing(Check):
@@ -42,6 +72,24 @@ class LicenseMissing(Check):
         if any(n.startswith(("license", "licence", "copying", "unlicense")) for n in names):
             return []
         return [self.finding("V kořeni repozitáře není LICENSE (ani COPYING).", key="license")]
+
+    def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
+        lic = repo.config.license
+        author = repo.git.config_get("user.name") or "Autor"
+        year = str(repo.now.year)
+        content = templates.render(
+            f"LICENSE-{lic}",
+            templates.LICENSES[lic],
+            repo.config.templates_dir,
+            year=year,
+            author=author,
+        )
+        return Patch(
+            check_id=self.id,
+            title=f"Licence {lic}",
+            summary=f"{lic} · {year} · {author}",
+            changes=[_create(repo, "LICENSE", content)],
+        )
 
 
 @register
@@ -79,6 +127,17 @@ class CiMissing(Check):
             )
         ]
 
+    def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
+        eco = _primary_ecosystem(repo)
+        key = str(eco) if eco else "generic"
+        content = templates.render(f"ci-{key}.yml", templates.CI[key], repo.config.templates_dir)
+        return Patch(
+            check_id=self.id,
+            title="GitHub Actions CI",
+            summary=f"lint + testy ({key})",
+            changes=[_create(repo, ".github/workflows/ci.yml", content)],
+        )
+
 
 @register
 class PrecommitMissing(Check):
@@ -100,6 +159,24 @@ class PrecommitMissing(Check):
                 key="precommit",
             )
         ]
+
+    def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
+        default = templates.PRECOMMIT_BASE
+        extras = ["gitleaks", "trailing whitespace", "velké soubory"]
+        if Ecosystem.PYTHON in repo.ecosystems:
+            default += templates.PRECOMMIT_PYTHON
+            extras.append("ruff")
+        if Ecosystem.NODE in repo.ecosystems:
+            default += templates.PRECOMMIT_NODE
+            extras.append("eslint")
+        content = templates.render("pre-commit-config.yaml", default, repo.config.templates_dir)
+        return Patch(
+            check_id=self.id,
+            title="Základní pre-commit",
+            summary=", ".join(extras),
+            changes=[_create(repo, ".pre-commit-config.yaml", content)],
+            notes=["Po checkoutu větve spusť `pre-commit install`."],
+        )
 
 
 # Položky .gitignore podle ekosystému: (řádek do .gitignore, reprezentativní cesta pro check-ignore)
@@ -145,6 +222,16 @@ class GitignoreMissing(Check):
         eco = ", ".join(sorted(repo.ecosystems)) or "obecný"
         return [self.finding(f"Repozitář nemá .gitignore (ekosystém: {eco}).", key="gitignore")]
 
+    def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
+        entries = [entry for entry, _ in required_ignores(repo)]
+        content = f"# repo-doctor: vytvořeno {repo.now:%Y-%m-%d}\n" + "\n".join(entries) + "\n"
+        return Patch(
+            check_id=self.id,
+            title="Nový .gitignore",
+            summary="+ " + ", ".join(entries),
+            changes=[_create(repo, ".gitignore", content)],
+        )
+
 
 @register
 class GitignoreIncomplete(Check):
@@ -170,6 +257,28 @@ class GitignoreIncomplete(Check):
                 missing=missing,
             )
         ]
+
+    def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
+        missing: list[str] = []
+        for f in findings:
+            value = f.data.get("missing", [])
+            if isinstance(value, list):
+                missing.extend(m for m in value if m not in missing)
+        if not missing:
+            return None
+        change = FileChange(
+            path=".gitignore",
+            action="append",
+            content="\n".join(missing),
+            header=f"# repo-doctor: doplněno {repo.now:%Y-%m-%d}",
+            old=repo.read_text(".gitignore"),
+        )
+        return Patch(
+            check_id=self.id,
+            title="Doplnit .gitignore",
+            summary="+ " + ", ".join(missing),
+            changes=[change],
+        )
 
 
 BINARY_EXT = re.compile(

@@ -5,8 +5,9 @@ from __future__ import annotations
 import re
 from pathlib import PurePosixPath
 
+from repo_doctor import templates
 from repo_doctor.checks.base import Check, RepoContext, register
-from repo_doctor.models import Category, Finding, Severity
+from repo_doctor.models import Category, FileChange, Finding, Patch, Severity
 from repo_doctor.secrets_scan import entropy
 
 SECRET_NAME = re.compile(r"(?i)(pass(word)?|secret|token|api[_-]?key|private[_-]?key|credential)")
@@ -70,6 +71,29 @@ class DockerHygiene(Check):
                 )
             )
         return findings
+
+    def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
+        if not any(f.key == "dockerignore" for f in findings):
+            return None
+        content = templates.render(
+            "dockerignore", templates.DOCKERIGNORE, repo.config.templates_dir
+        )
+        return Patch(
+            check_id=self.id,
+            title="Přidat .dockerignore",
+            summary=".git, .env, build výstupy",
+            changes=[
+                FileChange(
+                    path=".dockerignore",
+                    action="create",
+                    content=content,
+                    old=repo.read_text(".dockerignore"),
+                )
+            ],
+            notes=[
+                "Úpravy Dockerfile (tagy, USER, ENV) jsou jen návrh v reportu – proveď je ručně."
+            ],
+        )
 
     def _analyze(self, path: str, text: str) -> list[Finding]:
         findings: list[Finding] = []
@@ -140,7 +164,8 @@ class DockerHygiene(Check):
                     key=f"{path}:user",
                 )
             )
-        return findings
+        # úpravy Dockerfile jsou jen návrh – automaticky opravitelný je pouze .dockerignore
+        return [f.model_copy(update={"fixable": False}) for f in findings]
 
 
 def _assignments(rest: str) -> list[tuple[str, str]]:
