@@ -66,6 +66,7 @@ class PublicSensitive(Check):
     title = "Veřejné repo obsahuje konfiguraci infrastruktury"
     severity = Severity.HIGH
     category = Category.SECURITY
+    network = True  # viditelnost se zjišťuje z hostingu
 
     def run(self, repo: RepoContext) -> list[Finding]:
         if repo.visibility == "unknown":

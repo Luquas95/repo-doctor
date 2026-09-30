@@ -167,7 +167,7 @@ class RepoBuilder:
             "head": git(self.path, "rev-parse", "HEAD").strip(),
             "symbolic": git(self.path, "symbolic-ref", "-q", "HEAD").strip(),
             "refs": git(self.path, "for-each-ref", "--format=%(refname) %(objectname)"),
-            "status": git(self.path, "status", "--porcelain"),
+            "status": git(self.path, "status", "--porcelain", env={"GIT_OPTIONAL_LOCKS": "0"}),
             "index": git(self.path, "ls-files", "-s"),
             "stash": git(self.path, "stash", "list"),
             "files": repr(files),
