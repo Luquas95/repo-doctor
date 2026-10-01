@@ -1,0 +1,2174 @@
+# serializer version: 1
+# name: test_report_snapshot[html]
+  '''
+  <!doctype html>
+  <html lang="cs">
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+  <title>repo-doctor report</title>
+  <style>
+  :root{--bg:#f6f7f9;--panel:#fff;--text:#1d2330;--muted:#5b6474;--border:#d5d9e0;--accent:#0f8a6c;
+  --high:#c8102e;--med:#9a5b00;--low:#1f5fbf;--ok:#1e7b34;--sel:#e8eef8}
+  @media (prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#12141a;--panel:#171a21;--text:#c9ced8;
+  --muted:#8a93a6;--border:#343a47;--accent:#5fd3b0;--high:#ff5f6d;--med:#f5b642;--low:#6fa8ff;--ok:#7bd88f;--sel:#223047}}
+  :root[data-theme=dark]{--bg:#12141a;--panel:#171a21;--text:#c9ced8;--muted:#8a93a6;--border:#343a47;--accent:#5fd3b0;
+  --high:#ff5f6d;--med:#f5b642;--low:#6fa8ff;--ok:#7bd88f;--sel:#223047}
+  *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);
+  font:14px/1.45 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+  header,main{max-width:1200px;margin:0 auto;padding:16px}
+  h1{font-size:18px;margin:0 0 4px;color:var(--accent)}h2{font-size:15px;margin:0}
+  .muted{color:var(--muted)}.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;
+  padding:12px 14px;margin:12px 0}
+  .vitals{display:flex;flex-wrap:wrap;gap:18px;align-items:center}
+  .sev-high{color:var(--high)}.sev-medium{color:var(--med)}.sev-low{color:var(--low)}.zero{color:var(--muted);opacity:.6}
+  .filters{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+  select,button,input{font:inherit;color:var(--text);background:var(--panel);border:1px solid var(--border);
+  border-radius:6px;padding:4px 8px}
+  table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--border);
+  vertical-align:top}th{color:var(--accent);font-weight:600}
+  .repo summary{cursor:pointer;list-style:none;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+  .repo summary::before{content:'▸';color:var(--muted)}.repo[open] summary::before{content:'▾'}
+  .score{font-weight:700}.s-bad{color:var(--high)}.s-warn{color:var(--med)}.s-ok{color:var(--ok)}
+  code{background:var(--sel);padding:0 4px;border-radius:4px;overflow-wrap:anywhere}
+  .stripe{border-left:4px solid var(--border)}.stripe.s-bad{border-color:var(--high)}
+  .stripe.s-warn{border-color:var(--med)}.stripe.s-ok{border-color:var(--ok)}
+  .hidden{display:none}
+  @media (max-width:640px){td:nth-child(4),th:nth-child(4){display:none}}
+  </style>
+  </head>
+  <body>
+  <header>
+  <h1>repo-doctor · report</h1>
+  <div class="panel vitals">
+  <span>14 repozitářů</span>
+  <span class="sev-high" title="HIGH">▲ 4</span>
+  <span class="sev-medium" title="MED">◆ 22</span>
+  <span class="sev-low" title="LOW">● 28</span>
+  <span>zdraví <b class="s-ok">73</b></span>
+  <span class=muted>sken 2026-09-30 14:32</span>
+  <button id=theme type=button title="Přepnout světlý/tmavý režim">◐ téma</button>
+  </div>
+  <div class="panel"><b>Upozornění</b><ul><li>Složka ~/sandbox neexistuje – přeskočena.</li></ul></div>
+  <div class="panel filters">
+  <label class="sev-high"><input type=checkbox name=sev value="high" checked> ▲ HIGH</label><label class="sev-medium"><input type=checkbox name=sev value="medium" checked> ◆ MED</label><label class="sev-low"><input type=checkbox name=sev value="low" checked> ● LOW</label>
+  <label>repo <select id=f-repo><option value="">všechna</option><option value="infra-notes">infra-notes</option><option value="api-gateway">api-gateway</option><option value="scraper">scraper</option><option value="cz-tools">cz-tools</option><option value="blog">blog</option><option value="dotfiles">dotfiles</option><option value="game-proto">game-proto</option><option value="old-cli">old-cli</option><option value="thesis-2019">thesis-2019</option><option value="homelab">homelab</option><option value="kbd-layout">kbd-layout</option><option value="notes">notes</option><option value="scripts">scripts</option><option value="website">website</option></select></label>
+  <label>kategorie <select id=f-cat><option value="">všechny</option><option value="security">Bezpečnost</option><option value="maintenance">Údržba</option><option value="git">Stav gitu</option><option value="forge">Hosting</option></select></label>
+  <label>hledat <input id=f-q type=search placeholder="text nálezu"></label>
+  </div>
+  </header>
+  <main>
+  <details class="panel repo stripe s-bad" data-repo="infra-notes" open><summary><span class="score s-bad">2 █░░░░</span><h2>infra-notes</h2><span class=muted>KRITICKÉ</span><span class="sev-high" title="HIGH">▲ 2</span><span class="sev-medium" title="MED">◆ 4</span><span class="sev-low" title="LOW">● 4</span><span class=muted>github ◉ veřejné</span></summary><p class=muted>/home/nekdo/projekty/infra-notes</p><table><thead><tr><th>severity</th><th>kontrola</th><th>nález</th><th>kde</th></tr></thead><tbody><tr class=f data-sev="high" data-cat="security"><td class="sev-high">▲ HIGH</td><td><code>public-sensitive</code></td><td>veřejné repo obsahuje adresy 100.x (Tailscale) · hosts.yml</td><td>hosts.yml</td></tr><tr class=f data-sev="high" data-cat="security"><td class="sev-high">▲ HIGH</td><td><code>secrets-history</code></td><td>AWS access key v commitu a81f3c2 · config/prod.env</td><td>config/prod.env:4 · commit a81f3c2 · 14. 3. 2026 <code>AKIA…(20 znaků)</code></td></tr><tr class=f data-sev="medium" data-cat="security"><td class="sev-medium">◆ MED</td><td><code>docker-hygiene</code></td><td>kontejner běží pod rootem (ve finální fázi chybí USER)</td><td>Dockerfile</td></tr><tr class=f data-sev="medium" data-cat="forge"><td class="sev-medium">◆ MED</td><td><code>forge-ci-failing</code></td><td>poslední běh CI na main selhal (#142)</td><td></td></tr><tr class=f data-sev="medium" data-cat="maintenance"><td class="sev-medium">◆ MED</td><td><code>gitignore-incomplete</code> ✓</td><td>chybí .env, .venv/</td><td>.gitignore</td></tr><tr class=f data-sev="medium" data-cat="git"><td class="sev-medium">◆ MED</td><td><code>unpushed</code></td><td>branch main: 2 commitů oproti origin/main</td><td></td></tr><tr class=f data-sev="low" data-cat="forge"><td class="sev-low">● LOW</td><td><code>forge-stale-prs</code></td><td>2 otevřené PR bez aktivity 30+ dní</td><td></td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>license-missing</code> ✓</td><td>V kořeni repozitáře není LICENSE (ani COPYING).</td><td></td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>precommit-missing</code> ✓</td><td>Chybí .pre-commit-config.yaml (kontrola tajemství a formátu před commitem).</td><td></td></tr><tr class=f data-sev="low" data-cat="git"><td class="sev-low">● LOW</td><td><code>uncommitted</code></td><td>3 změněných souborů</td><td></td></tr></tbody></table></details><details class="panel repo stripe s-bad" data-repo="api-gateway" open><summary><span class="score s-bad">39 ██░░░</span><h2>api-gateway</h2><span class=muted>KRITICKÉ</span><span class="sev-high" title="HIGH">▲ 1</span><span class="sev-medium" title="MED">◆ 3</span><span class="sev-low" title="LOW">● 3</span><span class=muted>forgejo ○ privátní</span></summary><p class=muted>/home/nekdo/projekty/api-gateway</p><table><thead><tr><th>severity</th><th>kontrola</th><th>nález</th><th>kde</th></tr></thead><tbody><tr class=f data-sev="high" data-cat="security"><td class="sev-high">▲ HIGH</td><td><code>deps-vulnerable</code></td><td>jsonwebtoken 8.5.1 (npm): GHSA-8cf7-32gw-wr33</td><td>package-lock.json</td></tr><tr class=f data-sev="medium" data-cat="security"><td class="sev-medium">◆ MED</td><td><code>docker-hygiene</code></td><td>FROM node:latest – tag :latest</td><td>Dockerfile</td></tr><tr class=f data-sev="medium" data-cat="maintenance"><td class="sev-medium">◆ MED</td><td><code>gitignore-incomplete</code> ✓</td><td>chybí .env</td><td>.gitignore</td></tr><tr class=f data-sev="medium" data-cat="git"><td class="sev-medium">◆ MED</td><td><code>unpushed</code></td><td>branch main: 5 commitů oproti origin/main</td><td></td></tr><tr class=f data-sev="low" data-cat="forge"><td class="sev-low">● LOW</td><td><code>forge-no-branch-protection</code></td><td>výchozí branche main nemá ochranu</td><td></td></tr><tr class=f data-sev="low" data-cat="git"><td class="sev-low">● LOW</td><td><code>stale-branches</code></td><td>feature/old: bez commitu 120 dní</td><td></td></tr><tr class=f data-sev="low" data-cat="git"><td class="sev-low">● LOW</td><td><code>stashes</code></td><td>stash@{0} (45 dní): WIP</td><td></td></tr></tbody></table></details><details class="panel repo stripe s-warn" data-repo="scraper" open><summary><span class="score s-warn">45 ██░░░</span><h2>scraper</h2><span class=muted>KRITICKÉ</span><span class="sev-high" title="HIGH">▲ 1</span><span class="sev-medium" title="MED">◆ 2</span><span class="sev-low" title="LOW">● 4</span><span class=muted>github ○ privátní</span></summary><p class=muted>/home/nekdo/projekty/scraper</p><table><thead><tr><th>severity</th><th>kontrola</th><th>nález</th><th>kde</th></tr></thead><tbody><tr class=f data-sev="high" data-cat="security"><td class="sev-high">▲ HIGH</td><td><code>secrets-tree</code></td><td>OpenAI API klíč v souboru scrape.py</td><td>scrape.py:12 <code>sk-p…(56 znaků)</code></td></tr><tr class=f data-sev="medium" data-cat="security"><td class="sev-medium">◆ MED</td><td><code>deps-lockfile-missing</code></td><td>pyproject.toml deklaruje závislosti, ale chybí uv.lock</td><td>pyproject.toml</td></tr><tr class=f data-sev="medium" data-cat="maintenance"><td class="sev-medium">◆ MED</td><td><code>large-files</code></td><td>soubor 48.2 MB v aktuálním stromu</td><td>data/dump.sqlite</td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>ci-missing</code> ✓</td><td>Nenalezena konfigurace CI.</td><td></td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>deps-outdated</code></td><td>3× minor: httpx 0.25.0→0.28.1</td><td></td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>readme-missing</code> ✓</td><td>V kořeni repozitáře není README.</td><td></td></tr><tr class=f data-sev="low" data-cat="git"><td class="sev-low">● LOW</td><td><code>uncommitted</code></td><td>12 změněných souborů</td><td></td></tr></tbody></table></details><details class="panel repo stripe s-warn" data-repo="cz-tools" open><summary><span class="score s-warn">64 ███░░</span><h2>cz-tools</h2><span class=muted>SLEDOVAT</span><span class="zero" title="HIGH">▲ 0</span><span class="sev-medium" title="MED">◆ 3</span><span class="sev-low" title="LOW">● 3</span><span class=muted>github ◉ veřejné</span></summary><p class=muted>/home/nekdo/projekty/cz-tools</p><table><thead><tr><th>severity</th><th>kontrola</th><th>nález</th><th>kde</th></tr></thead><tbody><tr class=f data-sev="medium" data-cat="maintenance"><td class="sev-medium">◆ MED</td><td><code>deps-outdated</code></td><td>1× major: typer 0.9.0→0.15.1</td><td></td></tr><tr class=f data-sev="medium" data-cat="maintenance"><td class="sev-medium">◆ MED</td><td><code>gitignore-incomplete</code> ✓</td><td>chybí __pycache__/</td><td>.gitignore</td></tr><tr class=f data-sev="medium" data-cat="maintenance"><td class="sev-medium">◆ MED</td><td><code>large-files</code></td><td>binárka 3.1 MB v aktuálním stromu</td><td>dist/tool.zip</td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>ci-missing</code> ✓</td><td>Nenalezena konfigurace CI.</td><td></td></tr><tr class=f data-sev="low" data-cat="forge"><td class="sev-low">● LOW</td><td><code>forge-no-branch-protection</code></td><td>výchozí branche main nemá ochranu</td><td></td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>precommit-missing</code> ✓</td><td>Chybí .pre-commit-config.yaml.</td><td></td></tr></tbody></table></details><details class="panel repo stripe s-warn" data-repo="blog" open><summary><span class="score s-warn">67 ███░░</span><h2>blog</h2><span class=muted>SLEDOVAT</span><span class="zero" title="HIGH">▲ 0</span><span class="sev-medium" title="MED">◆ 3</span><span class="sev-low" title="LOW">● 2</span><span class=muted>forgejo ○ privátní</span></summary><p class=muted>/home/nekdo/git-archiv/blog</p><table><thead><tr><th>severity</th><th>kontrola</th><th>nález</th><th>kde</th></tr></thead><tbody><tr class=f data-sev="medium" data-cat="maintenance"><td class="sev-medium">◆ MED</td><td><code>deps-outdated</code></td><td>2× major: astro 2.0.0→5.1.0</td><td></td></tr><tr class=f data-sev="medium" data-cat="forge"><td class="sev-medium">◆ MED</td><td><code>forge-ci-failing</code></td><td>poslední běh CI na main selhal (#17)</td><td></td></tr><tr class=f data-sev="medium" data-cat="maintenance"><td class="sev-medium">◆ MED</td><td><code>gitignore-incomplete</code> ✓</td><td>chybí node_modules/</td><td>.gitignore</td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>precommit-missing</code> ✓</td><td>Chybí .pre-commit-config.yaml.</td><td></td></tr><tr class=f data-sev="low" data-cat="git"><td class="sev-low">● LOW</td><td><code>stale-branches</code></td><td>draft: mergnutá do main</td><td></td></tr></tbody></table></details><details class="panel repo stripe s-warn" data-repo="dotfiles" open><summary><span class="score s-warn">67 ███░░</span><h2>dotfiles</h2><span class=muted>SLEDOVAT</span><span class="zero" title="HIGH">▲ 0</span><span class="sev-medium" title="MED">◆ 3</span><span class="sev-low" title="LOW">● 2</span><span class=muted>github ○ privátní</span></summary><p class=muted>/home/nekdo/projekty/dotfiles</p><table><thead><tr><th>severity</th><th>kontrola</th><th>nález</th><th>kde</th></tr></thead><tbody><tr class=f data-sev="medium" data-cat="maintenance"><td class="sev-medium">◆ MED</td><td><code>gitignore-incomplete</code> ✓</td><td>chybí .env</td><td>.gitignore</td></tr><tr class=f data-sev="medium" data-cat="security"><td class="sev-medium">◆ MED</td><td><code>public-sensitive</code></td><td>privátní IP adresy · ssh/config</td><td>ssh/config</td></tr><tr class=f data-sev="medium" data-cat="git"><td class="sev-medium">◆ MED</td><td><code>unpushed</code></td><td>branch main: 1 commitů oproti origin/main</td><td></td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>ci-missing</code> ✓</td><td>Nenalezena konfigurace CI.</td><td></td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>license-missing</code> ✓</td><td>V kořeni není LICENSE.</td><td></td></tr></tbody></table></details><details class="panel repo stripe s-warn" data-repo="game-proto" open><summary><span class="score s-warn">67 ███░░</span><h2>game-proto</h2><span class=muted>SLEDOVAT</span><span class="zero" title="HIGH">▲ 0</span><span class="sev-medium" title="MED">◆ 3</span><span class="sev-low" title="LOW">● 2</span><span class=muted>github ○ privátní</span></summary><p class=muted>/home/nekdo/git-archiv/game-proto</p><table><thead><tr><th>severity</th><th>kontrola</th><th>nález</th><th>kde</th></tr></thead><tbody><tr class=f data-sev="medium" data-cat="security"><td class="sev-medium">◆ MED</td><td><code>deps-lockfile-missing</code></td><td>package.json deklaruje závislosti, ale chybí package-lock.json</td><td>package.json</td></tr><tr class=f data-sev="medium" data-cat="maintenance"><td class="sev-medium">◆ MED</td><td><code>gitignore-missing</code> ✓</td><td>Repozitář nemá .gitignore (ekosystém: node).</td><td></td></tr><tr class=f data-sev="medium" data-cat="maintenance"><td class="sev-medium">◆ MED</td><td><code>large-files</code></td><td>binárka 2.5 MB v aktuálním stromu</td><td>assets/music.mp3</td></tr><tr class=f data-sev="low" data-cat="git"><td class="sev-low">● LOW</td><td><code>detached-head</code></td><td>HEAD ukazuje přímo na commit 1b2c3d4, ne na branch.</td><td></td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>readme-missing</code> ✓</td><td>V kořeni repozitáře není README.</td><td></td></tr></tbody></table></details><details class="panel repo stripe s-ok" data-repo="old-cli" open><summary><span class="score s-ok">85 ████░</span><h2>old-cli</h2><span class=muted>BEZ TEPU</span><span class="zero" title="HIGH">▲ 0</span><span class="sev-medium" title="MED">◆ 1</span><span class="sev-low" title="LOW">● 2</span><span class=muted> ○ privátní</span></summary><p class=muted>/home/nekdo/git-archiv/old-cli</p><table><thead><tr><th>severity</th><th>kontrola</th><th>nález</th><th>kde</th></tr></thead><tbody><tr class=f data-sev="medium" data-cat="git"><td class="sev-medium">◆ MED</td><td><code>no-remote</code></td><td>Repozitář nemá žádný remote – commity existují jen na tomto disku.</td><td></td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>ci-missing</code> ✓</td><td>Nenalezena konfigurace CI.</td><td></td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>readme-missing</code> ✓</td><td>V kořeni repozitáře není README.</td><td></td></tr></tbody></table></details><details class="panel repo stripe s-ok" data-repo="thesis-2019" open><summary><span class="score s-ok">91 █████</span><h2>thesis-2019</h2><span class=muted>BEZ TEPU</span><span class="zero" title="HIGH">▲ 0</span><span class="zero" title="MED">◆ 0</span><span class="sev-low" title="LOW">● 3</span><span class=muted>github ○ privátní</span></summary><p class=muted>/home/nekdo/git-archiv/thesis-2019</p><table><thead><tr><th>severity</th><th>kontrola</th><th>nález</th><th>kde</th></tr></thead><tbody><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>ci-missing</code> ✓</td><td>Nenalezena konfigurace CI.</td><td></td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>license-missing</code> ✓</td><td>V kořeni není LICENSE.</td><td></td></tr><tr class=f data-sev="low" data-cat="maintenance"><td class="sev-low">● LOW</td><td><code>precommit-missing</code> ✓</td><td>Chybí .pre-commit-config.yaml.</td><td></td></tr></tbody></table></details><details class="panel repo stripe s-ok" data-repo="homelab" open><summary><span class="score s-ok">97 █████</span><h2>homelab</h2><span class=muted>ZDRAVÉ</span><span class="zero" title="HIGH">▲ 0</span><span class="zero" title="MED">◆ 0</span><span class="sev-low" title="LOW">● 1</span><span class=muted>github ○ privátní</span></summary><p class=muted>/home/nekdo/projekty/homelab</p><table><thead><tr><th>severity</th><th>kontrola</th><th>nález</th><th>kde</th></tr></thead><tbody><tr class=f data-sev="low" data-cat="git"><td class="sev-low">● LOW</td><td><code>stashes</code></td><td>stash@{0} (40 dní): wip</td><td></td></tr></tbody></table></details><details class="panel repo stripe s-ok" data-repo="kbd-layout" open><summary><span class="score s-ok">97 █████</span><h2>kbd-layout</h2><span class=muted>ZDRAVÉ</span><span class="zero" title="HIGH">▲ 0</span><span class="zero" title="MED">◆ 0</span><span class="sev-low" title="LOW">● 1</span><span class=muted>github ○ privátní</span></summary><p class=muted>/home/nekdo/projekty/kbd-layout</p><table><thead><tr><th>severity</th><th>kontrola</th><th>nález</th><th>kde</th></tr></thead><tbody><tr class=f data-sev="low" data-cat="git"><td class="sev-low">● LOW</td><td><code>stashes</code></td><td>stash@{0} (40 dní): wip</td><td></td></tr></tbody></table></details><details class="panel repo stripe s-ok" data-repo="notes" open><summary><span class="score s-ok">97 █████</span><h2>notes</h2><span class=muted>ZDRAVÉ</span><span class="zero" title="HIGH">▲ 0</span><span class="zero" title="MED">◆ 0</span><span class="sev-low" title="LOW">● 1</span><span class=muted>github ○ privátní</span></summary><p class=muted>/home/nekdo/projekty/notes</p><table><thead><tr><th>severity</th><th>kontrola</th><th>nález</th><th>kde</th></tr></thead><tbody><tr class=f data-sev="low" data-cat="git"><td class="sev-low">● LOW</td><td><code>stashes</code></td><td>stash@{0} (40 dní): wip</td><td></td></tr></tbody></table></details><details class="panel repo stripe s-ok" data-repo="scripts" ><summary><span class="score s-ok">100 █████</span><h2>scripts</h2><span class=muted>ZDRAVÉ</span><span class="zero" title="HIGH">▲ 0</span><span class="zero" title="MED">◆ 0</span><span class="zero" title="LOW">● 0</span><span class=muted>github ○ privátní</span></summary><p class=muted>/home/nekdo/projekty/scripts</p><p class=muted>Bez nálezů ✓</p></details><details class="panel repo stripe s-ok" data-repo="website" ><summary><span class="score s-ok">100 █████</span><h2>website</h2><span class=muted>ZDRAVÉ</span><span class="zero" title="HIGH">▲ 0</span><span class="zero" title="MED">◆ 0</span><span class="zero" title="LOW">● 0</span><span class=muted>github ○ privátní</span></summary><p class=muted>/home/nekdo/projekty/website</p><p class=muted>Bez nálezů ✓</p></details>
+  </main>
+  <script>
+  (function(){
+    const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+    function apply(){
+      const sev=$$('input[name=sev]:checked').map(e=>e.value);
+      const repo=$('#f-repo').value, cat=$('#f-cat').value, q=$('#f-q').value.toLowerCase();
+      $$('.repo').forEach(r=>{
+        let visible=0;
+        r.querySelectorAll('tr.f').forEach(tr=>{
+          const ok=sev.includes(tr.dataset.sev)&&(!cat||tr.dataset.cat===cat)&&(!q||tr.textContent.toLowerCase().includes(q));
+          tr.classList.toggle('hidden',!ok); if(ok) visible++;
+        });
+        const repoOk=!repo||r.dataset.repo===repo;
+        const empty=r.querySelectorAll('tr.f').length===0;
+        const filtering=cat||sev.length<3;
+        const nameHit=q&&r.dataset.repo.toLowerCase().includes(q);
+        r.classList.toggle('hidden',!repoOk||(visible===0&&!nameHit&&(filtering||q)));
+      });
+    }
+    $$('input[name=sev]').forEach(e=>e.addEventListener('change',apply));
+    ['#f-repo','#f-cat'].forEach(s=>$(s).addEventListener('change',apply));
+    $('#f-q').addEventListener('input',apply);
+    $('#theme').addEventListener('click',()=>{
+      const root=document.documentElement;
+      const dark=root.dataset.theme?root.dataset.theme==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+      root.dataset.theme=dark?'light':'dark';
+    });
+  })();
+  </script>
+  </body>
+  </html>
+  
+  '''
+# ---
+# name: test_report_snapshot[json]
+  '''
+  {
+    "schema_version": 1,
+    "tool": {
+      "name": "repo-doctor",
+      "version": "0.1.0"
+    },
+    "generated_at": "2026-09-30T14:32:00Z",
+    "started_at": "2026-09-30T14:31:19Z",
+    "offline": false,
+    "cancelled": false,
+    "roots": [
+      "~/projekty",
+      "~/git-archiv"
+    ],
+    "summary": {
+      "repos": 14,
+      "findings": {
+        "high": 4,
+        "medium": 22,
+        "low": 28
+      },
+      "health": 73,
+      "no_pulse": 2
+    },
+    "repos": [
+      {
+        "name": "infra-notes",
+        "path": "/home/nekdo/projekty/infra-notes",
+        "root": "~/projekty",
+        "score": 2,
+        "band": "critical",
+        "forge": "github",
+        "visibility": "public",
+        "archived": false,
+        "web_url": "https://github.example/nekdo/infra-notes",
+        "remotes": [
+          {
+            "name": "origin",
+            "url": "git@github.example:nekdo/infra-notes.git",
+            "forge": "github"
+          }
+        ],
+        "state": {
+          "branch": "main",
+          "detached": false,
+          "default_branch": "main",
+          "uncommitted": 3,
+          "unpushed": 2,
+          "last_commit": "2026-09-28T14:32:00Z",
+          "pulse_30d": [
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            4,
+            3,
+            6,
+            5,
+            2,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            4,
+            3,
+            2,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "counts": {
+          "high": 2,
+          "medium": 4,
+          "low": 4
+        },
+        "findings": [
+          {
+            "id": "public-sensitive",
+            "fingerprint": "bb37e8bac5efe8aa",
+            "severity": "high",
+            "category": "security",
+            "title": "Veřejné repo obsahuje konfiguraci infrastruktury",
+            "message": "veřejné repo obsahuje adresy 100.x (Tailscale) · hosts.yml",
+            "location": {
+              "path": "hosts.yml",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "secrets-history",
+            "fingerprint": "997f0ff726ebec11",
+            "severity": "high",
+            "category": "security",
+            "title": "Tajemství v historii commitů",
+            "message": "AWS access key v commitu a81f3c2 · config/prod.env",
+            "location": {
+              "path": "config/prod.env",
+              "line": 4,
+              "commit": "a81f3c2d9e",
+              "commit_date": "2026-03-14T00:00:00Z"
+            },
+            "snippet": "AKIA…(20 znaků)",
+            "kind": "AWS access key",
+            "fixable": false
+          },
+          {
+            "id": "docker-hygiene",
+            "fingerprint": "1007ecadaa71aa6e",
+            "severity": "medium",
+            "category": "security",
+            "title": "Hygiena Dockerfile",
+            "message": "kontejner běží pod rootem (ve finální fázi chybí USER)",
+            "location": {
+              "path": "Dockerfile",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "forge-ci-failing",
+            "fingerprint": "a49d601912000770",
+            "severity": "medium",
+            "category": "forge",
+            "title": "CI na výchozí branchi selhává",
+            "message": "poslední běh CI na main selhal (#142)",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "gitignore-incomplete",
+            "fingerprint": "23daf71bcf787531",
+            "severity": "medium",
+            "category": "maintenance",
+            "title": "Neúplný .gitignore",
+            "message": "chybí .env, .venv/",
+            "location": {
+              "path": ".gitignore",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "unpushed",
+            "fingerprint": "4764044a4fd8a805",
+            "severity": "medium",
+            "category": "git",
+            "title": "Nepushnuté commity",
+            "message": "branch main: 2 commitů oproti origin/main",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "forge-stale-prs",
+            "fingerprint": "1d9df05bb2252152",
+            "severity": "low",
+            "category": "forge",
+            "title": "Neaktivní pull requesty a issues",
+            "message": "2 otevřené PR bez aktivity 30+ dní",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "license-missing",
+            "fingerprint": "8cd524bbb32899d3",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí licence",
+            "message": "V kořeni repozitáře není LICENSE (ani COPYING).",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "precommit-missing",
+            "fingerprint": "c645ddb9d448be1e",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí pre-commit",
+            "message": "Chybí .pre-commit-config.yaml (kontrola tajemství a formátu před commitem).",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "uncommitted",
+            "fingerprint": "c239360bb435f5a9",
+            "severity": "low",
+            "category": "git",
+            "title": "Necommitnuté změny",
+            "message": "3 změněných souborů",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          }
+        ],
+        "allowlisted": 0,
+        "skipped": {},
+        "errors": {}
+      },
+      {
+        "name": "api-gateway",
+        "path": "/home/nekdo/projekty/api-gateway",
+        "root": "~/projekty",
+        "score": 39,
+        "band": "critical",
+        "forge": "forgejo",
+        "visibility": "private",
+        "archived": false,
+        "web_url": "https://forgejo.example/nekdo/api-gateway",
+        "remotes": [
+          {
+            "name": "origin",
+            "url": "git@forgejo.example:nekdo/api-gateway.git",
+            "forge": "forgejo"
+          }
+        ],
+        "state": {
+          "branch": "main",
+          "detached": false,
+          "default_branch": "main",
+          "uncommitted": 0,
+          "unpushed": 5,
+          "last_commit": "2026-09-28T14:32:00Z",
+          "pulse_30d": [
+            2,
+            1,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            6,
+            5,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            5,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "counts": {
+          "high": 1,
+          "medium": 3,
+          "low": 3
+        },
+        "findings": [
+          {
+            "id": "deps-vulnerable",
+            "fingerprint": "7bccec79da7307ad",
+            "severity": "high",
+            "category": "security",
+            "title": "Zranitelné závislosti",
+            "message": "jsonwebtoken 8.5.1 (npm): GHSA-8cf7-32gw-wr33",
+            "location": {
+              "path": "package-lock.json",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "docker-hygiene",
+            "fingerprint": "3fa5b17d1b0c8d34",
+            "severity": "medium",
+            "category": "security",
+            "title": "Hygiena Dockerfile",
+            "message": "FROM node:latest – tag :latest",
+            "location": {
+              "path": "Dockerfile",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "gitignore-incomplete",
+            "fingerprint": "c3fea8726ab88a01",
+            "severity": "medium",
+            "category": "maintenance",
+            "title": "Neúplný .gitignore",
+            "message": "chybí .env",
+            "location": {
+              "path": ".gitignore",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "unpushed",
+            "fingerprint": "522e3f910027ae84",
+            "severity": "medium",
+            "category": "git",
+            "title": "Nepushnuté commity",
+            "message": "branch main: 5 commitů oproti origin/main",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "forge-no-branch-protection",
+            "fingerprint": "b56daced3bb5aca2",
+            "severity": "low",
+            "category": "forge",
+            "title": "Výchozí branche bez ochrany",
+            "message": "výchozí branche main nemá ochranu",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "stale-branches",
+            "fingerprint": "8205320824d3e2e1",
+            "severity": "low",
+            "category": "git",
+            "title": "Zastaralé lokální branche",
+            "message": "feature/old: bez commitu 120 dní",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "stashes",
+            "fingerprint": "9a9b5e7c6c309c88",
+            "severity": "low",
+            "category": "git",
+            "title": "Zapomenuté stashe",
+            "message": "stash@{0} (45 dní): WIP",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          }
+        ],
+        "allowlisted": 0,
+        "skipped": {},
+        "errors": {}
+      },
+      {
+        "name": "scraper",
+        "path": "/home/nekdo/projekty/scraper",
+        "root": "~/projekty",
+        "score": 45,
+        "band": "critical",
+        "forge": "github",
+        "visibility": "private",
+        "archived": false,
+        "web_url": "https://github.example/nekdo/scraper",
+        "remotes": [
+          {
+            "name": "origin",
+            "url": "git@github.example:nekdo/scraper.git",
+            "forge": "github"
+          }
+        ],
+        "state": {
+          "branch": "main",
+          "detached": false,
+          "default_branch": "main",
+          "uncommitted": 12,
+          "unpushed": 0,
+          "last_commit": "2026-09-28T14:32:00Z",
+          "pulse_30d": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            2,
+            1,
+            4,
+            3,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            2,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "counts": {
+          "high": 1,
+          "medium": 2,
+          "low": 4
+        },
+        "findings": [
+          {
+            "id": "secrets-tree",
+            "fingerprint": "483bf7bb7e07f6de",
+            "severity": "high",
+            "category": "security",
+            "title": "Tajemství v aktuálních souborech",
+            "message": "OpenAI API klíč v souboru scrape.py",
+            "location": {
+              "path": "scrape.py",
+              "line": 12,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": "sk-p…(56 znaků)",
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "deps-lockfile-missing",
+            "fingerprint": "f0422431ed9a1e22",
+            "severity": "medium",
+            "category": "security",
+            "title": "Chybí lockfile",
+            "message": "pyproject.toml deklaruje závislosti, ale chybí uv.lock",
+            "location": {
+              "path": "pyproject.toml",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "large-files",
+            "fingerprint": "ad5641dc2a53101e",
+            "severity": "medium",
+            "category": "maintenance",
+            "title": "Velké soubory mimo Git LFS",
+            "message": "soubor 48.2 MB v aktuálním stromu",
+            "location": {
+              "path": "data/dump.sqlite",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "ci-missing",
+            "fingerprint": "64458e39f224f645",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí CI",
+            "message": "Nenalezena konfigurace CI.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "deps-outdated",
+            "fingerprint": "348736b7f13ea870",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Zastaralé závislosti",
+            "message": "3× minor: httpx 0.25.0→0.28.1",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "readme-missing",
+            "fingerprint": "c08c5ca3d1f10ab4",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí README",
+            "message": "V kořeni repozitáře není README.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "uncommitted",
+            "fingerprint": "331b6a7acb9b8415",
+            "severity": "low",
+            "category": "git",
+            "title": "Necommitnuté změny",
+            "message": "12 změněných souborů",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          }
+        ],
+        "allowlisted": 0,
+        "skipped": {},
+        "errors": {}
+      },
+      {
+        "name": "cz-tools",
+        "path": "/home/nekdo/projekty/cz-tools",
+        "root": "~/projekty",
+        "score": 64,
+        "band": "watch",
+        "forge": "github",
+        "visibility": "public",
+        "archived": false,
+        "web_url": "https://github.example/nekdo/cz-tools",
+        "remotes": [
+          {
+            "name": "origin",
+            "url": "git@github.example:nekdo/cz-tools.git",
+            "forge": "github"
+          }
+        ],
+        "state": {
+          "branch": "main",
+          "detached": false,
+          "default_branch": "main",
+          "uncommitted": 0,
+          "unpushed": 0,
+          "last_commit": "2026-09-28T14:32:00Z",
+          "pulse_30d": [
+            1,
+            0,
+            2,
+            1,
+            1,
+            0,
+            4,
+            3,
+            2,
+            1,
+            1,
+            0,
+            0,
+            0,
+            1,
+            0,
+            2,
+            1,
+            4,
+            3,
+            5,
+            4,
+            4,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "counts": {
+          "high": 0,
+          "medium": 3,
+          "low": 3
+        },
+        "findings": [
+          {
+            "id": "deps-outdated",
+            "fingerprint": "c7d0eefe817e737c",
+            "severity": "medium",
+            "category": "maintenance",
+            "title": "Zastaralé závislosti",
+            "message": "1× major: typer 0.9.0→0.15.1",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "gitignore-incomplete",
+            "fingerprint": "9eeb4d597f6e5262",
+            "severity": "medium",
+            "category": "maintenance",
+            "title": "Neúplný .gitignore",
+            "message": "chybí __pycache__/",
+            "location": {
+              "path": ".gitignore",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "large-files",
+            "fingerprint": "dffcdd2260d2dedb",
+            "severity": "medium",
+            "category": "maintenance",
+            "title": "Velké soubory mimo Git LFS",
+            "message": "binárka 3.1 MB v aktuálním stromu",
+            "location": {
+              "path": "dist/tool.zip",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "ci-missing",
+            "fingerprint": "5059a1a177ea13a7",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí CI",
+            "message": "Nenalezena konfigurace CI.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "forge-no-branch-protection",
+            "fingerprint": "828f208171cf31ff",
+            "severity": "low",
+            "category": "forge",
+            "title": "Výchozí branche bez ochrany",
+            "message": "výchozí branche main nemá ochranu",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "precommit-missing",
+            "fingerprint": "ff99a3192913cf16",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí pre-commit",
+            "message": "Chybí .pre-commit-config.yaml.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          }
+        ],
+        "allowlisted": 0,
+        "skipped": {},
+        "errors": {}
+      },
+      {
+        "name": "dotfiles",
+        "path": "/home/nekdo/projekty/dotfiles",
+        "root": "~/projekty",
+        "score": 67,
+        "band": "watch",
+        "forge": "github",
+        "visibility": "private",
+        "archived": false,
+        "web_url": "https://github.example/nekdo/dotfiles",
+        "remotes": [
+          {
+            "name": "origin",
+            "url": "git@github.example:nekdo/dotfiles.git",
+            "forge": "github"
+          }
+        ],
+        "state": {
+          "branch": "main",
+          "detached": false,
+          "default_branch": "main",
+          "uncommitted": 0,
+          "unpushed": 1,
+          "last_commit": "2026-09-28T14:32:00Z",
+          "pulse_30d": [
+            4,
+            3,
+            1,
+            0,
+            2,
+            1,
+            0,
+            0,
+            1,
+            0,
+            4,
+            3,
+            2,
+            1,
+            1,
+            0,
+            0,
+            0,
+            2,
+            1,
+            1,
+            0,
+            4,
+            3,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "counts": {
+          "high": 0,
+          "medium": 3,
+          "low": 2
+        },
+        "findings": [
+          {
+            "id": "gitignore-incomplete",
+            "fingerprint": "e640745eba318af0",
+            "severity": "medium",
+            "category": "maintenance",
+            "title": "Neúplný .gitignore",
+            "message": "chybí .env",
+            "location": {
+              "path": ".gitignore",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "public-sensitive",
+            "fingerprint": "a4fdd3646a2bce0d",
+            "severity": "medium",
+            "category": "security",
+            "title": "Veřejné repo obsahuje konfiguraci infrastruktury",
+            "message": "privátní IP adresy · ssh/config",
+            "location": {
+              "path": "ssh/config",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "unpushed",
+            "fingerprint": "5e6927985f4e7f5d",
+            "severity": "medium",
+            "category": "git",
+            "title": "Nepushnuté commity",
+            "message": "branch main: 1 commitů oproti origin/main",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "ci-missing",
+            "fingerprint": "9422a4cbf87e6ea1",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí CI",
+            "message": "Nenalezena konfigurace CI.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "license-missing",
+            "fingerprint": "c52bb7290e0447fa",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí licence",
+            "message": "V kořeni není LICENSE.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          }
+        ],
+        "allowlisted": 0,
+        "skipped": {},
+        "errors": {}
+      },
+      {
+        "name": "blog",
+        "path": "/home/nekdo/git-archiv/blog",
+        "root": "~/git-archiv",
+        "score": 67,
+        "band": "watch",
+        "forge": "forgejo",
+        "visibility": "private",
+        "archived": false,
+        "web_url": "https://forgejo.example/nekdo/blog",
+        "remotes": [
+          {
+            "name": "origin",
+            "url": "git@forgejo.example:nekdo/blog.git",
+            "forge": "forgejo"
+          }
+        ],
+        "state": {
+          "branch": "main",
+          "detached": false,
+          "default_branch": "main",
+          "uncommitted": 0,
+          "unpushed": 0,
+          "last_commit": "2026-09-28T14:32:00Z",
+          "pulse_30d": [
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            2,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "counts": {
+          "high": 0,
+          "medium": 3,
+          "low": 2
+        },
+        "findings": [
+          {
+            "id": "deps-outdated",
+            "fingerprint": "726a8f7c6ed921eb",
+            "severity": "medium",
+            "category": "maintenance",
+            "title": "Zastaralé závislosti",
+            "message": "2× major: astro 2.0.0→5.1.0",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "forge-ci-failing",
+            "fingerprint": "e08ac30b3993ea09",
+            "severity": "medium",
+            "category": "forge",
+            "title": "CI na výchozí branchi selhává",
+            "message": "poslední běh CI na main selhal (#17)",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "gitignore-incomplete",
+            "fingerprint": "262caa1d876d0a3f",
+            "severity": "medium",
+            "category": "maintenance",
+            "title": "Neúplný .gitignore",
+            "message": "chybí node_modules/",
+            "location": {
+              "path": ".gitignore",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "precommit-missing",
+            "fingerprint": "0f7cfc6b215895e1",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí pre-commit",
+            "message": "Chybí .pre-commit-config.yaml.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "stale-branches",
+            "fingerprint": "475c1253da38ec04",
+            "severity": "low",
+            "category": "git",
+            "title": "Zastaralé lokální branche",
+            "message": "draft: mergnutá do main",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          }
+        ],
+        "allowlisted": 0,
+        "skipped": {},
+        "errors": {}
+      },
+      {
+        "name": "game-proto",
+        "path": "/home/nekdo/git-archiv/game-proto",
+        "root": "~/git-archiv",
+        "score": 67,
+        "band": "watch",
+        "forge": "github",
+        "visibility": "private",
+        "archived": false,
+        "web_url": "https://github.example/nekdo/game-proto",
+        "remotes": [
+          {
+            "name": "origin",
+            "url": "git@github.example:nekdo/game-proto.git",
+            "forge": "github"
+          }
+        ],
+        "state": {
+          "branch": null,
+          "detached": true,
+          "default_branch": "main",
+          "uncommitted": 0,
+          "unpushed": 0,
+          "last_commit": "2026-09-28T14:32:00Z",
+          "pulse_30d": [
+            6,
+            5,
+            5,
+            4,
+            4,
+            3,
+            2,
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "counts": {
+          "high": 0,
+          "medium": 3,
+          "low": 2
+        },
+        "findings": [
+          {
+            "id": "deps-lockfile-missing",
+            "fingerprint": "ea5e8259e98f1710",
+            "severity": "medium",
+            "category": "security",
+            "title": "Chybí lockfile",
+            "message": "package.json deklaruje závislosti, ale chybí package-lock.json",
+            "location": {
+              "path": "package.json",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "gitignore-missing",
+            "fingerprint": "8787a413ab021982",
+            "severity": "medium",
+            "category": "maintenance",
+            "title": "Chybí .gitignore",
+            "message": "Repozitář nemá .gitignore (ekosystém: node).",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "large-files",
+            "fingerprint": "517add375b14682a",
+            "severity": "medium",
+            "category": "maintenance",
+            "title": "Velké soubory mimo Git LFS",
+            "message": "binárka 2.5 MB v aktuálním stromu",
+            "location": {
+              "path": "assets/music.mp3",
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "detached-head",
+            "fingerprint": "35efb61211d36460",
+            "severity": "low",
+            "category": "git",
+            "title": "Detached HEAD",
+            "message": "HEAD ukazuje přímo na commit 1b2c3d4, ne na branch.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "readme-missing",
+            "fingerprint": "f3bf2b6966f44913",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí README",
+            "message": "V kořeni repozitáře není README.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          }
+        ],
+        "allowlisted": 0,
+        "skipped": {},
+        "errors": {}
+      },
+      {
+        "name": "old-cli",
+        "path": "/home/nekdo/git-archiv/old-cli",
+        "root": "~/git-archiv",
+        "score": 85,
+        "band": "no_pulse",
+        "forge": null,
+        "visibility": "private",
+        "archived": false,
+        "web_url": null,
+        "remotes": [],
+        "state": {
+          "branch": "main",
+          "detached": false,
+          "default_branch": "main",
+          "uncommitted": 0,
+          "unpushed": 0,
+          "last_commit": "2025-08-26T14:32:00Z",
+          "pulse_30d": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "counts": {
+          "high": 0,
+          "medium": 1,
+          "low": 2
+        },
+        "findings": [
+          {
+            "id": "no-remote",
+            "fingerprint": "adf87c7e2025f851",
+            "severity": "medium",
+            "category": "git",
+            "title": "Repo bez remote (bez zálohy)",
+            "message": "Repozitář nemá žádný remote – commity existují jen na tomto disku.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          },
+          {
+            "id": "ci-missing",
+            "fingerprint": "d48d0a134e00f551",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí CI",
+            "message": "Nenalezena konfigurace CI.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "readme-missing",
+            "fingerprint": "406eb1ecb81f60ec",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí README",
+            "message": "V kořeni repozitáře není README.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          }
+        ],
+        "allowlisted": 0,
+        "skipped": {},
+        "errors": {}
+      },
+      {
+        "name": "thesis-2019",
+        "path": "/home/nekdo/git-archiv/thesis-2019",
+        "root": "~/git-archiv",
+        "score": 91,
+        "band": "no_pulse",
+        "forge": "github",
+        "visibility": "private",
+        "archived": true,
+        "web_url": "https://github.example/nekdo/thesis-2019",
+        "remotes": [
+          {
+            "name": "origin",
+            "url": "git@github.example:nekdo/thesis-2019.git",
+            "forge": "github"
+          }
+        ],
+        "state": {
+          "branch": "main",
+          "detached": false,
+          "default_branch": "main",
+          "uncommitted": 0,
+          "unpushed": 0,
+          "last_commit": "2024-04-13T14:32:00Z",
+          "pulse_30d": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "counts": {
+          "high": 0,
+          "medium": 0,
+          "low": 3
+        },
+        "findings": [
+          {
+            "id": "ci-missing",
+            "fingerprint": "9713f9deeb53e9d9",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí CI",
+            "message": "Nenalezena konfigurace CI.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "license-missing",
+            "fingerprint": "c48ea08fccfd797a",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí licence",
+            "message": "V kořeni není LICENSE.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          },
+          {
+            "id": "precommit-missing",
+            "fingerprint": "5f27347a9c5f367f",
+            "severity": "low",
+            "category": "maintenance",
+            "title": "Chybí pre-commit",
+            "message": "Chybí .pre-commit-config.yaml.",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": true
+          }
+        ],
+        "allowlisted": 0,
+        "skipped": {},
+        "errors": {}
+      },
+      {
+        "name": "notes",
+        "path": "/home/nekdo/projekty/notes",
+        "root": "~/projekty",
+        "score": 97,
+        "band": "healthy",
+        "forge": "github",
+        "visibility": "private",
+        "archived": false,
+        "web_url": "https://github.example/nekdo/notes",
+        "remotes": [
+          {
+            "name": "origin",
+            "url": "git@github.example:nekdo/notes.git",
+            "forge": "github"
+          }
+        ],
+        "state": {
+          "branch": "main",
+          "detached": false,
+          "default_branch": "main",
+          "uncommitted": 0,
+          "unpushed": 0,
+          "last_commit": "2026-09-29T14:32:00Z",
+          "pulse_30d": [
+            2,
+            1,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            6,
+            5,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            5,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "counts": {
+          "high": 0,
+          "medium": 0,
+          "low": 1
+        },
+        "findings": [
+          {
+            "id": "stashes",
+            "fingerprint": "2a1c8bb598a8968c",
+            "severity": "low",
+            "category": "git",
+            "title": "Zapomenuté stashe",
+            "message": "stash@{0} (40 dní): wip",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          }
+        ],
+        "allowlisted": 0,
+        "skipped": {},
+        "errors": {}
+      },
+      {
+        "name": "website",
+        "path": "/home/nekdo/projekty/website",
+        "root": "~/projekty",
+        "score": 100,
+        "band": "healthy",
+        "forge": "github",
+        "visibility": "private",
+        "archived": false,
+        "web_url": "https://github.example/nekdo/website",
+        "remotes": [
+          {
+            "name": "origin",
+            "url": "git@github.example:nekdo/website.git",
+            "forge": "github"
+          }
+        ],
+        "state": {
+          "branch": "main",
+          "detached": false,
+          "default_branch": "main",
+          "uncommitted": 0,
+          "unpushed": 0,
+          "last_commit": "2026-09-28T14:32:00Z",
+          "pulse_30d": [
+            2,
+            1,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            6,
+            5,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            5,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "counts": {
+          "high": 0,
+          "medium": 0,
+          "low": 0
+        },
+        "findings": [],
+        "allowlisted": 0,
+        "skipped": {},
+        "errors": {}
+      },
+      {
+        "name": "homelab",
+        "path": "/home/nekdo/projekty/homelab",
+        "root": "~/projekty",
+        "score": 97,
+        "band": "healthy",
+        "forge": "github",
+        "visibility": "private",
+        "archived": false,
+        "web_url": "https://github.example/nekdo/homelab",
+        "remotes": [
+          {
+            "name": "origin",
+            "url": "git@github.example:nekdo/homelab.git",
+            "forge": "github"
+          }
+        ],
+        "state": {
+          "branch": "main",
+          "detached": false,
+          "default_branch": "main",
+          "uncommitted": 0,
+          "unpushed": 0,
+          "last_commit": "2026-09-27T14:32:00Z",
+          "pulse_30d": [
+            2,
+            1,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            6,
+            5,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            5,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "counts": {
+          "high": 0,
+          "medium": 0,
+          "low": 1
+        },
+        "findings": [
+          {
+            "id": "stashes",
+            "fingerprint": "1071e0e289dedd4d",
+            "severity": "low",
+            "category": "git",
+            "title": "Zapomenuté stashe",
+            "message": "stash@{0} (40 dní): wip",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          }
+        ],
+        "allowlisted": 0,
+        "skipped": {},
+        "errors": {}
+      },
+      {
+        "name": "scripts",
+        "path": "/home/nekdo/projekty/scripts",
+        "root": "~/projekty",
+        "score": 100,
+        "band": "healthy",
+        "forge": "github",
+        "visibility": "private",
+        "archived": false,
+        "web_url": "https://github.example/nekdo/scripts",
+        "remotes": [
+          {
+            "name": "origin",
+            "url": "git@github.example:nekdo/scripts.git",
+            "forge": "github"
+          }
+        ],
+        "state": {
+          "branch": "main",
+          "detached": false,
+          "default_branch": "main",
+          "uncommitted": 0,
+          "unpushed": 0,
+          "last_commit": "2026-09-26T14:32:00Z",
+          "pulse_30d": [
+            2,
+            1,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            6,
+            5,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            5,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "counts": {
+          "high": 0,
+          "medium": 0,
+          "low": 0
+        },
+        "findings": [],
+        "allowlisted": 0,
+        "skipped": {},
+        "errors": {}
+      },
+      {
+        "name": "kbd-layout",
+        "path": "/home/nekdo/projekty/kbd-layout",
+        "root": "~/projekty",
+        "score": 97,
+        "band": "healthy",
+        "forge": "github",
+        "visibility": "private",
+        "archived": false,
+        "web_url": "https://github.example/nekdo/kbd-layout",
+        "remotes": [
+          {
+            "name": "origin",
+            "url": "git@github.example:nekdo/kbd-layout.git",
+            "forge": "github"
+          }
+        ],
+        "state": {
+          "branch": "main",
+          "detached": false,
+          "default_branch": "main",
+          "uncommitted": 0,
+          "unpushed": 0,
+          "last_commit": "2026-09-25T14:32:00Z",
+          "pulse_30d": [
+            2,
+            1,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            6,
+            5,
+            4,
+            3,
+            5,
+            4,
+            6,
+            5,
+            5,
+            4,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "counts": {
+          "high": 0,
+          "medium": 0,
+          "low": 1
+        },
+        "findings": [
+          {
+            "id": "stashes",
+            "fingerprint": "5c24a2bb7f7b1422",
+            "severity": "low",
+            "category": "git",
+            "title": "Zapomenuté stashe",
+            "message": "stash@{0} (40 dní): wip",
+            "location": {
+              "path": null,
+              "line": null,
+              "commit": null,
+              "commit_date": null
+            },
+            "snippet": null,
+            "kind": null,
+            "fixable": false
+          }
+        ],
+        "allowlisted": 0,
+        "skipped": {},
+        "errors": {}
+      }
+    ],
+    "warnings": [
+      "Složka ~/sandbox neexistuje – přeskočena."
+    ]
+  }
+  
+  '''
+# ---
+# name: test_report_snapshot[md]
+  '''
+  # repo-doctor – report
+  
+  Sken 2026-09-30 14:32.
+  
+  | repozitáře | ▲ HIGH | ◆ MED | ● LOW | zdraví |
+  |---:|---:|---:|---:|---:|
+  | 14 | 4 | 22 | 28 | 73/100 |
+  
+  > **Upozornění**
+  >
+  > - Složka ~/sandbox neexistuje – přeskočena.
+  
+  ## Přehled
+  
+  | skóre | repozitář | pásmo | nálezy | hosting |
+  |---:|---|---|---|---|
+  | 2 █░░░░ | `infra-notes` | KRITICKÉ | ▲2 ◆4 ●4 | github ◉ veřejné |
+  | 39 ██░░░ | `api-gateway` | KRITICKÉ | ▲1 ◆3 ●3 | forgejo ○ privátní |
+  | 45 ██░░░ | `scraper` | KRITICKÉ | ▲1 ◆2 ●4 | github ○ privátní |
+  | 64 ███░░ | `cz-tools` | SLEDOVAT | ▲0 ◆3 ●3 | github ◉ veřejné |
+  | 67 ███░░ | `blog` | SLEDOVAT | ▲0 ◆3 ●2 | forgejo ○ privátní |
+  | 67 ███░░ | `dotfiles` | SLEDOVAT | ▲0 ◆3 ●2 | github ○ privátní |
+  | 67 ███░░ | `game-proto` | SLEDOVAT | ▲0 ◆3 ●2 | github ○ privátní |
+  | 85 ████░ | `old-cli` | BEZ TEPU | ▲0 ◆1 ●2 | — ○ privátní |
+  | 91 █████ | `thesis-2019` | BEZ TEPU | ▲0 ◆0 ●3 | github ○ privátní |
+  | 97 █████ | `homelab` | ZDRAVÉ | ▲0 ◆0 ●1 | github ○ privátní |
+  | 97 █████ | `kbd-layout` | ZDRAVÉ | ▲0 ◆0 ●1 | github ○ privátní |
+  | 97 █████ | `notes` | ZDRAVÉ | ▲0 ◆0 ●1 | github ○ privátní |
+  | 100 █████ | `scripts` | ZDRAVÉ | ▲0 ◆0 ●0 | github ○ privátní |
+  | 100 █████ | `website` | ZDRAVÉ | ▲0 ◆0 ●0 | github ○ privátní |
+  
+  ## infra-notes – 2/100
+  
+  `/home/nekdo/projekty/infra-notes`
+  
+  | severity | kontrola | nález | kde |
+  |---|---|---|---|
+  | ▲ HIGH | `public-sensitive` | veřejné repo obsahuje adresy 100.x (Tailscale) · hosts.yml | hosts.yml |
+  | ▲ HIGH | `secrets-history` | AWS access key v commitu a81f3c2 · config/prod.env | config/prod.env:4 · commit a81f3c2 · 14. 3. 2026 · 'AKIA…(20 znaků)' |
+  | ◆ MED | `docker-hygiene` | kontejner běží pod rootem (ve finální fázi chybí USER) | Dockerfile |
+  | ◆ MED | `forge-ci-failing` | poslední běh CI na main selhal (#142) |  |
+  | ◆ MED | `gitignore-incomplete` ✓ | chybí .env, .venv/ | .gitignore |
+  | ◆ MED | `unpushed` | branch main: 2 commitů oproti origin/main |  |
+  | ● LOW | `forge-stale-prs` | 2 otevřené PR bez aktivity 30+ dní |  |
+  | ● LOW | `license-missing` ✓ | V kořeni repozitáře není LICENSE (ani COPYING). |  |
+  | ● LOW | `precommit-missing` ✓ | Chybí .pre-commit-config.yaml (kontrola tajemství a formátu před commitem). |  |
+  | ● LOW | `uncommitted` | 3 změněných souborů |  |
+  
+  ## api-gateway – 39/100
+  
+  `/home/nekdo/projekty/api-gateway`
+  
+  | severity | kontrola | nález | kde |
+  |---|---|---|---|
+  | ▲ HIGH | `deps-vulnerable` | jsonwebtoken 8.5.1 (npm): GHSA-8cf7-32gw-wr33 | package-lock.json |
+  | ◆ MED | `docker-hygiene` | FROM node:latest – tag :latest | Dockerfile |
+  | ◆ MED | `gitignore-incomplete` ✓ | chybí .env | .gitignore |
+  | ◆ MED | `unpushed` | branch main: 5 commitů oproti origin/main |  |
+  | ● LOW | `forge-no-branch-protection` | výchozí branche main nemá ochranu |  |
+  | ● LOW | `stale-branches` | feature/old: bez commitu 120 dní |  |
+  | ● LOW | `stashes` | stash@{0} (45 dní): WIP |  |
+  
+  ## scraper – 45/100
+  
+  `/home/nekdo/projekty/scraper`
+  
+  | severity | kontrola | nález | kde |
+  |---|---|---|---|
+  | ▲ HIGH | `secrets-tree` | OpenAI API klíč v souboru scrape.py | scrape.py:12 · 'sk-p…(56 znaků)' |
+  | ◆ MED | `deps-lockfile-missing` | pyproject.toml deklaruje závislosti, ale chybí uv.lock | pyproject.toml |
+  | ◆ MED | `large-files` | soubor 48.2 MB v aktuálním stromu | data/dump.sqlite |
+  | ● LOW | `ci-missing` ✓ | Nenalezena konfigurace CI. |  |
+  | ● LOW | `deps-outdated` | 3× minor: httpx 0.25.0→0.28.1 |  |
+  | ● LOW | `readme-missing` ✓ | V kořeni repozitáře není README. |  |
+  | ● LOW | `uncommitted` | 12 změněných souborů |  |
+  
+  ## cz-tools – 64/100
+  
+  `/home/nekdo/projekty/cz-tools`
+  
+  | severity | kontrola | nález | kde |
+  |---|---|---|---|
+  | ◆ MED | `deps-outdated` | 1× major: typer 0.9.0→0.15.1 |  |
+  | ◆ MED | `gitignore-incomplete` ✓ | chybí __pycache__/ | .gitignore |
+  | ◆ MED | `large-files` | binárka 3.1 MB v aktuálním stromu | dist/tool.zip |
+  | ● LOW | `ci-missing` ✓ | Nenalezena konfigurace CI. |  |
+  | ● LOW | `forge-no-branch-protection` | výchozí branche main nemá ochranu |  |
+  | ● LOW | `precommit-missing` ✓ | Chybí .pre-commit-config.yaml. |  |
+  
+  ## blog – 67/100
+  
+  `/home/nekdo/git-archiv/blog`
+  
+  | severity | kontrola | nález | kde |
+  |---|---|---|---|
+  | ◆ MED | `deps-outdated` | 2× major: astro 2.0.0→5.1.0 |  |
+  | ◆ MED | `forge-ci-failing` | poslední běh CI na main selhal (#17) |  |
+  | ◆ MED | `gitignore-incomplete` ✓ | chybí node_modules/ | .gitignore |
+  | ● LOW | `precommit-missing` ✓ | Chybí .pre-commit-config.yaml. |  |
+  | ● LOW | `stale-branches` | draft: mergnutá do main |  |
+  
+  ## dotfiles – 67/100
+  
+  `/home/nekdo/projekty/dotfiles`
+  
+  | severity | kontrola | nález | kde |
+  |---|---|---|---|
+  | ◆ MED | `gitignore-incomplete` ✓ | chybí .env | .gitignore |
+  | ◆ MED | `public-sensitive` | privátní IP adresy · ssh/config | ssh/config |
+  | ◆ MED | `unpushed` | branch main: 1 commitů oproti origin/main |  |
+  | ● LOW | `ci-missing` ✓ | Nenalezena konfigurace CI. |  |
+  | ● LOW | `license-missing` ✓ | V kořeni není LICENSE. |  |
+  
+  ## game-proto – 67/100
+  
+  `/home/nekdo/git-archiv/game-proto`
+  
+  | severity | kontrola | nález | kde |
+  |---|---|---|---|
+  | ◆ MED | `deps-lockfile-missing` | package.json deklaruje závislosti, ale chybí package-lock.json | package.json |
+  | ◆ MED | `gitignore-missing` ✓ | Repozitář nemá .gitignore (ekosystém: node). |  |
+  | ◆ MED | `large-files` | binárka 2.5 MB v aktuálním stromu | assets/music.mp3 |
+  | ● LOW | `detached-head` | HEAD ukazuje přímo na commit 1b2c3d4, ne na branch. |  |
+  | ● LOW | `readme-missing` ✓ | V kořeni repozitáře není README. |  |
+  
+  ## old-cli – 85/100
+  
+  `/home/nekdo/git-archiv/old-cli`
+  
+  | severity | kontrola | nález | kde |
+  |---|---|---|---|
+  | ◆ MED | `no-remote` | Repozitář nemá žádný remote – commity existují jen na tomto disku. |  |
+  | ● LOW | `ci-missing` ✓ | Nenalezena konfigurace CI. |  |
+  | ● LOW | `readme-missing` ✓ | V kořeni repozitáře není README. |  |
+  
+  ## thesis-2019 – 91/100
+  
+  `/home/nekdo/git-archiv/thesis-2019`
+  
+  | severity | kontrola | nález | kde |
+  |---|---|---|---|
+  | ● LOW | `ci-missing` ✓ | Nenalezena konfigurace CI. |  |
+  | ● LOW | `license-missing` ✓ | V kořeni není LICENSE. |  |
+  | ● LOW | `precommit-missing` ✓ | Chybí .pre-commit-config.yaml. |  |
+  
+  ## homelab – 97/100
+  
+  `/home/nekdo/projekty/homelab`
+  
+  | severity | kontrola | nález | kde |
+  |---|---|---|---|
+  | ● LOW | `stashes` | stash@{0} (40 dní): wip |  |
+  
+  ## kbd-layout – 97/100
+  
+  `/home/nekdo/projekty/kbd-layout`
+  
+  | severity | kontrola | nález | kde |
+  |---|---|---|---|
+  | ● LOW | `stashes` | stash@{0} (40 dní): wip |  |
+  
+  ## notes – 97/100
+  
+  `/home/nekdo/projekty/notes`
+  
+  | severity | kontrola | nález | kde |
+  |---|---|---|---|
+  | ● LOW | `stashes` | stash@{0} (40 dní): wip |  |
+  
+  ## Bez nálezů ✓
+  
+  `scripts`, `website`
+  
+  ---
+  ✓ = opravitelné automaticky v TUI (`repo-doctor`, obrazovka Léčba).
+  
+  '''
+# ---

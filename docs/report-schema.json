@@ -1,0 +1,443 @@
+{
+  "$defs": {
+    "JFinding": {
+      "properties": {
+        "id": {
+          "description": "ID kontroly, např. secrets-history",
+          "title": "Id",
+          "type": "string"
+        },
+        "fingerprint": {
+          "description": "Stabilní hash nálezu pro allowlist",
+          "title": "Fingerprint",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/Severity"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string"
+        },
+        "title": {
+          "title": "Title",
+          "type": "string"
+        },
+        "message": {
+          "title": "Message",
+          "type": "string"
+        },
+        "location": {
+          "$ref": "#/$defs/JLocation"
+        },
+        "snippet": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "description": "Vždy maskovaná ukázka (AKIA…(20 znaků))",
+          "title": "Snippet"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kind"
+        },
+        "fixable": {
+          "title": "Fixable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "id",
+        "fingerprint",
+        "severity",
+        "category",
+        "title",
+        "message",
+        "location",
+        "fixable"
+      ],
+      "title": "JFinding",
+      "type": "object"
+    },
+    "JLocation": {
+      "properties": {
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "line": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Line"
+        },
+        "commit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Commit"
+        },
+        "commit_date": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Commit Date"
+        }
+      },
+      "title": "JLocation",
+      "type": "object"
+    },
+    "JRepo": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "root": {
+          "title": "Root",
+          "type": "string"
+        },
+        "score": {
+          "title": "Score",
+          "type": "integer"
+        },
+        "band": {
+          "title": "Band",
+          "type": "string"
+        },
+        "forge": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Forge"
+        },
+        "visibility": {
+          "title": "Visibility",
+          "type": "string"
+        },
+        "archived": {
+          "title": "Archived",
+          "type": "boolean"
+        },
+        "web_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Web Url"
+        },
+        "remotes": {
+          "items": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object"
+          },
+          "title": "Remotes",
+          "type": "array"
+        },
+        "state": {
+          "$ref": "#/$defs/JState"
+        },
+        "counts": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Counts",
+          "type": "object"
+        },
+        "findings": {
+          "items": {
+            "$ref": "#/$defs/JFinding"
+          },
+          "title": "Findings",
+          "type": "array"
+        },
+        "allowlisted": {
+          "title": "Allowlisted",
+          "type": "integer"
+        },
+        "skipped": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Skipped",
+          "type": "object"
+        },
+        "errors": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Errors",
+          "type": "object"
+        }
+      },
+      "required": [
+        "name",
+        "path",
+        "root",
+        "score",
+        "band",
+        "forge",
+        "visibility",
+        "archived",
+        "web_url",
+        "remotes",
+        "state",
+        "counts",
+        "findings",
+        "allowlisted",
+        "skipped",
+        "errors"
+      ],
+      "title": "JRepo",
+      "type": "object"
+    },
+    "JState": {
+      "properties": {
+        "branch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Branch"
+        },
+        "detached": {
+          "title": "Detached",
+          "type": "boolean"
+        },
+        "default_branch": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Default Branch"
+        },
+        "uncommitted": {
+          "title": "Uncommitted",
+          "type": "integer"
+        },
+        "unpushed": {
+          "title": "Unpushed",
+          "type": "integer"
+        },
+        "last_commit": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Last Commit"
+        },
+        "pulse_30d": {
+          "items": {
+            "type": "integer"
+          },
+          "title": "Pulse 30D",
+          "type": "array"
+        }
+      },
+      "required": [
+        "branch",
+        "detached",
+        "default_branch",
+        "uncommitted",
+        "unpushed",
+        "last_commit",
+        "pulse_30d"
+      ],
+      "title": "JState",
+      "type": "object"
+    },
+    "JSummary": {
+      "properties": {
+        "repos": {
+          "title": "Repos",
+          "type": "integer"
+        },
+        "findings": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Findings",
+          "type": "object"
+        },
+        "health": {
+          "title": "Health",
+          "type": "integer"
+        },
+        "no_pulse": {
+          "title": "No Pulse",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "repos",
+        "findings",
+        "health",
+        "no_pulse"
+      ],
+      "title": "JSummary",
+      "type": "object"
+    },
+    "Severity": {
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ],
+      "title": "Severity",
+      "type": "string"
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "default": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "tool": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Tool",
+      "type": "object"
+    },
+    "generated_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Generated At"
+    },
+    "started_at": {
+      "format": "date-time",
+      "title": "Started At",
+      "type": "string"
+    },
+    "offline": {
+      "title": "Offline",
+      "type": "boolean"
+    },
+    "cancelled": {
+      "title": "Cancelled",
+      "type": "boolean"
+    },
+    "roots": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Roots",
+      "type": "array"
+    },
+    "summary": {
+      "$ref": "#/$defs/JSummary"
+    },
+    "repos": {
+      "items": {
+        "$ref": "#/$defs/JRepo"
+      },
+      "title": "Repos",
+      "type": "array"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "tool",
+    "generated_at",
+    "started_at",
+    "offline",
+    "cancelled",
+    "roots",
+    "summary",
+    "repos",
+    "warnings"
+  ],
+  "title": "JReport",
+  "type": "object",
+  "$id": "https://github.com/Luquas95/repo-doctor/report-schema-v1.json"
+}

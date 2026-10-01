@@ -50,5 +50,11 @@ def expand_path(raw: str) -> Path:
 
 
 def ensure_private_dir(path: Path) -> Path:
+    """Vytvoří adresář s právy 0700 a případně je zpřísní (obsahuje data o privátních repech)."""
     path.mkdir(parents=True, exist_ok=True, mode=0o700)
+    try:
+        if path.stat().st_mode & 0o077:
+            path.chmod(0o700)
+    except OSError:
+        pass
     return path
