@@ -145,5 +145,8 @@ def preview_text(repo: RepoResult | None, width: int, p: Palette, limit: int = 4
         line.append(pad(msg, max(4, width - id_w - 6)))
         t.append(line)
     if len(findings) > limit:
-        t.append(f"\n    … a {len(findings) - limit} další", style=Style(color=p.muted))
+        t.append(
+            f"\n    … a {len(findings) - limit} {'další' if len(findings) - limit < 5 else 'dalších'}",
+            style=Style(color=p.muted),
+        )
     return t

@@ -258,6 +258,13 @@ def build_keymap(overrides: Mapping[str, str]) -> dict[str, str]:
     return result
 
 
+def key_label(action_id: str, keymap: Mapping[str, str] | None = None) -> str:
+    """Jak klávesu akce zobrazit (respektuje přemapování)."""
+    action = BY_ID[action_id]
+    key = (keymap or {}).get(action_id, action.key)
+    return action.label if action.label and key == action.key else display_key(key)
+
+
 def grouped(keymap: Mapping[str, str] | None = None) -> dict[str, list[tuple[str, str]]]:
     """Pro nápovědu: {kontext: [(klávesa, popis)]} podle aktuálního mapování."""
     keymap = keymap or {a.id: a.key for a in ACTIONS}

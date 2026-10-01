@@ -5,8 +5,10 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
+from textual.binding import Binding
 from textual.suggester import Suggester
 from textual.validation import ValidationResult, Validator
+from textual.widgets import Input
 
 from repo_doctor.paths import expand_path
 
@@ -39,6 +41,20 @@ class PathSuggester(Suggester):
             return None
         head = value if value.endswith("/") else value[: len(value) - len(prefix)]
         return head + names[0] + "/"
+
+
+class PathInput(Input):
+    """Vstup cesty: Tab přijme návrh (pokud je), jinak přejde na další pole."""
+
+    BINDINGS = [Binding("tab", "accept_or_next", "doplnit", show=False)]
+
+    def action_accept_or_next(self) -> None:
+        suggestion = getattr(self, "_suggestion", "")
+        if suggestion and suggestion != self.value:
+            self.value = suggestion
+            self.cursor_position = len(self.value)
+        else:
+            self.screen.focus_next()
 
 
 class ExistingDir(Validator):

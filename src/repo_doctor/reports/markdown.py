@@ -50,7 +50,10 @@ def render(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None 
             f"{_counts(r)} | {_cell(host)} |"
         )
     lines.append("")
+    clean = [r for r in ordered if not r.findings and not r.errors]
     for r in ordered:
+        if r in clean:
+            continue
         lines += [f"## {_cell(r.name)} – {r.score}/100", "", f"`{_cell(r.path)}`", ""]
         if not r.findings:
             lines += ["Bez nálezů. ✓", ""]
@@ -78,5 +81,7 @@ def render(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None 
             lines.append("")
         if r.allowlisted:
             lines += [f"Skryto allowlistem: {r.allowlisted}", ""]
+    if clean:
+        lines += ["## Bez nálezů ✓", "", ", ".join(f"`{_cell(r.name)}`" for r in clean), ""]
     lines += ["---", "✓ = opravitelné automaticky v TUI (`repo-doctor`, obrazovka Léčba).", ""]
     return "\n".join(lines)

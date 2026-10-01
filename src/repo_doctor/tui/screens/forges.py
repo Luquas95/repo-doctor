@@ -94,7 +94,7 @@ class ForgesScreen(BaseScreen):
         table = self.query_one(DataTable)
         row = table.cursor_row
         table.clear(columns=True)
-        table.add_columns("název", "typ", "URL", "uživatel / org", "token", "TLS", "připojení")
+        table.add_columns("název", "připojení", "typ", "TLS", "token", "URL", "uživatel / org")
         for i, f in enumerate(self.rd.config.forges):
             tls = Text("ověřeno", style=Style(color=p.ok))
             if f.ca_bundle:
@@ -112,13 +112,13 @@ class ForgesScreen(BaseScreen):
                 status = Text("✗ chyba", style=Style(color=p.high))
             table.add_row(
                 f.name,
+                status,
                 f.type,
-                f.base_url,
-                " / ".join(x for x in (f.user, f.org) if x) or "—",
+                tls,
                 SOURCE_LABELS.get(f.token_source or "none", "?")
                 + (f" ({f.token_env})" if f.token_env else ""),
-                tls,
-                status,
+                f.base_url,
+                " / ".join(x for x in (f.user, f.org) if x) or "—",
                 key=str(i),
             )
         if not self.rd.config.forges:

@@ -155,6 +155,7 @@ class DashboardScreen(NavMixin, Screen[Any]):
                 done=app.scan_done,
                 total=app.scan_total,
                 current=app.scan_current,
+                keys=(app.key("scan_all"), app.key("cancel_scan")),
             )
         )
         if light:
@@ -214,7 +215,7 @@ class DashboardScreen(NavMixin, Screen[Any]):
             msg = (
                 "Žádná repa neodpovídají filtru."
                 if self.state.filters.active()
-                else "Zatím žádná data – R spustí sken."
+                else f"Zatím žádná data – {app.key('scan_all')} spustí sken."
             )
             options.append(Option(Text(f"  {msg}", style=Style(color=p.muted)), disabled=True))
             self._row_paths.append(None)
@@ -236,6 +237,15 @@ class DashboardScreen(NavMixin, Screen[Any]):
                 target = next((i for i, o in enumerate(options) if not o.disabled), None)
         if target is not None:
             lst.highlighted = target
+        visible = [p for p in self._row_paths if p]
+        if app.selected_path not in visible:
+            # vybrané repo zmizelo z pohledu (filtr, hledání) – nesmí zůstat skrytě vybrané
+            hl = lst.highlighted
+            app.selected_path = (
+                self._row_paths[hl] if hl is not None and hl < len(self._row_paths) else None
+            )
+            if app.selected_path is None and visible:
+                app.selected_path = visible[0]
         self._update_preview()
 
     def _update_preview(self) -> None:

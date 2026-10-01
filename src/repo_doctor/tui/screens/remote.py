@@ -210,4 +210,6 @@ class RemoteScreen(BaseScreen):
             (f, r) for f, r in self.missing if not (f == forge and r.full_name == repo.full_name)
         ]
         self.render_view()
-        self.notify(f"Naklonováno do {home_path(str(dest))}. R spustí sken.")
+        self.notify(
+            f"Naklonováno do {home_path(str(dest))}. {self.rd.key('scan_all')} spustí sken."
+        )

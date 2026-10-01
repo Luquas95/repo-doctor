@@ -16,6 +16,7 @@ from repo_doctor.checks import all_checks
 from repo_doctor.config import ConfigError, LimitsConfig
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import BaseScreen
+from repo_doctor.tui.screens.dialogs import ConfirmDialog
 from repo_doctor.tui.theme import DARK_NAME, LIGHT_NAME
 from repo_doctor.tui.widgets.forms import IntRange, PositiveNumber, split_list
 from repo_doctor.tui.widgets.keybar import KeyBar
@@ -206,14 +207,29 @@ class SettingsScreen(BaseScreen):
 
     def action_settings_allow_remove(self) -> None:
         table = self.query_one("#allowlist", DataTable)
+        if self.focused is not table:
+            self.notify("Nejdřív přejdi (tab) na tabulku allowlistu.", severity="warning")
+            return
         if not self.rd.config.allowlist or table.row_count == 0:
             return
         entry = self.rd.config.allowlist[min(table.cursor_row, len(self.rd.config.allowlist) - 1)]
-        if self._save(self.rd.store.remove_allow, entry.hash):
-            self._fill_allowlist()
-            self.notify(
-                f"Odebráno z allowlistu – nález se znovu ukáže po dalším skenu ({entry.check})."
-            )
+
+        def done(ok: bool | None) -> None:
+            if ok and self._save(self.rd.store.remove_allow, entry.hash):
+                self._fill_allowlist()
+                self.notify(
+                    f"Odebráno z allowlistu – nález se znovu ukáže po dalším skenu ({entry.check})."
+                )
+
+        self.app.push_screen(
+            ConfirmDialog(
+                "Odebrat z allowlistu",
+                f"\nOdebrat výjimku {entry.hash} ({entry.check or '?'})?\nDůvod: {entry.reason}\n",
+                confirm_label="Odebrat",
+                danger=True,
+            ),
+            done,
+        )
 
 
 __all__ = ["LIMIT_LABELS", "LimitsConfig", "SettingsScreen"]

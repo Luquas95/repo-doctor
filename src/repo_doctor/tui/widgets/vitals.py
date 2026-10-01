@@ -22,6 +22,7 @@ def vitals_text(
     done: int,
     total: int,
     current: str,
+    keys: tuple[str, str] = ("R", "x"),
 ) -> Text:
     s = result.summary(no_pulse_days)
     t = Text()
@@ -55,7 +56,7 @@ def vitals_text(
         if current:
             t.append("   › ", style=Style(color=p.muted))
             t.append(current, style=Style(color=p.text))
-        t.append("   x zruší", style=Style(color=p.dim))
+        t.append(f"   {keys[1]} zruší", style=Style(color=p.dim))
     else:
         when = result.finished_at
         if when is not None:
@@ -64,7 +65,7 @@ def vitals_text(
             t.append(f"poslední sken {local:%-d. %-m. %H:%M}", style=Style(color=p.muted))
             t.append(f" · {dur:.0f} s", style=Style(color=p.dim))
         else:
-            t.append("zatím bez skenu – R spustí sken", style=Style(color=p.muted))
+            t.append(f"zatím bez skenu – {keys[0]} spustí sken", style=Style(color=p.muted))
         if result.cancelled:
             t.append(" · přerušený", style=Style(color=p.med))
         if result.warnings:

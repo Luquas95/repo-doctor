@@ -254,7 +254,10 @@ class FixScreen(BaseScreen):
             pt for pt in self.patches if pt.check_id in set(self.query_one(SelectionList).selected)
         ]
         if not chosen:
-            self.notify("Nic není vybráno (space vybere, A vše).", severity="warning")
+            self.notify(
+                f"Nic není vybráno ({self.rd.key('toggle_fix')} vybere, {self.rd.key('select_all')} vše).",
+                severity="warning",
+            )
             return
         repo = self.repo
         default = (repo.state.default_branch or repo.state.branch or "main") if repo else "main"

@@ -142,8 +142,15 @@ def diagnosis(finding: Finding | None, app: RepoDoctorApp) -> Text:
         if doc.note:
             t.append("\n" + doc.note + "\n", style=Style(color=p.med))
     if finding.fixable:
-        t.append("\n✓ opravitelné automaticky – f připraví opravu\n", style=Style(color=p.ok))
-    t.append("\n o  otevřít soubor   w  na webu   y  kopírovat cestu", style=Style(color=p.muted))
+        t.append(
+            f"\n✓ opravitelné automaticky – {app.key('detail_fix')} připraví opravu\n",
+            style=Style(color=p.ok),
+        )
+    t.append(
+        f"\n {app.key('open_editor')}  otevřít soubor   {app.key('open_web')}  na webu   "
+        f"{app.key('copy_path')}  kopírovat cestu",
+        style=Style(color=p.muted),
+    )
     return t
 
 

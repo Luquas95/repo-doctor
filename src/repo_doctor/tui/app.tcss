@@ -71,7 +71,7 @@ Button:focus { border: tall $accent; text-style: bold; }
 Button.-primary { background: $accent 20%; }
 
 /* karta repa */
-#card-header { height: 5; padding: 0 1; }
+#card-header { height: auto; max-height: 8; padding: 0 1; }
 #card-body { height: 1fr; }
 #findings-panel { width: 34; }
 #findings-panel Tree { height: 1fr; }
@@ -79,7 +79,7 @@ Button.-primary { background: $accent 20%; }
 #diagnosis { width: 1fr; padding: 0 1; }
 
 /* léčba */
-#fix-header { height: 3; padding: 0 1; }
+#fix-header { height: auto; max-height: 6; padding: 0 1; }
 #fix-body { height: 1fr; }
 #rx-panel { width: 38; }
 #rx-panel SelectionList { height: 1fr; border: none; background: $background; }

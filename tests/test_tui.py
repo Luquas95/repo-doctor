@@ -638,9 +638,17 @@ async def test_settings(tmp_path: Path) -> None:
         checks = screen.query_one("#checks")
         checks.deselect("stashes")  # type: ignore[attr-defined]
         await pilot.pause()
+        await pilot.press("d")  # fokus není na allowlistu → nic se nesmaže
+        await pilot.pause()
+        assert len(app.config.allowlist) == 1
         table = screen.query_one("#allowlist")
         table.focus()
         await pilot.press("d")
+        await pilot.pause()
+        assert isinstance(app.screen, ConfirmDialog)
+        await pilot.press("enter")  # Zrušit
+        assert len(app.config.allowlist) == 1
+        await pilot.press("d", "tab", "enter")
         await pilot.pause()
     cfg = ConfigStore(tmp_path / "config.toml").load()
     assert cfg.limits.large_file_mb == 2.5 and cfg.ui.editor == "nvim" and cfg.ui.theme == "light"
@@ -738,3 +746,57 @@ async def test_responsive(tmp_path: Path, size: tuple[int, int]) -> None:
             await pilot.pause()
             await pilot.press("escape")
             await pilot.press("1")
+
+
+async def test_wizard_guards(tmp_path: Path) -> None:
+    root = tmp_path / "zz-repos"
+    fx.RepoBuilder.create(root / "r")
+    app = make_app(tmp_path, config=None)
+    async with app.run_test(size=(100, 31)) as pilot:
+        await pilot.pause()
+        app.screen.query_one("#folders").focus()
+        await pilot.press("4")  # přepínání obrazovek je v průvodci blokované
+        assert isinstance(app.screen, WizardScreen)
+        path = app.screen.query_one("#path")
+        path.focus()
+        for ch in str(tmp_path / "zz-rep"):
+            await pilot.press(ch)
+        await pilot.pause(0.2)
+        await pilot.press("tab")  # přijme návrh cesty
+        assert path.value.endswith("/zz-repos/")  # type: ignore[attr-defined]
+        await pilot.press("enter")
+        await pilot.pause(0.3)
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        await pilot.press("escape")
+        assert isinstance(app.screen, ConfirmDialog)
+        await pilot.press("enter")  # Zrušit
+        assert isinstance(app.screen, WizardScreen)
+    assert not (tmp_path / "config.toml").exists()
+
+
+async def test_search_resets_hidden_selection(tmp_path: Path) -> None:
+    app = make_app(tmp_path)
+    async with app.run_test(size=(100, 31)) as pilot:
+        await pilot.pause()
+        await pilot.press("slash", "z", "z", "z", "q")
+        await pilot.pause()
+        assert app.selected_path is None
+
+
+async def test_export_asks_before_overwrite(tmp_path: Path) -> None:
+    target = tmp_path / "r.md"
+    target.write_text("puvodni")
+    app = make_app(tmp_path)
+    async with app.run_test(size=(100, 31)) as pilot:
+        await pilot.pause()
+        await pilot.press("8")
+        app.screen.query_one("#path").value = str(target)  # type: ignore[attr-defined]
+        await pilot.press("e")
+        await pilot.pause()
+        assert isinstance(app.screen, ConfirmDialog)
+        await pilot.press("enter")
+        assert target.read_text() == "puvodni"
+        await pilot.press("e", "tab", "enter")
+        await pilot.pause()
+    assert target.read_text().startswith("# repo-doctor")

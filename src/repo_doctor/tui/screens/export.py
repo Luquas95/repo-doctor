@@ -15,6 +15,7 @@ from repo_doctor.paths import expand_path
 from repo_doctor.reports import FORMATS, ReportFormat, render
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import BaseScreen
+from repo_doctor.tui.screens.dialogs import ConfirmDialog
 from repo_doctor.tui.widgets.keybar import KeyBar
 
 if TYPE_CHECKING:
@@ -77,6 +78,26 @@ class ExportScreen(BaseScreen):
         self.action_export()
 
     def action_export(self) -> None:
+        raw = self.query_one("#path", Input).value.strip()
+        target = expand_path(raw) if raw else None
+        if target is not None and target.is_file():
+
+            def done(ok: bool | None) -> None:
+                if ok:
+                    self._export()
+
+            self.app.push_screen(
+                ConfirmDialog(
+                    "Přepsat soubor",
+                    f"\nSoubor {target} už existuje. Přepsat?\n",
+                    confirm_label="Přepsat",
+                ),
+                done,
+            )
+            return
+        self._export()
+
+    def _export(self) -> None:
         p = self.rd.palette
         raw = self.query_one("#path", Input).value.strip()
         out = self.query_one("#export-result", Static)

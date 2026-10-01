@@ -14,7 +14,7 @@ from textual.worker import Worker
 
 from repo_doctor import history, paths
 from repo_doctor.config import Config, ConfigError, ConfigStore, RootConfig
-from repo_doctor.keymap import BY_ID, KeymapError, build_keymap
+from repo_doctor.keymap import BY_ID, KeymapError, build_keymap, key_label
 from repo_doctor.masking import install_log_redaction
 from repo_doctor.models import RepoResult, ScanResult
 from repo_doctor.scanner import ScanEvent, Scanner, ScanOptions
@@ -97,6 +97,9 @@ class RepoDoctorApp(App[int]):
         self._dashboard: DashboardScreen | None = None
 
     # ------------------------------------------------------------------ vlastnosti
+    def key(self, action_id: str) -> str:
+        return key_label(action_id, self.keymap_ids)
+
     @property
     def palette(self) -> Palette:
         return palette_for(self.theme)
@@ -180,7 +183,7 @@ class RepoDoctorApp(App[int]):
 
     def start_scan(self, repo_path: str | None = None) -> None:
         if self.scanning:
-            self.notify("Sken už běží (x ho zruší).", severity="warning")
+            self.notify(f"Sken už běží ({self.key('cancel_scan')} ho zruší).", severity="warning")
             return
         roots = self.roots
         if not roots:
@@ -287,7 +290,7 @@ class RepoDoctorApp(App[int]):
         self.offline = not self.offline
         self.result.offline = self.offline
         state = "zapnutý – síťové kontroly budou přeskočeny" if self.offline else "vypnutý"
-        self.notify(f"Offline režim {state}. R spustí nový sken.")
+        self.notify(f"Offline režim {state}. {self.key('scan_all')} spustí nový sken.")
         self._refresh_views()
 
     def action_toggle_theme(self) -> None:
@@ -298,11 +301,26 @@ class RepoDoctorApp(App[int]):
                 redraw()
 
     def action_search(self) -> None:
+        if self._in_wizard():
+            return
         self._pop_to_dashboard()
         self.dashboard.open_search()
 
+    def _in_wizard(self) -> bool:
+        from repo_doctor.tui.screens.wizard import WizardScreen
+
+        if isinstance(self.screen, WizardScreen):
+            self.notify(
+                "Nejdřív dokonči průvodce (ctrl+s) nebo ho přeskoč (esc).", severity="warning"
+            )
+            return True
+        return False
+
     def action_go_back(self) -> None:
         from repo_doctor.tui.screens.dashboard import DashboardScreen
+
+        if self._in_wizard():
+            return
 
         if isinstance(self.screen, DashboardScreen):
             self.exit(0)
@@ -316,6 +334,8 @@ class RepoDoctorApp(App[int]):
             self.pop_screen()
 
     def action_switch_screen_n(self, n: int) -> None:
+        if self._in_wizard():
+            return
         from repo_doctor.tui.screens import (
             detail,
             export,

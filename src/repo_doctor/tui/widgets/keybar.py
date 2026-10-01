@@ -43,7 +43,7 @@ class KeyBar(Static):
         for item in self.items:
             action_id, desc = (item, None) if isinstance(item, str) else item
             if action_id not in BY_ID:
-                parts.append((action_id, desc or "", action_id != "esc"))
+                parts.append((action_id, desc or "", True))
                 continue
             action = BY_ID[action_id]
             key = app.keymap_ids.get(action_id, action.key)

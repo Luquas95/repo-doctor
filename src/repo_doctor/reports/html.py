@@ -28,7 +28,8 @@ select,button,input{font:inherit;color:var(--text);background:var(--panel);borde
 border-radius:6px;padding:4px 8px}
 table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--border);
 vertical-align:top}th{color:var(--accent);font-weight:600}
-.repo summary{cursor:pointer;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.repo summary{cursor:pointer;list-style:none;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.repo summary::before{content:'▸';color:var(--muted)}.repo[open] summary::before{content:'▾'}
 .score{font-weight:700}.s-bad{color:var(--high)}.s-warn{color:var(--med)}.s-ok{color:var(--ok)}
 code{background:var(--sel);padding:0 4px;border-radius:4px;overflow-wrap:anywhere}
 .stripe{border-left:4px solid var(--border)}.stripe.s-bad{border-color:var(--high)}
@@ -51,7 +52,9 @@ JS = """
       });
       const repoOk=!repo||r.dataset.repo===repo;
       const empty=r.querySelectorAll('tr.f').length===0;
-      r.classList.toggle('hidden',!repoOk||(!empty&&visible===0&&(cat||q||sev.length<3)));
+      const filtering=cat||sev.length<3;
+      const nameHit=q&&r.dataset.repo.toLowerCase().includes(q);
+      r.classList.toggle('hidden',!repoOk||(visible===0&&!nameHit&&(filtering||q)));
     });
   }
   $$('input[name=sev]').forEach(e=>e.addEventListener('change',apply));

@@ -17,7 +17,13 @@ from repo_doctor.config import ForgeConfig, RootConfig, format_validation_error
 from repo_doctor.discovery import suggest_depth
 from repo_doctor.forges.base import ForgeRepo
 from repo_doctor.paths import expand_path
-from repo_doctor.tui.widgets.forms import ExistingDir, IntRange, PathSuggester, split_list
+from repo_doctor.tui.widgets.forms import (
+    ExistingDir,
+    IntRange,
+    PathInput,
+    PathSuggester,
+    split_list,
+)
 
 
 class RootDialog(ModalScreen[RootConfig | None]):
@@ -31,10 +37,10 @@ class RootDialog(ModalScreen[RootConfig | None]):
 
     def compose(self) -> ComposeResult:
         r = self.root
-        with Vertical(classes="dialog wide") as box:
+        with VerticalScroll(classes="dialog wide") as box:
             box.border_title = " Upravit složku " if r else " Přidat složku "
             yield Label("Cesta (tab doplní návrh)")
-            yield Input(
+            yield PathInput(
                 compact=True,
                 value=r.path if r else "",
                 placeholder="~/projekty",
@@ -96,7 +102,8 @@ class RootDialog(ModalScreen[RootConfig | None]):
         for inp in (path_in, depth_in):
             res = inp.validate(inp.value)
             if res and not res.is_valid:
-                error.update(f"{inp.id}: {'; '.join(res.failure_descriptions)}")
+                label = "Cesta" if inp.id == "path" else "Hloubka"
+                error.update(f"{label}: {'; '.join(res.failure_descriptions)}")
                 inp.focus()
                 return None
         try:

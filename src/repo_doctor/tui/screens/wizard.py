@@ -18,8 +18,9 @@ from repo_doctor.discovery import suggest_depth
 from repo_doctor.forges.tokens import TokenError, store_in_keyring
 from repo_doctor.paths import expand_path
 from repo_doctor.tui.screens.base import NavMixin
+from repo_doctor.tui.screens.dialogs import ConfirmDialog
 from repo_doctor.tui.screens.forms import ForgeDialog, ForgeFormResult
-from repo_doctor.tui.widgets.forms import ExistingDir, IntRange, PathSuggester
+from repo_doctor.tui.widgets.forms import ExistingDir, IntRange, PathInput, PathSuggester
 from repo_doctor.tui.widgets.keybar import KeyBar
 
 if TYPE_CHECKING:
@@ -56,7 +57,7 @@ class WizardScreen(NavMixin, Screen[None]):
             )
             yield Static(intro)
             yield Label("1 · Složky s repozitáři (tab doplní cestu, enter přidá)")
-            yield Input(
+            yield PathInput(
                 compact=True,
                 placeholder="~/projekty",
                 suggester=PathSuggester(),
@@ -186,6 +187,27 @@ class WizardScreen(NavMixin, Screen[None]):
         self.rd.start_scan()
 
     def action_skip(self) -> None:
+        pending = len(self.folders) + len(self.forges)
+        if pending:
+
+            def done(ok: bool | None) -> None:
+                if ok:
+                    self._skip()
+
+            self.app.push_screen(
+                ConfirmDialog(
+                    "Přeskočit průvodce",
+                    f"\nZahodit {pending} přidaných položek (složky, hostingy)?\n"
+                    "Uložit je můžeš klávesou ctrl+s.\n",
+                    confirm_label="Zahodit",
+                    danger=True,
+                ),
+                done,
+            )
+            return
+        self._skip()
+
+    def _skip(self) -> None:
         try:
             config = self.rd.store.save()
         except ConfigError as exc:  # pragma: no cover

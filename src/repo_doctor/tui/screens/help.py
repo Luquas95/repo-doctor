@@ -44,7 +44,9 @@ class HelpScreen(NavMixin, ModalScreen[Any]):
             yield Static(table)
             yield Static(
                 Text(
-                    '\nZkratky jdou přemapovat v config.toml, sekce [keys] (akce = "klávesa").\n'
+                    "\nesc = zpět / zavřít dialog · enter = otevřít, potvrdit, sbalit pásmo · "
+                    "ctrl+s = uložit formulář · tab = další pole (v poli cesty přijme návrh)\n"
+                    'Zkratky jdou přemapovat v config.toml, sekce [keys] (akce = "klávesa").\n'
                     "Esc nebo ? zavře nápovědu.",
                     style=Style(color=p.muted),
                 )
