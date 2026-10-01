@@ -215,6 +215,20 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | Klávesa | Akce |
 |---|---|
 | `e` | exportovat |
+
+**Průvodce prvním spuštěním**
+
+| Klávesa | Akce |
+|---|---|
+| `ctrl+s` | uložit a skenovat |
+| `ctrl+n` | přidat hosting |
+
+**Formulářové dialogy**
+
+| Klávesa | Akce |
+|---|---|
+| `ctrl+s` | uložit / potvrdit formulář |
+
 ## Kontroly
 
 | ID | Kategorie | Severity | Automatická oprava | Síť / hosting |

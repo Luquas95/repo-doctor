@@ -14,8 +14,8 @@ from textual.app import ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.events import Resize
-from textual.widgets import SelectionList, Static
-from textual.widgets.selection_list import Selection
+from textual.widgets import OptionList, Static
+from textual.widgets.option_list import Option
 
 from repo_doctor.checks.base import RepoContext
 from repo_doctor.config import ConfigError, effective_for_repo, load_repo_overrides
@@ -73,6 +73,7 @@ class FixScreen(BaseScreen):
         self.dirty = 0
         self.ready = False
         self.current: Patch | None = None
+        self.selected: set[str] | None = None
 
     @property
     def rd(self) -> RepoDoctorApp:
@@ -86,7 +87,7 @@ class FixScreen(BaseScreen):
         yield Static(id="fix-header")
         with Horizontal(id="fix-body"):
             with Vertical(id="rx-panel"):
-                yield SelectionList[str](id="rx")
+                yield OptionList(id="rx")
                 yield Static(id="rx-summary")
             with VerticalScroll(id="diff-panel"):
                 yield Static(id="diff")
@@ -171,35 +172,47 @@ class FixScreen(BaseScreen):
                 )
             )
         self._render_list()
-        self.query_one(SelectionList).focus()
+        self.query_one("#rx", OptionList).focus()
 
     def _render_list(self) -> None:
+        """Předpis: zaškrtávací položky o dvou řádcích (ID kontroly + co se změní)."""
         p = self.rd.palette
-        sl = self.query_one(SelectionList)
-        selected = set(sl.selected) if sl.option_count else None
-        sl.clear_options()
-        options = []
+        lst = self.query_one("#rx", OptionList)
+        if self.selected is None:
+            # na repu s necommitnutými změnami nic nepředvybíráme – oprava se stejně nespustí
+            self.selected = (
+                set()
+                if self.dirty
+                else {pt.check_id for pt in self.patches if self.focus_check in (None, pt.check_id)}
+            )
+        highlighted = lst.highlighted
+        lst.clear_options()
+        width = max(20, lst.size.width - 6) if lst.size.width else 60
         for patch in self.patches:
-            prompt = Text(patch.check_id, style=Style(color=p.text, bold=True))
-            prompt.append("\n    " + patch.summary[:60], style=Style(color=p.muted))
-            if selected is not None:
-                on_ = patch.check_id in selected
-            else:
-                on_ = self.focus_check is None or patch.check_id == self.focus_check
-            options.append(Selection(prompt, patch.check_id, on_))
-        sl.add_options(options)
-        if self.focus_check:
-            ids = [pt.check_id for pt in self.patches]
-            if self.focus_check in ids:
-                sl.highlighted = ids.index(self.focus_check)
-        if self.patches and sl.highlighted is None:
-            sl.highlighted = 0
+            on_ = patch.check_id in self.selected
+            box = Text(
+                "[x] " if on_ else "[ ] ", style=Style(color=p.ok if on_ else p.muted, bold=on_)
+            )
+            box.append(patch.check_id, style=Style(color=p.text, bold=True))
+            box.append("\n    " + patch.summary[:width], style=Style(color=p.muted))
+            lst.add_option(Option(box, id=patch.check_id))
+        if highlighted is not None and highlighted < len(self.patches):
+            lst.highlighted = highlighted
+        elif self.focus_check and self.focus_check in [pt.check_id for pt in self.patches]:
+            lst.highlighted = [pt.check_id for pt in self.patches].index(self.focus_check)
+        elif self.patches:
+            lst.highlighted = 0
         self._summary()
         self._render_diff()
+        bar = self.query_one(KeyBar)
+        keys: list[str | tuple[str, str]] = ["toggle_fix", "select_all", ("j/k", "pohyb")]
+        if not self.dirty and self.patches:
+            keys.append("confirm_fix")
+        bar.set_items([*keys, ("esc", "zpět"), "help"])
 
     def _summary(self) -> None:
         p = self.rd.palette
-        n = len(self.query_one(SelectionList).selected)
+        n = len(self.selected or ())
         t = Text(f"vybráno {n} · {n} {commits_word(n)}\n", style=Style(color=p.text))
         t.append(f"větev {self.branch}", style=Style(color=p.accent))
         self.query_one("#rx-summary", Static).update(t)
@@ -222,27 +235,30 @@ class FixScreen(BaseScreen):
                 text.append(f"! {note}\n", style=Style(color=self.rd.palette.med))
         self.query_one("#diff", Static).update(text)
 
-    @on(SelectionList.SelectionHighlighted)
-    def _highlighted(self, event: SelectionList.SelectionHighlighted[str]) -> None:
-        check_id = event.selection.value
+    @on(OptionList.OptionHighlighted, "#rx")
+    def _highlighted(self, event: OptionList.OptionHighlighted) -> None:
+        check_id = event.option.id
         self.current = next((pt for pt in self.patches if pt.check_id == check_id), None)
         self._render_diff()
 
-    @on(SelectionList.SelectedChanged)
-    def _changed(self) -> None:
-        self._summary()
+    @on(OptionList.OptionSelected, "#rx")
+    def _selected_option(self, event: OptionList.OptionSelected) -> None:
+        self.action_toggle_fix()
 
     def action_toggle_fix(self) -> None:
-        sl = self.query_one(SelectionList)
-        if sl.highlighted is not None:
-            sl.toggle(sl.get_option_at_index(sl.highlighted).value)
+        lst = self.query_one("#rx", OptionList)
+        if lst.highlighted is None or self.selected is None or not self.patches:
+            return
+        check_id = self.patches[lst.highlighted].check_id
+        self.selected ^= {check_id}
+        self._render_list()
 
     def action_select_all(self) -> None:
-        sl = self.query_one(SelectionList)
-        if len(sl.selected) == sl.option_count:
-            sl.deselect_all()
-        else:
-            sl.select_all()
+        if self.selected is None:
+            return
+        ids = {pt.check_id for pt in self.patches}
+        self.selected = set() if self.selected >= ids else ids
+        self._render_list()
 
     def action_confirm_fix(self) -> None:
         if not self.ready:
@@ -250,9 +266,7 @@ class FixScreen(BaseScreen):
         if self.dirty:
             self.notify("Repo má necommitnuté změny – oprava se nespustí.", severity="error")
             return
-        chosen = [
-            pt for pt in self.patches if pt.check_id in set(self.query_one(SelectionList).selected)
-        ]
+        chosen = [pt for pt in self.patches if pt.check_id in (self.selected or set())]
         if not chosen:
             self.notify(
                 f"Nic není vybráno ({self.rd.key('toggle_fix')} vybere, {self.rd.key('select_all')} vše).",

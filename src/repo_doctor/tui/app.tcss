@@ -82,7 +82,8 @@ Button.-primary { background: $accent 20%; }
 #fix-header { height: auto; max-height: 6; padding: 0 1; }
 #fix-body { height: 1fr; }
 #rx-panel { width: 38; }
-#rx-panel SelectionList { height: 1fr; border: none; background: $background; }
+#rx-panel OptionList { height: 1fr; border: none; background: $background; }
+#rx-panel OptionList:focus { border: none; }
 #rx-summary { height: 3; padding: 0 1; color: $rd-muted; }
 #diff-panel { width: 1fr; }
 #diff { padding: 0 1; }

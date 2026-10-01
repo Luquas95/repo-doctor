@@ -21,6 +21,8 @@ CONTEXTS: dict[str, str] = {
     "remote": "Vzdálená repa",
     "settings": "Nastavení",
     "export": "Export",
+    "wizard": "Průvodce prvním spuštěním",
+    "dialog": "Formulářové dialogy",
 }
 
 
@@ -121,6 +123,11 @@ ACTIONS: tuple[KeyAction, ...] = (
     _a("settings_allow_remove", "d", "settings", "odebrat z allowlistu", show=False),
     # export
     _a("export", "e", "export", "exportovat"),
+    # průvodce prvním spuštěním
+    _a("wizard_finish", "ctrl+s", "wizard", "uložit a skenovat", "finish"),
+    _a("wizard_add_forge", "ctrl+n", "wizard", "přidat hosting", "add_forge"),
+    # formulářové dialogy (složka, hosting, klon)
+    _a("dialog_save", "ctrl+s", "dialog", "uložit / potvrdit formulář", "save"),
 )
 
 BY_ID: dict[str, KeyAction] = {a.id: a for a in ACTIONS}
