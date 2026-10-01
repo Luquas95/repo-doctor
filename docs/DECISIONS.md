@@ -26,9 +26,14 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   Tokeny hostingů jsou v objektu `Token` (repr maskovaný, nepicklovatelný) a jsou
   registrované v globálním redakčním registru, přes který jdou logy, chybové hlášky
   gitu a výsledné reporty (obrana do hloubky).
+- **Otisk tajemství** je `scrypt(secret, salt=„repo-doctor/secret-fingerprint/v2“, n=2¹⁴)`,
+  zkrácený na 16 hex znaků. Sůl je pevná (ne náhodná), protože otisk musí být stejný na všech
+  strojích – allowlist v `.repo-doctor.toml` se commituje a používá v CI. Pomalá funkce brání
+  slovníkovému útoku na sdílený report; po změně verze je potřeba allowlist přegenerovat.
 - **`token_cmd`** se spouští bez shellu (`shlex.split`), s timeoutem 15 s, stdin
   `/dev/null`; bere se první neprázdný řádek (jako `pass show`). Výstup se nikdy
-  nepropisuje do chyb – ani při nenulovém exit kódu.
+  nepropisuje do chyb – ani při nenulovém exit kódu. Běží ve vlastní skupině procesů, po
+  timeoutu se ukončí celá skupina (i potomci, kteří by drželi rouru).
 - **Skóre:** 100 − 25 za HIGH, 9 za MED, 3 za LOW, s limitem na kontrolu (max 50 / 18 / 6),
   aby deset nálezů jedné kontroly nesrazilo repo na nulu. Kalibrováno podle wireframu.
 - **Pásma triáže mají prioritu** KRITICKÉ > SLEDOVAT > BEZ TEPU > ZDRAVÉ: repo s HIGH

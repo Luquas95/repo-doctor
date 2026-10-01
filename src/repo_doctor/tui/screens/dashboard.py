@@ -43,6 +43,7 @@ if TYPE_CHECKING:
     from repo_doctor.tui.app import RepoDoctorApp
 
 SIDEBAR_W = 22
+MIN_NAME_W = 13  # nejdelší názvy ve wireframu („thesis-2019“, „infra-notes“) se vejdou celé
 DASH_KEYS: list[str | tuple[str, str]] = [
     "scan_all",
     "search",
@@ -177,7 +178,14 @@ class DashboardScreen(NavMixin, Screen[Any]):
 
     def _columns(self) -> Columns:
         panel_w = self.width - (SIDEBAR_W if self._sidebar_visible() else 0) - 4
-        return Columns(width=panel_w, show_pulse=self.width >= 90, show_host=self.width >= 80)
+        cols = Columns(width=panel_w, show_pulse=self.width >= 90, show_host=self.width >= 80)
+        # Rozhoduje i skutečné místo v panelu: když je zapnutý levý panel (b) na užším terminálu,
+        # obětujeme nejdřív TEP, pak HOSTING, aby se nezkracovaly názvy repozitářů.
+        if cols.show_pulse and cols.name_w < MIN_NAME_W:
+            cols = Columns(width=panel_w, show_pulse=False, show_host=cols.show_host)
+        if cols.show_host and cols.name_w < MIN_NAME_W:
+            cols = Columns(width=panel_w, show_pulse=False, show_host=False)
+        return cols
 
     def _render_triage(self) -> None:
         app = self.rd

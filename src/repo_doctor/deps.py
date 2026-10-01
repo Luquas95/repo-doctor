@@ -86,6 +86,22 @@ def _norm_py(name: str) -> str:
     return str(canonicalize_name(name))
 
 
+POETRY_LOCAL_SOURCES = {"directory", "file", "git", "url"}
+
+
+def _npm_entry(name: str, version: str) -> tuple[str, str] | None:
+    """Normalizuje npm verzi; lokální a neregistrové zdroje (`file:`, `link:`, git…) vrací None."""
+    if version.startswith("npm:"):  # alias: "npm:skutecny-nazev@1.2.3"
+        target = version[4:]
+        at = target.rfind("@")
+        if at <= 0:
+            return None
+        name, version = target[:at], target[at + 1 :]
+    if not version[:1].isdigit():
+        return None  # file:, link:, git+…, github:…, URL
+    return name, version
+
+
 def parse_toml_packages(text: str, source: str, ecosystem: OsvEcosystem) -> list[Dependency]:
     """uv.lock, poetry.lock, Cargo.lock – pole [[package]] s name a version."""
     try:
@@ -101,7 +117,9 @@ def parse_toml_packages(text: str, source: str, ecosystem: OsvEcosystem) -> list
         if ecosystem == "crates.io" and src is None:
             continue  # lokální crate (workspace)
         if isinstance(src, dict) and ({"editable", "virtual", "path", "directory"} & set(src)):
-            continue  # samotný projekt
+            continue  # samotný projekt (uv.lock)
+        if isinstance(src, dict) and str(src.get("type", "")).lower() in POETRY_LOCAL_SOURCES:
+            continue  # poetry: lokální/git/url balíček – v registru nemusí existovat
         deps.append(
             Dependency(
                 ecosystem, _norm_py(name) if ecosystem == "PyPI" else name, str(version), source
@@ -171,16 +189,20 @@ def parse_package_lock(text: str, source: str) -> list[Dependency]:
                 continue
             if info.get("link"):
                 continue
+            if str(info.get("resolved", "")).startswith(("file:", "link:")):
+                continue
             name = info.get("name") or key.rsplit("node_modules/", 1)[1]
-            version = info.get("version")
-            if version:
-                deps[(name, version)] = Dependency("npm", name, version, source)
+            entry = _npm_entry(name, str(info.get("version") or ""))
+            if entry:
+                deps[entry] = Dependency("npm", entry[0], entry[1], source)
     else:
 
         def walk(tree: dict[str, Any]) -> None:
             for name, info in tree.items():
                 if isinstance(info, dict) and info.get("version"):
-                    deps[(name, info["version"])] = Dependency("npm", name, info["version"], source)
+                    entry = _npm_entry(name, str(info["version"]))
+                    if entry:
+                        deps[entry] = Dependency("npm", entry[0], entry[1], source)
                     walk(info.get("dependencies", {}) or {})
 
         walk(data.get("dependencies", {}) or {})

@@ -1,21 +1,23 @@
 # Nastavení repo-doctoru pro tento repozitář (dogfooding).
+# Otisky v allowlistu jsou scrypt otisky tajemství (v2) – po změně algoritmu je přegeneruj:
+#   repo-doctor scan . --offline --report json --only secrets-history
 
 [[allowlist]]
-hash = "30333d1cd4477281"
+hash = "e4e49f64289cd354"
 reason = "falešný testovací token v historii (tests/test_forges.py), ve stromu už se skládá za běhu"
 check = "secrets-history"
 
 [[allowlist]]
-hash = "d296557b83d1167e"
+hash = "7dbddaef032ba011"
 reason = "falešný výstup token_cmd v historii testů (tests/test_forges.py)"
 check = "secrets-history"
 
 [[allowlist]]
-hash = "35d90f73e0c72bc6"
+hash = "4633e98b8b278cc3"
 reason = "falešné heslo v historii regresního testu placeholder filtru"
 check = "secrets-history"
 
 [[allowlist]]
-hash = "c0604b28acb15244"
+hash = "40d7cc7d3abf5253"
 reason = "falešný GitLab token v historii testu přesměrování (tests/test_httpclient.py)"
 check = "secrets-history"

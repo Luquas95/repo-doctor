@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from datetime import datetime
 from typing import Any
 
@@ -33,6 +34,10 @@ class JFinding(BaseModel):
     snippet: str | None = Field(default=None, description="Vždy maskovaná ukázka (AKIA…(20 znaků))")
     kind: str | None = None
     fixable: bool
+    data: dict[str, str | int | list[str]] = Field(
+        default_factory=dict,
+        description="Podrobnosti kontroly (např. chybějící položky, ID zranitelností)",
+    )
 
 
 class JState(BaseModel):
@@ -96,6 +101,7 @@ def _finding(f: Finding, repo: RepoResult) -> JFinding:
         snippet=f.snippet,
         kind=f.kind,
         fixable=f.fixable,
+        data=dict(f.data),
     )
 
 
@@ -153,7 +159,15 @@ def build(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None =
 
 
 def render(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None = None) -> str:
-    return build(result, no_pulse_days=no_pulse_days, now=now).model_dump_json(indent=2) + "\n"
+    text = build(result, no_pulse_days=no_pulse_days, now=now).model_dump_json(indent=2)
+    # tep (30 čísel) na jeden řádek – jinak by tvořil většinu souboru
+    text = _PULSE.sub(
+        lambda m: m.group(1) + "[" + ", ".join(m.group(2).split()).replace(",,", ",") + "]", text
+    )
+    return text + "\n"
+
+
+_PULSE = re.compile(r'("pulse_30d": )\[([\s\d,]*)\]')
 
 
 def json_schema() -> dict[str, Any]:

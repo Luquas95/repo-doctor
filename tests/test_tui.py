@@ -800,3 +800,55 @@ async def test_export_asks_before_overwrite(tmp_path: Path) -> None:
         await pilot.press("e", "tab", "enter")
         await pilot.pause()
     assert target.read_text().startswith("# repo-doctor")
+
+
+async def test_columns_follow_panel_width(tmp_path: Path) -> None:
+    app = make_app(tmp_path)
+    async with app.run_test(size=(84, 30)) as pilot:
+        await pilot.pause()
+        d = dash(app)
+        assert not d.query_one("#sidebar").display
+        await pilot.press("b")  # levý panel ručně zapnutý na úzkém terminálu
+        await pilot.pause()
+        cols = d._columns()
+        assert cols.name_w >= 13
+        assert not cols.show_pulse
+        assert "infra-notes" in screen_text(app)
+
+
+async def test_wizard_keys_are_remappable(tmp_path: Path) -> None:
+    root = tmp_path / "w"
+    fx.RepoBuilder.create(root / "r")
+    repos = sample_result().repos[:1]
+    cfg = tmp_path / "config.toml"
+    app = make_app(tmp_path, config=None, scanner_factory=fake_factory(repos, 0.01))
+    app.config.keys = {"wizard_finish": "f2"}
+    async with app.run_test(size=(100, 31)) as pilot:
+        await pilot.pause()
+        app.set_keymap({"wizard_finish": "f2"})
+        app.keymap_ids["wizard_finish"] = "f2"
+        app.screen.query_one("#path").value = str(root)  # type: ignore[attr-defined]
+        await pilot.press("f2")
+        await pilot.pause(0.3)
+        assert isinstance(app.screen, DashboardScreen)
+        await app.workers.wait_for_complete()
+    assert cfg.exists()
+
+
+async def test_dialogs_enter_saves(tmp_path: Path) -> None:
+    app = make_app(tmp_path, config="")
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        await pilot.press("5", "n")
+        await pilot.pause()
+        app.screen.query_one("#name").value = "gh"  # type: ignore[attr-defined]
+        app.screen.query_one("#source").value = "none"  # type: ignore[attr-defined]
+        app.screen.query_one("#user").focus()
+        await pilot.press("enter")  # Enter v poli uloží stejně jako ctrl+s
+        await pilot.pause()
+        assert [f.name for f in app.config.forges] == ["gh"]
+    from repo_doctor.keymap import grouped
+
+    g = grouped()
+    assert ("ctrl+s", "uložit a skenovat") in g["Průvodce prvním spuštěním"]
+    assert ("ctrl+s", "uložit / potvrdit formulář") in g["Formulářové dialogy"]

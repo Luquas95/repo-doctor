@@ -17,6 +17,7 @@ from repo_doctor.config import ConfigError, ForgeConfig, RootConfig
 from repo_doctor.discovery import suggest_depth
 from repo_doctor.forges.tokens import TokenError, store_in_keyring
 from repo_doctor.paths import expand_path
+from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import NavMixin
 from repo_doctor.tui.screens.dialogs import ConfirmDialog
 from repo_doctor.tui.screens.forms import ForgeDialog, ForgeFormResult
@@ -29,8 +30,7 @@ if TYPE_CHECKING:
 
 class WizardScreen(NavMixin, Screen[None]):
     BINDINGS = [
-        Binding("ctrl+s", "finish", "uložit a skenovat"),
-        Binding("ctrl+n", "add_forge", "přidat hosting"),
+        *bindings("wizard"),
         Binding("escape", "skip", "přeskočit"),
     ]
 
@@ -48,7 +48,7 @@ class WizardScreen(NavMixin, Screen[None]):
         with VerticalScroll(classes="page panel form", id="wizard") as page:
             page.border_title = " repo-doctor · první spuštění "
             intro = Text(
-                "Vítej! repo-doctor projde tvoje git repozitáře, najde bezpečnostní a hygienické problémy\n",
+                "Vítej! repo-doctor projde tvoje git repozitáře, najde bezpečnostní a hygienické problémy ",
                 style=Style(color=p.text),
             )
             intro.append(
@@ -70,19 +70,20 @@ class WizardScreen(NavMixin, Screen[None]):
             yield Input(compact=True, value="3", validators=[IntRange(0, 12)], id="depth")
             yield Label("3 · Git hosting (volitelné) – připojení jen pro čtení")
             with Horizontal(classes="row"):
-                yield Button("Přidat hosting…  (ctrl+n)", id="add-forge")
+                yield Button(
+                    f"Přidat hosting…  ({self.rd.key('wizard_add_forge')})", id="add-forge"
+                )
             yield Static("", id="forge-list", classes="hint")
             with Horizontal(classes="row"):
-                yield Button("Uložit a skenovat  (ctrl+s)", id="finish", variant="primary")
+                yield Button(
+                    f"Uložit a skenovat  ({self.rd.key('wizard_finish')})",
+                    id="finish",
+                    variant="primary",
+                )
                 yield Button("Přeskočit  (esc)", id="skip")
             yield Static("", classes="error", id="wizard-error")
         yield KeyBar(
-            [
-                ("enter", "přidat složku"),
-                ("ctrl+s", "uložit a skenovat"),
-                ("ctrl+n", "hosting"),
-                ("esc", "přeskočit"),
-            ]
+            [("enter", "přidat složku"), "wizard_finish", "wizard_add_forge", ("esc", "přeskočit")]
         )
 
     def on_mount(self) -> None:

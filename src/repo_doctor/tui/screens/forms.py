@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from pydantic import ValidationError
 from textual import on, work
@@ -17,6 +18,7 @@ from repo_doctor.config import ForgeConfig, RootConfig, format_validation_error
 from repo_doctor.discovery import suggest_depth
 from repo_doctor.forges.base import ForgeRepo
 from repo_doctor.paths import expand_path
+from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.widgets.forms import (
     ExistingDir,
     IntRange,
@@ -29,7 +31,7 @@ from repo_doctor.tui.widgets.forms import (
 class RootDialog(ModalScreen[RootConfig | None]):
     """Přidání / úprava sledované složky."""
 
-    BINDINGS = [Binding("escape", "cancel", "zrušit"), Binding("ctrl+s", "save", "uložit")]
+    BINDINGS = [Binding("escape", "cancel", "zrušit"), *bindings("dialog")]
 
     def __init__(self, root: RootConfig | None = None) -> None:
         super().__init__()
@@ -71,7 +73,7 @@ class RootDialog(ModalScreen[RootConfig | None]):
             with Horizontal(classes="buttons"):
                 yield Button("Zrušit", id="cancel")
                 yield Button("Uložit", id="ok", variant="primary")
-            yield Static("tab další pole · enter / ctrl+s uložit · esc zrušit", classes="hint")
+            yield Static(dialog_hint(self), classes="hint")
 
     def on_mount(self) -> None:
         self.query_one("#path", Input).focus()
@@ -139,6 +141,12 @@ class RootDialog(ModalScreen[RootConfig | None]):
         self.dismiss(None)
 
 
+def dialog_hint(screen: ModalScreen[Any]) -> str:
+    """Jednotná nápověda formulářových dialogů (klávesa uložení podle aktuálního mapování)."""
+    key = getattr(screen.app, "key", lambda _id: "ctrl+s")("dialog_save")
+    return f"tab další pole · enter / {key} uložit · esc zrušit"
+
+
 @dataclass
 class ForgeFormResult:
     config: ForgeConfig
@@ -162,7 +170,7 @@ FORGE_TYPES = [
 class ForgeDialog(ModalScreen[ForgeFormResult | None]):
     """Přidání / úprava hostingu. Token se nikdy nezobrazí (pole je maskované a prázdné)."""
 
-    BINDINGS = [Binding("escape", "cancel", "zrušit"), Binding("ctrl+s", "save", "uložit")]
+    BINDINGS = [Binding("escape", "cancel", "zrušit"), *bindings("dialog")]
 
     def __init__(
         self, forge: ForgeConfig | None = None, existing_names: set[str] | None = None
@@ -255,7 +263,7 @@ class ForgeDialog(ModalScreen[ForgeFormResult | None]):
                 yield Button("Zrušit", id="cancel")
                 yield Button("Uložit", id="ok", variant="primary")
             yield Static(
-                "Token se nikdy nezobrazí ani neuloží do config.toml. ctrl+s uložit · esc zrušit",
+                "Token se nikdy nezobrazí ani neuloží do config.toml.\n" + dialog_hint(self),
                 classes="hint",
             )
 
@@ -321,6 +329,7 @@ class ForgeDialog(ModalScreen[ForgeFormResult | None]):
         if result is not None:
             self.dismiss(result)
 
+    @on(Input.Submitted)
     @on(Button.Pressed, "#ok")
     def _ok(self) -> None:
         self.action_save()
@@ -342,7 +351,7 @@ class CloneRequest:
 class CloneDialog(ModalScreen[CloneRequest | None]):
     """Volba cílové složky pro klon. Výchozí tlačítko = Zrušit, existující cíl se odmítne."""
 
-    BINDINGS = [Binding("escape", "cancel", "zrušit")]
+    BINDINGS = [Binding("escape", "cancel", "zrušit"), *bindings("dialog")]
 
     def __init__(self, repo: ForgeRepo, roots: list[RootConfig], protocol: str) -> None:
         super().__init__()
@@ -376,7 +385,9 @@ class CloneDialog(ModalScreen[CloneRequest | None]):
                 yield Button("Zrušit", id="cancel")
                 yield Button("Naklonovat", id="ok", variant="primary")
             yield Static(
-                "Klonuje se jen po potvrzení; existující složku nic nepřepíše.", classes="hint"
+                "Klonuje se jen po potvrzení; existující složku nic nepřepíše.\n"
+                + dialog_hint(self),
+                classes="hint",
             )
 
     def on_mount(self) -> None:
@@ -404,8 +415,9 @@ class CloneDialog(ModalScreen[CloneRequest | None]):
             error = "Cíl už existuje – klon ho nepřepíše, zvol jiný název."
         self.query_one("#error", Static).update(error)
 
+    @on(Input.Submitted)
     @on(Button.Pressed, "#ok")
-    def _ok(self) -> None:
+    def action_save(self) -> None:
         dest = self._dest()
         if dest is None or dest.exists() or not self.url:
             self._update()
