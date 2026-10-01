@@ -12,6 +12,7 @@ Zásady:
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import tempfile
 import threading
@@ -139,10 +140,80 @@ class Git:
     def __init__(self, path: Path | str, timeout: float = DEFAULT_TIMEOUT) -> None:
         self.path = Path(path)
         self.timeout = timeout
+        self._hardening: list[tuple[str, str]] | None = None
 
     # ------------------------------------------------------------------ nízká úroveň
     def _cmd(self, args: Sequence[str]) -> list[str]:
-        return ["git", "--no-pager", *_SAFE_CONFIG, "-C", str(self.path), *args]
+        return ["git", "--no-pager", *_SAFE_CONFIG, *self.hardening(), "-C", str(self.path), *args]
+
+    def hardening_pairs(self) -> list[tuple[str, str]]:
+        """Neutralizace programů, které by spustila konfigurace *repozitáře* (ne uživatele).
+
+        Cizí `.git/config` (např. rozbalený archiv s .git) může definovat `filter.X.clean`,
+        `diff.X.textconv/command` apod. – git by je spustil i při čtení (`status`, `log -p`).
+        Proto je pro každé volání přebijeme prázdnou hodnotou. Globální konfiguraci uživatele
+        (např. git-lfs) necháváme, ta je důvěryhodná.
+        """
+        if self._hardening is None:
+            pairs: list[tuple[str, str]] = []
+            try:
+                proc = subprocess.run(
+                    [
+                        "git",
+                        "-C",
+                        str(self.path),
+                        "config",
+                        "--local",
+                        "--includes",
+                        "--name-only",
+                        "--get-regexp",
+                        r"^(filter|diff|merge)\..*\.(clean|smudge|process|textconv|command|driver)$|^core\.(sshcommand|editor|pager|askpass)$",
+                    ],
+                    capture_output=True,
+                    timeout=self.timeout,
+                    env=git_env(),
+                    check=False,
+                    stdin=subprocess.DEVNULL,
+                )
+                names = proc.stdout.decode("utf-8", "replace").split()
+            except (subprocess.TimeoutExpired, FileNotFoundError, NotADirectoryError):
+                names = []
+            safe = {
+                "textconv": "cat",
+                "command": "true",
+                "driver": "false",
+                "sshcommand": "ssh",
+                "editor": "true",
+                "pager": "cat",
+            }
+            for name in sorted(set(names)):
+                if not re.fullmatch(r"[A-Za-z0-9_.\-]+", name):
+                    continue
+                pairs.append((name, safe.get(name.rsplit(".", 1)[-1].lower(), "")))
+                if name.startswith("filter.") and name.endswith((".clean", ".smudge", ".process")):
+                    pairs.append((name.rsplit(".", 1)[0] + ".required", "false"))
+            self._hardening = pairs
+        return self._hardening
+
+    def hardening(self) -> list[str]:
+        out: list[str] = []
+        for key, value in self.hardening_pairs():
+            out += ["-c", f"{key}={value}"]
+        return out
+
+    def hardening_env(self) -> dict[str, str]:
+        """Totéž jako `hardening()`, ale přes GIT_CONFIG_* (pro externí nástroje, např. gitleaks)."""
+        pairs = [
+            *self.hardening_pairs(),
+            ("core.fsmonitor", "false"),
+            ("diff.external", ""),
+            ("core.pager", "cat"),
+        ]
+        env = {"GIT_CONFIG_COUNT": str(len(pairs))}
+        for i, (key, value) in enumerate(pairs):
+            env[f"GIT_CONFIG_KEY_{i}"] = key
+            env[f"GIT_CONFIG_VALUE_{i}"] = value
+        return env
 
     def run_bytes(
         self,

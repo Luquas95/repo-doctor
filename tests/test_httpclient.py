@@ -200,3 +200,37 @@ def test_build_verify(tmp_path: Path) -> None:
     if ca:
         ctx = build_verify(True, ca)
         assert isinstance(ctx, ssl.SSLContext)
+
+
+@respx.mock
+async def test_credentials_not_sent_to_other_origin() -> None:
+    seen: dict[str, httpx.Headers] = {}
+
+    def evil(request: httpx.Request) -> httpx.Response:
+        seen["evil"] = request.headers
+        return httpx.Response(200, json=[2])
+
+    respx.get("https://gitlab.example/api/v4/projects").respond(
+        302, headers={"Location": "https://evil.example/steal"}
+    )
+    respx.get("https://evil.example/steal").mock(side_effect=evil)
+    async with HttpClient(
+        base_url="https://gitlab.example/api/v4",
+        headers={"PRIVATE-TOKEN": "glpat-secret-value-123"},
+    ) as c:
+        assert await c.get_json("/projects") == [2]
+    assert "private-token" not in seen["evil"]
+    assert "authorization" not in seen["evil"]
+
+
+@respx.mock
+async def test_pagination_does_not_leave_origin() -> None:
+    other = respx.get("https://evil.example/page2").respond(json=[9])
+    respx.get("https://api.test/items").respond(
+        json=[1], headers={"Link": '<https://evil.example/page2>; rel="next"'}
+    )
+    async with HttpClient(
+        base_url="https://api.test", headers={"Authorization": "token x"}, ttl=0
+    ) as c:
+        assert await c.paginate("/items") == [1]
+    assert other.call_count == 0

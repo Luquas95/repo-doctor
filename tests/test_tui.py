@@ -188,6 +188,7 @@ async def test_screen_switching_and_help(tmp_path: Path) -> None:
 async def test_detail_actions(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     opened: list[str] = []
     copied: list[str] = []
+
     def fake_open(url: str) -> bool:
         opened.append(url)
         return True

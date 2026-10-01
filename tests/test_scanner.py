@@ -73,7 +73,7 @@ async def test_state_and_remote(tmp_path: Path) -> None:
     assert res.state.unpushed == 2
     assert res.state.uncommitted == 1
     assert res.state.branch == "main"
-    assert res.remotes[0].url == "https://user:…@github.com/nekdo/proj.git"
+    assert res.remotes[0].url == "https://…@github.com/nekdo/proj.git"
     assert "hunter2hunter2" not in res.model_dump_json()
     assert res.web_url == "https://github.com/nekdo/proj"
     assert res.forge == "github"

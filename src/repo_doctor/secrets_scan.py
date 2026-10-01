@@ -18,7 +18,7 @@ from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
 
-from repo_doctor.gitwrap import git_env
+from repo_doctor.gitwrap import Git, git_env
 from repo_doctor.masking import mask
 
 
@@ -287,13 +287,13 @@ def gitleaks_available() -> bool:
     return shutil.which("gitleaks") is not None
 
 
-def _exec(cmd: list[str], timeout: float) -> None:
+def _exec(cmd: list[str], timeout: float, env: dict[str, str] | None = None) -> None:
     subprocess.run(
         cmd,
         capture_output=True,
         timeout=timeout,
         check=False,
-        env=git_env(),
+        env=git_env(env),
         stdin=subprocess.DEVNULL,
     )
 
@@ -319,7 +319,8 @@ def run_gitleaks(repo: Path, *, history: bool, timeout: float) -> list[SecretMat
         ]
         if not history:
             cmd.append("--no-git")
-        _exec(cmd, timeout)
+        # gitleaks volá `git log -p` sám – přebijeme filtry/textconv z konfigurace repa
+        _exec(cmd, timeout, Git(repo).hardening_env())
         try:
             data = json.loads(report.read_text("utf-8") or "[]")
         except (OSError, json.JSONDecodeError):

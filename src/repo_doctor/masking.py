@@ -70,13 +70,18 @@ def redact(text: str) -> str:
     return REGISTRY.redact(text)
 
 
+_URL_USERINFO = re.compile(r"(?P<scheme>[a-z][a-z0-9+.-]*://)[^/@\s]+@", re.IGNORECASE)
+_URL_TOKEN_PARAM = re.compile(
+    r"(?P<key>[?&](?:private_token|access_token|token|oauth_token|api_key|apikey|password)=)[^&#\s]+",
+    re.IGNORECASE,
+)
+
+
 def redact_url_credentials(url: str) -> str:
-    """`https://user:token@host/x` → `https://user:…@host/x` (i bez registrace)."""
-    return re.sub(
-        r"(?P<scheme>[a-z][a-z0-9+.-]*://)(?P<user>[^/@:\s]*):[^/@\s]*@",
-        r"\g<scheme>\g<user>:…@",
-        url,
-    )
+    """Odstraní celou userinfo část (`https://user:token@host`, `https://<token>@host`)
+    i tokeny v query (`?private_token=…`). Funguje i bez registrace hodnoty."""
+    url = _URL_USERINFO.sub(r"\g<scheme>…@", url)
+    return _URL_TOKEN_PARAM.sub(r"\g<key>…", url)
 
 
 class Token:

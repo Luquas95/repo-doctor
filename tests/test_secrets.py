@@ -144,7 +144,7 @@ def _fake_gitleaks(
     monkeypatch.setattr(secrets_scan, "gitleaks_available", lambda: True)
     monkeypatch.setattr("repo_doctor.checks.secrets.gitleaks_available", lambda: True)
 
-    def fake_run(cmd: list[str], limit: float) -> None:
+    def fake_run(cmd: list[str], limit: float, env: dict[str, str] | None = None) -> None:
         calls.append(cmd)
         if timeout:
             raise subprocess.TimeoutExpired(cmd, 1)
@@ -191,7 +191,7 @@ def test_gitleaks_timeout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
 
 
 def test_gitleaks_bad_report(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(secrets_scan, "_exec", lambda cmd, limit: None)
+    monkeypatch.setattr(secrets_scan, "_exec", lambda cmd, limit, env=None: None)
     assert secrets_scan.run_gitleaks(tmp_path, history=False, timeout=1) == []
 
 

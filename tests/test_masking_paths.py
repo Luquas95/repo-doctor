@@ -50,7 +50,14 @@ def test_redact_registered() -> None:
 
 
 def test_redact_url_credentials() -> None:
-    assert redact_url_credentials("https://user:pa55@host/x") == "https://user:…@host/x"
+    assert redact_url_credentials("https://user:pa55@host/x") == "https://…@host/x"
+    token = "ghp_" + "a" * 36
+    assert token not in redact_url_credentials(f"https://{token}@github.com/a/b")
+    assert (
+        redact_url_credentials("https://h/x?private_token=abc123&y=1")
+        == "https://h/x?private_token=…&y=1"
+    )
+    assert redact_url_credentials("git@github.com:a/b") == "git@github.com:a/b"
     assert redact_url_credentials("https://host/x") == "https://host/x"
 
 

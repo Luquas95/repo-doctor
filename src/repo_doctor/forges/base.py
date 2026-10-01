@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import abc
+import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Literal
@@ -79,6 +80,16 @@ class ForgeSnapshot:
     errors: list[str] = field(default_factory=list)
 
 
+_OWNER_PATH = re.compile(r"[A-Za-z0-9_.-]+(/[A-Za-z0-9_.-]+)+")
+
+
+def valid_owner_path(owner_path: str) -> bool:
+    """`owner/repo` (GitLab i s podskupinami). Brání posílání dotazů na libovolné cesty API."""
+    return bool(_OWNER_PATH.fullmatch(owner_path)) and not any(
+        part in {".", ".."} for part in owner_path.split("/")
+    )
+
+
 def parse_time(value: object) -> datetime | None:
     if not isinstance(value, str) or not value:
         return None
@@ -133,6 +144,9 @@ class Forge(abc.ABC):
     async def snapshot(self, owner_path: str) -> ForgeSnapshot:
         """Načte vše potřebné pro kontroly hostingu. Chyby jednotlivých částí jen zaznamená."""
         snap = ForgeSnapshot(forge=self.name, kind=self.kind, owner_path=owner_path)
+        if not valid_owner_path(owner_path):
+            snap.missing_reason = "neplatná cesta repa v URL remote"
+            return snap
         try:
             snap.repo = await self.get_repo(owner_path)
         except NotFoundError:

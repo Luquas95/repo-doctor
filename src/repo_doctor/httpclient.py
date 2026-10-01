@@ -9,6 +9,7 @@ import asyncio
 import hashlib
 import json
 import logging
+import os
 import ssl
 import time
 from collections.abc import Awaitable, Callable, Mapping
@@ -21,6 +22,7 @@ import httpx
 
 from repo_doctor import __version__
 from repo_doctor.masking import redact
+from repo_doctor.paths import ensure_private_dir
 
 log = logging.getLogger(__name__)
 
@@ -99,14 +101,22 @@ class ResponseCache:
         if self.directory is None:
             return
         try:
-            self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+            ensure_private_dir(self.directory)
             file = self.directory / f"{key}.json"
             tmp = file.with_suffix(".tmp")
-            tmp.write_text(json.dumps(entry.__dict__), "utf-8")
-            tmp.chmod(0o600)
+            fd = os.open(tmp, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                fh.write(json.dumps(entry.__dict__))
             tmp.replace(file)
         except OSError as err:  # pragma: no cover - cache je jen optimalizace
             log.debug("cache nelze zapsat: %s", err)
+
+
+SENSITIVE_HEADERS = ("authorization", "private-token", "job-token", "cookie")
+
+
+def _origin(url: httpx.URL) -> tuple[str, str, int | None]:
+    return (url.scheme, url.host, url.port)
 
 
 def _parse_link_next(header: str | None) -> str | None:
@@ -152,6 +162,7 @@ class HttpClient:
         self.max_rate_wait = max_rate_wait
         self._sleep = sleep
         self._sem = asyncio.Semaphore(max_concurrency)
+        self._origin = _origin(httpx.URL(base_url)) if base_url else None
         self._client = httpx.AsyncClient(
             base_url=base_url,
             headers={"User-Agent": USER_AGENT, "Accept": "application/json", **(headers or {})},
@@ -159,7 +170,18 @@ class HttpClient:
             verify=verify,
             follow_redirects=True,
             transport=transport,
+            event_hooks={"request": [self._guard_credentials]},
         )
+
+    async def _guard_credentials(self, request: httpx.Request) -> None:
+        """Přihlašovací hlavičky smí odejít jen na origin hostingu (ne po přesměrování jinam).
+
+        httpx při přesměrování na cizí origin maže jen `Authorization`, ne např. GitLabí
+        `PRIVATE-TOKEN` – proto to hlídáme sami u každého požadavku.
+        """
+        if self._origin is not None and _origin(request.url) != self._origin:
+            for name in SENSITIVE_HEADERS:
+                request.headers.pop(name, None)
         self.last_headers: httpx.Headers = httpx.Headers()
 
     async def __aenter__(self) -> HttpClient:
@@ -316,5 +338,11 @@ class HttpClient:
             if not isinstance(page, list):
                 break
             items.extend(page)
+            if (
+                link is not None
+                and self._origin is not None
+                and _origin(httpx.URL(link)) != self._origin
+            ):
+                break  # stránkování mimo hosting nenásledujeme
             next_url, next_params = link, None
         return items

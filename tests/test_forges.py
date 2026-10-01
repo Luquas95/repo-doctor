@@ -561,3 +561,19 @@ def test_archived_active(tmp_path: Path) -> None:
         )
         == []
     )
+
+
+async def test_invalid_owner_path_not_queried() -> None:
+    from repo_doctor.forges.base import valid_owner_path
+
+    assert (
+        valid_owner_path("g/sub/p")
+        and not valid_owner_path("a/../../user?x/b")
+        and not valid_owner_path("solo")
+    )
+    forge = build_forge(
+        gh(), token=TOKEN, transport=httpx.MockTransport(lambda r: httpx.Response(500))
+    )
+    snap = await forge.snapshot("a/../user?x")
+    assert snap.repo is None and "neplatná" in (snap.missing_reason or "")
+    await forge.client.aclose()

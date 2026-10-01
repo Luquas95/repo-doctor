@@ -218,3 +218,25 @@ def test_clone_never_overwrites(tmp_path: Path) -> None:
 def test_fetch(tmp_path: Path) -> None:
     rb, _ = with_remote(tmp_path)
     Git(rb.path).fetch()
+
+
+def test_repo_config_cannot_run_programs(tmp_path: Path) -> None:
+    """Cizí .git/config s filtrem/textconv nesmí při čtení nic spustit."""
+    rb = RepoBuilder.create(tmp_path / "r")
+    marker = tmp_path / "PWNED"
+    rb.write("a.txt", "hi\n").write(".gitattributes", "* filter=x diff=x\n").commit()
+    rb.git("config", "filter.x.clean", f"sh -c 'touch {marker}; cat'")
+    rb.git("config", "filter.x.required", "true")
+    rb.git("config", "diff.x.textconv", f"sh -c 'touch {marker}; cat'")
+    import os
+    import time
+
+    time.sleep(1.1)
+    os.utime(rb.path / "a.txt")
+    g = Git(rb.path)
+    g.status()
+    list(g.stream_lines("log", "-p", "--format=%H"))
+    g.run("diff", "HEAD~0")
+    assert not marker.exists()
+    env = g.hardening_env()
+    assert "filter.x.clean" in env.values() and env["GIT_CONFIG_COUNT"].isdigit()
