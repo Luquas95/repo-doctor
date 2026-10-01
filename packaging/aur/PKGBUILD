@@ -1,0 +1,28 @@
+# Maintainer: repo-doctor contributors
+pkgname=repo-doctor
+pkgver=0.1.0
+pkgrel=1
+pkgdesc="TUI pro audit a údržbu lokálních git repozitářů (bezpečnost, hygiena, git hostingy)"
+arch=('any')
+url="https://github.com/Luquas95/repo-doctor"
+license=('MIT')
+depends=('python>=3.12' 'git' 'python-textual' 'python-typer' 'python-pydantic' 'python-httpx'
+         'python-tomlkit' 'python-keyring' 'python-packaging' 'python-rich')
+makedepends=('python-build' 'python-installer' 'python-hatchling')
+optdepends=('gitleaks: rychlejší a přesnější sken tajemství'
+            'wl-clipboard: kopírování cesty do schránky (Wayland)'
+            'xdg-utils: otevření repa na webu')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+  cd "$pkgname-$pkgver"
+  python -m build --wheel --no-isolation
+}
+
+package() {
+  cd "$pkgname-$pkgver"
+  python -m installer --destdir="$pkgdir" dist/*.whl
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+  install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}
