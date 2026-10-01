@@ -1,0 +1,11 @@
+# Nastavení repo-doctoru pro tento repozitář (dogfooding).
+
+[[allowlist]]
+hash = "30333d1cd4477281"
+reason = "falešný testovací token v historii (tests/test_forges.py), ve stromu už se skládá za běhu"
+check = "secrets-history"
+
+[[allowlist]]
+hash = "d296557b83d1167e"
+reason = "falešný výstup token_cmd v historii testů (tests/test_forges.py)"
+check = "secrets-history"
