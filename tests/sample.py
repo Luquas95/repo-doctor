@@ -274,6 +274,30 @@ def sample_result() -> ScanResult:
             archived=True,
         ),
     ]
+    extra = {
+        "cz-tools": [F("deps-outdated", "1× major: typer 0.9.0→0.15.1", M)],
+        "dotfiles": [F("gitignore-incomplete", "chybí .env", M, path=".gitignore")],
+        "blog": [F("forge-ci-failing", "poslední běh CI na main selhal (#17)")],
+        "game-proto": [
+            F(
+                "deps-lockfile-missing",
+                "package.json deklaruje závislosti, ale chybí package-lock.json",
+                path="package.json",
+            ),
+            F("gitignore-missing", "Repozitář nemá .gitignore (ekosystém: node)."),
+        ],
+    }
+    repos[0].forge_info = {
+        "ci": "failure",
+        "ci_number": "142",
+        "protected": False,
+        "alerts": 1,
+        "open_items": 2,
+    }
+    for r in repos:
+        if r.name in extra:
+            r.findings = [*r.findings, *extra[r.name]]
+            r.score = score(r.findings)
     for i, name in enumerate(["notes", "website", "homelab", "scripts", "kbd-layout"]):
         repos.append(
             repo(

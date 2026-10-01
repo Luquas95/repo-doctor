@@ -68,6 +68,7 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "S105", "S106", "S108", "S311", "PTH"]
+"src/repo_doctor/tui/**" = ["RUF012"]  # Textual BINDINGS/CSS jsou idiomaticky třídní seznamy
 
 [tool.mypy]
 strict = true

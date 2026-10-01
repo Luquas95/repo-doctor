@@ -70,7 +70,7 @@ ACTIONS: tuple[KeyAction, ...] = (
     _a("cancel_scan", "x", "global", "zrušit sken", show=False),
     _a("toggle_offline", "O", "global", "offline režim", show=False),
     _a("toggle_theme", "t", "global", "světlé / tmavé téma", show=False),
-    _a("back", "q", "global", "zpět / konec"),
+    _a("back", "q", "global", "zpět / konec", "go_back"),
     _a("quit", "ctrl+c", "global", "okamžitý konec", show=False),
     # pohyb (platí ve všech seznamech)
     _a("cursor_down", "j", "nav", "dolů", show=False),

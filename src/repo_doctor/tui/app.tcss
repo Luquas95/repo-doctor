@@ -1,0 +1,107 @@
+/* repo-doctor – vizuální koncept „Triáž“ */
+Screen {
+    background: $background;
+    color: $foreground;
+}
+
+.hidden { display: none; }
+
+/* panely */
+.panel, #triage-panel, #diagnosis, #findings-panel, #rx-panel, #diff-panel, #card-header, #fix-header {
+    border: round $rd-border;
+    border-title-color: $accent;
+    border-title-style: bold;
+    background: $background;
+}
+#triage-panel:focus-within, #findings-panel:focus-within, #diagnosis:focus-within,
+#rx-panel:focus-within, #diff-panel:focus-within {
+    border: round $accent;
+}
+
+#body { height: 1fr; }
+#triage-panel { width: 1fr; padding: 0 1; }
+#triage-header { height: 1; }
+#preview { height: 7; }
+#search { border: tall $accent; height: 3; margin: 0; }
+
+/* patička jako klávesové čepičky */
+Footer { background: $background; }
+FooterKey .footer-key--key { background: $accent; color: $background; text-style: bold; }
+FooterKey .footer-key--description { color: $rd-muted; }
+
+OptionList { background: $background; }
+OptionList > .option-list--option-highlighted { background: $rd-selection; }
+OptionList:focus > .option-list--option-highlighted { background: $rd-selection; text-style: bold; }
+
+DataTable { background: $background; height: 1fr; }
+DataTable > .datatable--header { color: $rd-muted; text-style: bold; background: $background; }
+DataTable > .datatable--cursor { background: $rd-selection; color: $foreground; }
+
+Tree { background: $background; }
+
+Input { background: $panel; }
+Input.-textual-compact { background: $panel; }
+Input.-textual-compact:focus { background: $rd-selection; }
+Input.-invalid, Input.-textual-compact.-invalid { color: $rd-high; }
+Select { width: 60; }
+.form Label, .dialog Label { color: $accent; }
+
+/* modální dialogy */
+ModalScreen { align: center middle; background: $background 60%; }
+.dialog {
+    width: 64;
+    max-width: 95%;
+    height: auto;
+    max-height: 95%;
+    border: round $accent;
+    border-title-color: $accent;
+    border-title-style: bold;
+    background: $panel;
+    padding: 1 2;
+}
+.dialog .buttons { height: 3; align: center middle; margin-top: 1; }
+.dialog Button { margin: 0 2; min-width: 12; }
+.dialog .hint { color: $rd-muted; margin-top: 1; }
+.dialog Label { margin-top: 1; }
+.dialog .error { color: $rd-high; }
+.dialog.wide { width: 90; }
+
+Button { border: tall $rd-border; background: $panel; }
+Button:focus { border: tall $accent; text-style: bold; }
+Button.-primary { background: $accent 20%; }
+
+/* karta repa */
+#card-header { height: 5; padding: 0 1; }
+#card-body { height: 1fr; }
+#findings-panel { width: 34; }
+#findings-panel Tree { height: 1fr; }
+#findings-hint { height: 2; color: $rd-muted; padding: 0 1; }
+#diagnosis { width: 1fr; padding: 0 1; }
+
+/* léčba */
+#fix-header { height: 3; padding: 0 1; }
+#fix-body { height: 1fr; }
+#rx-panel { width: 38; }
+#rx-panel SelectionList { height: 1fr; border: none; background: $background; }
+#rx-summary { height: 3; padding: 0 1; color: $rd-muted; }
+#diff-panel { width: 1fr; }
+#diff { padding: 0 1; }
+
+/* seznamové obrazovky */
+.page { height: 1fr; padding: 0 1; }
+.page-header { height: auto; padding: 0 1; color: $rd-muted; }
+.page-title { color: $accent; text-style: bold; }
+.form { height: 1fr; padding: 0 1; }
+.form Label { margin-top: 1; color: $accent; }
+.form .hint { color: $rd-muted; }
+.form Input { width: 70; }
+.form .row { height: auto; }
+.form .error { color: $rd-high; }
+
+HelpScreen VerticalScroll { width: 90; max-width: 95%; height: 90%; border: round $accent; background: $panel; padding: 0 2; }
+
+.row { height: auto; }
+.row Input { width: 1fr; margin-right: 1; }
+.dialog Input { width: 100%; }
+Checkbox { border: none; padding: 0; background: $background 0%; margin-top: 1; }
+Checkbox:focus { border: none; background: $rd-selection; }

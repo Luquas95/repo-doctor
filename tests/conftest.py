@@ -1,11 +1,16 @@
 from __future__ import annotations
 
+import os
+import time
 from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
 
 from repo_doctor.masking import REGISTRY
+
+os.environ["TZ"] = "UTC"  # deterministické časy ve snapshotech
+time.tzset()
 
 
 @pytest.fixture(autouse=True)
@@ -24,7 +29,6 @@ def _isolated_env(
         "[user]\n\tname = Test Tester\n\temail = test@example.invalid\n[init]\n\tdefaultBranch = main\n"
     )
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
-    monkeypatch.setenv("NO_COLOR", "")
     yield
     REGISTRY.clear()
 

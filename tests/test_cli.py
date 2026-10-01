@@ -33,6 +33,7 @@ def test_tty_launches_tui(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> No
     calls: list[list[str] | None] = []
     monkeypatch.setattr(sys.stdout, "isatty", lambda: True)
     monkeypatch.setattr(sys.stdin, "isatty", lambda: True)
+
     def fake_tui(roots: list[str] | None) -> int:
         calls.append(roots)
         return 0
