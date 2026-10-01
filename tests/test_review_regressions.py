@@ -120,3 +120,53 @@ def test_windows_path_is_not_ssh() -> None:
     r = parse_remote("C:\\Users\\me\\repo")
     assert r is not None and r.scheme == "file"
     assert os.sep  # jen pro mypy/ruff
+
+
+def test_local_packages_not_sent_to_osv() -> None:
+    import json
+
+    from repo_doctor.deps import parse_package_lock, parse_toml_packages
+
+    poetry = """\
+[[package]]
+name = "mylib"
+version = "0.1.0"
+[package.source]
+type = "directory"
+url = "../mylib"
+
+[[package]]
+name = "fromgit"
+version = "1.0.0"
+[package.source]
+type = "git"
+url = "https://example.com/x.git"
+
+[[package]]
+name = "requests"
+version = "2.31.0"
+"""
+    assert [d.name for d in parse_toml_packages(poetry, "poetry.lock", "PyPI")] == ["requests"]
+    v1 = json.dumps(
+        {
+            "dependencies": {
+                "local": {"version": "file:../local"},
+                "gitdep": {"version": "git+https://example.com/g.git#abc"},
+                "alias": {"version": "npm:lodash@4.17.21"},
+                "ok": {"version": "1.0.0"},
+            }
+        }
+    )
+    assert sorted((d.name, d.version) for d in parse_package_lock(v1, "p")) == [
+        ("lodash", "4.17.21"),
+        ("ok", "1.0.0"),
+    ]
+    v3 = json.dumps(
+        {
+            "packages": {
+                "node_modules/w": {"version": "1.0.0", "resolved": "file:../w"},
+                "node_modules/x": {"version": "2.0.0"},
+            }
+        }
+    )
+    assert [(d.name, d.version) for d in parse_package_lock(v3, "p")] == [("x", "2.0.0")]

@@ -381,6 +381,13 @@ def test_token_cmd_runner_never_leaks(tmp_path: Path) -> None:
         _run_cmd(f'{py} -c "import time; time.sleep(3)"', 0.2)
     with pytest.raises(TokenError, match="prázdný"):
         _run_cmd("", 5)
+    # potomek na pozadí drží stdout otevřený – timeout musí platit i tak (dřív to viselo)
+    import time
+
+    start = time.monotonic()
+    with pytest.raises(TokenError, match="nedoběhl"):
+        _run_cmd("sh -c 'sleep 30 & echo tok-123456; wait'", 0.5)
+    assert time.monotonic() - start < 5
     with pytest.raises(TokenError, match="rozparsovat"):
         _run_cmd('"unclosed', 5)
 

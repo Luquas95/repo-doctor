@@ -294,3 +294,15 @@ def test_context_read_text(tmp_path: Path) -> None:
     assert c.read_text("t") == "text"
     assert c.read_text("missing") is None
     assert c.has_any("T") and not c.has_any("nothing")
+
+
+def test_fingerprint_is_slow_keyed_and_stable() -> None:
+    import hashlib
+
+    from repo_doctor.secrets_scan import fingerprint
+
+    secret = fx.fake_generic_secret(21)
+    assert fingerprint(secret) == fingerprint(secret)  # stabilní (allowlist)
+    assert len(fingerprint(secret)) == 16
+    assert fingerprint(secret) != hashlib.sha256(secret.encode()).hexdigest()[:16]
+    assert fingerprint(secret) != fingerprint(secret + "x")

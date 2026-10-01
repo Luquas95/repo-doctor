@@ -47,7 +47,7 @@
   <span class="sev-medium" title="MED">◆ 22</span>
   <span class="sev-low" title="LOW">● 28</span>
   <span>zdraví <b class="s-ok">73</b></span>
-  <span class=muted>sken 2026-09-30 14:32</span>
+  <span class=muted>sken 2026-09-30 14:32 UTC</span>
   <button id=theme type=button title="Přepnout světlý/tmavý režim">◐ téma</button>
   </div>
   <div class="panel"><b>Upozornění</b><ul><li>Složka ~/sandbox neexistuje – přeskočena.</li></ul></div>
@@ -146,38 +146,7 @@
           "uncommitted": 3,
           "unpushed": 2,
           "last_commit": "2026-09-28T14:32:00Z",
-          "pulse_30d": [
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            4,
-            3,
-            6,
-            5,
-            2,
-            1,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            4,
-            3,
-            2,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "pulse_30d": [0, 0, 1, 0, 0, 0, 4, 3, 6, 5, 2, 1, 0, 0, 0, 0, 1, 0, 4, 3, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0]
         },
         "counts": {
           "high": 2,
@@ -200,7 +169,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "secrets-history",
@@ -217,7 +187,8 @@
             },
             "snippet": "AKIA…(20 znaků)",
             "kind": "AWS access key",
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "docker-hygiene",
@@ -234,7 +205,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "forge-ci-failing",
@@ -251,7 +223,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "gitignore-incomplete",
@@ -268,7 +241,13 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {
+              "missing": [
+                ".env",
+                ".venv/"
+              ]
+            }
           },
           {
             "id": "unpushed",
@@ -285,7 +264,10 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {
+              "count": 2
+            }
           },
           {
             "id": "forge-stale-prs",
@@ -302,7 +284,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "license-missing",
@@ -319,7 +302,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           },
           {
             "id": "precommit-missing",
@@ -336,7 +320,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           },
           {
             "id": "uncommitted",
@@ -353,7 +338,10 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {
+              "count": 3
+            }
           }
         ],
         "allowlisted": 0,
@@ -384,38 +372,7 @@
           "uncommitted": 0,
           "unpushed": 5,
           "last_commit": "2026-09-28T14:32:00Z",
-          "pulse_30d": [
-            2,
-            1,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            6,
-            5,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            5,
-            4,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "pulse_30d": [2, 1, 4, 3, 5, 4, 6, 5, 4, 3, 5, 4, 6, 5, 6, 5, 4, 3, 5, 4, 6, 5, 5, 4, 0, 0, 0, 0, 0, 0]
         },
         "counts": {
           "high": 1,
@@ -438,7 +395,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "docker-hygiene",
@@ -455,7 +413,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "gitignore-incomplete",
@@ -472,7 +431,12 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {
+              "missing": [
+                ".env"
+              ]
+            }
           },
           {
             "id": "unpushed",
@@ -489,7 +453,10 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {
+              "count": 5
+            }
           },
           {
             "id": "forge-no-branch-protection",
@@ -506,7 +473,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "stale-branches",
@@ -523,7 +491,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "stashes",
@@ -540,7 +509,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           }
         ],
         "allowlisted": 0,
@@ -571,38 +541,7 @@
           "uncommitted": 12,
           "unpushed": 0,
           "last_commit": "2026-09-28T14:32:00Z",
-          "pulse_30d": [
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            2,
-            1,
-            4,
-            3,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            2,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "pulse_30d": [0, 0, 0, 0, 1, 0, 0, 0, 2, 1, 4, 3, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 2, 1, 0, 0, 0, 0, 0, 0]
         },
         "counts": {
           "high": 1,
@@ -625,7 +564,8 @@
             },
             "snippet": "sk-p…(56 znaků)",
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "deps-lockfile-missing",
@@ -642,7 +582,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "large-files",
@@ -659,7 +600,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "ci-missing",
@@ -676,7 +618,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           },
           {
             "id": "deps-outdated",
@@ -693,7 +636,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "readme-missing",
@@ -710,7 +654,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           },
           {
             "id": "uncommitted",
@@ -727,7 +672,10 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {
+              "count": 12
+            }
           }
         ],
         "allowlisted": 0,
@@ -758,38 +706,7 @@
           "uncommitted": 0,
           "unpushed": 0,
           "last_commit": "2026-09-28T14:32:00Z",
-          "pulse_30d": [
-            1,
-            0,
-            2,
-            1,
-            1,
-            0,
-            4,
-            3,
-            2,
-            1,
-            1,
-            0,
-            0,
-            0,
-            1,
-            0,
-            2,
-            1,
-            4,
-            3,
-            5,
-            4,
-            4,
-            3,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "pulse_30d": [1, 0, 2, 1, 1, 0, 4, 3, 2, 1, 1, 0, 0, 0, 1, 0, 2, 1, 4, 3, 5, 4, 4, 3, 0, 0, 0, 0, 0, 0]
         },
         "counts": {
           "high": 0,
@@ -812,7 +729,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "gitignore-incomplete",
@@ -829,7 +747,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           },
           {
             "id": "large-files",
@@ -846,7 +765,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "ci-missing",
@@ -863,7 +783,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           },
           {
             "id": "forge-no-branch-protection",
@@ -880,7 +801,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "precommit-missing",
@@ -897,7 +819,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           }
         ],
         "allowlisted": 0,
@@ -928,38 +851,7 @@
           "uncommitted": 0,
           "unpushed": 1,
           "last_commit": "2026-09-28T14:32:00Z",
-          "pulse_30d": [
-            4,
-            3,
-            1,
-            0,
-            2,
-            1,
-            0,
-            0,
-            1,
-            0,
-            4,
-            3,
-            2,
-            1,
-            1,
-            0,
-            0,
-            0,
-            2,
-            1,
-            1,
-            0,
-            4,
-            3,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "pulse_30d": [4, 3, 1, 0, 2, 1, 0, 0, 1, 0, 4, 3, 2, 1, 1, 0, 0, 0, 2, 1, 1, 0, 4, 3, 0, 0, 0, 0, 0, 0]
         },
         "counts": {
           "high": 0,
@@ -982,7 +874,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           },
           {
             "id": "public-sensitive",
@@ -999,7 +892,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "unpushed",
@@ -1016,7 +910,10 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {
+              "count": 1
+            }
           },
           {
             "id": "ci-missing",
@@ -1033,7 +930,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           },
           {
             "id": "license-missing",
@@ -1050,7 +948,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           }
         ],
         "allowlisted": 0,
@@ -1081,38 +980,7 @@
           "uncommitted": 0,
           "unpushed": 0,
           "last_commit": "2026-09-28T14:32:00Z",
-          "pulse_30d": [
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            2,
-            1,
-            0,
-            0,
-            0,
-            0,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "pulse_30d": [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         },
         "counts": {
           "high": 0,
@@ -1135,7 +1003,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "forge-ci-failing",
@@ -1152,7 +1021,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "gitignore-incomplete",
@@ -1169,7 +1039,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           },
           {
             "id": "precommit-missing",
@@ -1186,7 +1057,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           },
           {
             "id": "stale-branches",
@@ -1203,7 +1075,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           }
         ],
         "allowlisted": 0,
@@ -1234,38 +1107,7 @@
           "uncommitted": 0,
           "unpushed": 0,
           "last_commit": "2026-09-28T14:32:00Z",
-          "pulse_30d": [
-            6,
-            5,
-            5,
-            4,
-            4,
-            3,
-            2,
-            1,
-            1,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "pulse_30d": [6, 5, 5, 4, 4, 3, 2, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         },
         "counts": {
           "high": 0,
@@ -1288,7 +1130,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "gitignore-missing",
@@ -1305,7 +1148,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           },
           {
             "id": "large-files",
@@ -1322,7 +1166,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "detached-head",
@@ -1339,7 +1184,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "readme-missing",
@@ -1356,7 +1202,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           }
         ],
         "allowlisted": 0,
@@ -1381,38 +1228,7 @@
           "uncommitted": 0,
           "unpushed": 0,
           "last_commit": "2025-08-26T14:32:00Z",
-          "pulse_30d": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "pulse_30d": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         },
         "counts": {
           "high": 0,
@@ -1435,7 +1251,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           },
           {
             "id": "ci-missing",
@@ -1452,7 +1269,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           },
           {
             "id": "readme-missing",
@@ -1469,7 +1287,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           }
         ],
         "allowlisted": 0,
@@ -1500,38 +1319,7 @@
           "uncommitted": 0,
           "unpushed": 0,
           "last_commit": "2024-04-13T14:32:00Z",
-          "pulse_30d": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "pulse_30d": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
         },
         "counts": {
           "high": 0,
@@ -1554,7 +1342,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           },
           {
             "id": "license-missing",
@@ -1571,7 +1360,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           },
           {
             "id": "precommit-missing",
@@ -1588,7 +1378,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": true
+            "fixable": true,
+            "data": {}
           }
         ],
         "allowlisted": 0,
@@ -1619,38 +1410,7 @@
           "uncommitted": 0,
           "unpushed": 0,
           "last_commit": "2026-09-29T14:32:00Z",
-          "pulse_30d": [
-            2,
-            1,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            6,
-            5,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            5,
-            4,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "pulse_30d": [2, 1, 4, 3, 5, 4, 6, 5, 4, 3, 5, 4, 6, 5, 6, 5, 4, 3, 5, 4, 6, 5, 5, 4, 0, 0, 0, 0, 0, 0]
         },
         "counts": {
           "high": 0,
@@ -1673,7 +1433,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           }
         ],
         "allowlisted": 0,
@@ -1704,38 +1465,7 @@
           "uncommitted": 0,
           "unpushed": 0,
           "last_commit": "2026-09-28T14:32:00Z",
-          "pulse_30d": [
-            2,
-            1,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            6,
-            5,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            5,
-            4,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "pulse_30d": [2, 1, 4, 3, 5, 4, 6, 5, 4, 3, 5, 4, 6, 5, 6, 5, 4, 3, 5, 4, 6, 5, 5, 4, 0, 0, 0, 0, 0, 0]
         },
         "counts": {
           "high": 0,
@@ -1771,38 +1501,7 @@
           "uncommitted": 0,
           "unpushed": 0,
           "last_commit": "2026-09-27T14:32:00Z",
-          "pulse_30d": [
-            2,
-            1,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            6,
-            5,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            5,
-            4,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "pulse_30d": [2, 1, 4, 3, 5, 4, 6, 5, 4, 3, 5, 4, 6, 5, 6, 5, 4, 3, 5, 4, 6, 5, 5, 4, 0, 0, 0, 0, 0, 0]
         },
         "counts": {
           "high": 0,
@@ -1825,7 +1524,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           }
         ],
         "allowlisted": 0,
@@ -1856,38 +1556,7 @@
           "uncommitted": 0,
           "unpushed": 0,
           "last_commit": "2026-09-26T14:32:00Z",
-          "pulse_30d": [
-            2,
-            1,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            6,
-            5,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            5,
-            4,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "pulse_30d": [2, 1, 4, 3, 5, 4, 6, 5, 4, 3, 5, 4, 6, 5, 6, 5, 4, 3, 5, 4, 6, 5, 5, 4, 0, 0, 0, 0, 0, 0]
         },
         "counts": {
           "high": 0,
@@ -1923,38 +1592,7 @@
           "uncommitted": 0,
           "unpushed": 0,
           "last_commit": "2026-09-25T14:32:00Z",
-          "pulse_30d": [
-            2,
-            1,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            6,
-            5,
-            4,
-            3,
-            5,
-            4,
-            6,
-            5,
-            5,
-            4,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
+          "pulse_30d": [2, 1, 4, 3, 5, 4, 6, 5, 4, 3, 5, 4, 6, 5, 6, 5, 4, 3, 5, 4, 6, 5, 5, 4, 0, 0, 0, 0, 0, 0]
         },
         "counts": {
           "high": 0,
@@ -1977,7 +1615,8 @@
             },
             "snippet": null,
             "kind": null,
-            "fixable": false
+            "fixable": false,
+            "data": {}
           }
         ],
         "allowlisted": 0,
@@ -1996,7 +1635,7 @@
   '''
   # repo-doctor – report
   
-  Sken 2026-09-30 14:32.
+  Sken 2026-09-30 14:32 UTC.
   
   | repozitáře | ▲ HIGH | ◆ MED | ● LOW | zdraví |
   |---:|---:|---:|---:|---:|

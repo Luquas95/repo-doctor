@@ -36,6 +36,7 @@ def test_json_schema_stable() -> None:
         "snippet",
         "kind",
         "fixable",
+        "data",
     }
 
 
@@ -66,3 +67,17 @@ def test_html_escapes_and_is_self_contained() -> None:
     assert "http://" not in html.replace("http-equiv", "")
     assert "https://" not in html.split("<main>")[0]  # žádné externí zdroje v hlavičce
     assert "prefers-color-scheme:dark" in html
+
+
+def test_markdown_code_span_keeps_backticks() -> None:
+    from repo_doctor.reports.markdown import _code
+
+    assert _code("a`b") == "``a`b``"
+    assert _code("`x`") == "`` `x` ``"
+    assert _code("a|b") == "`a\\|b`"
+
+
+def test_local_time_has_zone() -> None:
+    from repo_doctor.reports import local_time
+
+    assert local_time(NOW).endswith("UTC")

@@ -6,6 +6,7 @@ from datetime import datetime
 from html import escape
 
 from repo_doctor.models import Category, RepoResult, ScanResult, Severity
+from repo_doctor.reports import local_time
 from repo_doctor.scoring import band, gauge
 
 CSS = """
@@ -127,7 +128,7 @@ def _repo(r: RepoResult, no_pulse_days: int, now: datetime | None) -> str:
 
 def render(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None = None) -> str:
     s = result.summary(no_pulse_days, now)
-    when = (result.finished_at or result.started_at).strftime("%Y-%m-%d %H:%M")
+    when = local_time(result.finished_at or result.started_at)
     repos = sorted(result.repos, key=lambda r: (r.score, r.name))
     repo_options = "".join(
         f'<option value="{escape(r.name)}">{escape(r.name)}</option>' for r in repos

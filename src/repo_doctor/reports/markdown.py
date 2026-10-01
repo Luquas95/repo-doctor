@@ -2,10 +2,20 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 
 from repo_doctor.models import RepoResult, ScanResult, Severity
+from repo_doctor.reports import local_time
 from repo_doctor.scoring import band, gauge
+
+
+def _code(text: str) -> str:
+    """Kódový span, který zachová i zpětné apostrofy v textu (a escapuje `|` pro tabulky)."""
+    text = text.replace("|", "\\|").replace("\n", " ")
+    fence = "`" * (max((len(m) for m in re.findall(r"`+", text)), default=0) + 1)
+    pad = " " if text.startswith("`") or text.endswith("`") else ""
+    return f"{fence}{pad}{text}{pad}{fence}"
 
 
 def _cell(text: str) -> str:
@@ -19,7 +29,7 @@ def _counts(repo: RepoResult) -> str:
 
 def render(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None = None) -> str:
     s = result.summary(no_pulse_days, now)
-    when = (result.finished_at or result.started_at).strftime("%Y-%m-%d %H:%M")
+    when = local_time(result.finished_at or result.started_at)
     lines = [
         "# repo-doctor – report",
         "",
@@ -62,7 +72,7 @@ def render(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None 
             for f in sorted(r.findings, key=lambda f: (-f.severity.rank, f.check_id)):
                 where = f.location.render()
                 if f.snippet:
-                    where = f"{where} · `{_cell(f.snippet)}`" if where else f"`{_cell(f.snippet)}`"
+                    where = f"{where} · {_code(f.snippet)}" if where else _code(f.snippet)
                 fix = " ✓" if f.fixable else ""
                 lines.append(
                     f"| {f.severity.symbol} {f.severity.short} | `{f.check_id}`{fix} | {_cell(f.message)} | {_cell(where)} |"

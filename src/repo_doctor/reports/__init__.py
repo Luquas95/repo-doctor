@@ -12,6 +12,13 @@ ReportFormat = Literal["md", "json", "html"]
 FORMATS: tuple[ReportFormat, ...] = ("md", "json", "html")
 
 
+def local_time(when: datetime) -> str:
+    """Čas skenu v místní zóně i s jejím označením (např. `2026-10-01 16:20 CEST`)."""
+    local = when.astimezone()
+    zone = local.strftime("%Z") or local.strftime("%z")
+    return f"{local:%Y-%m-%d %H:%M} {zone}".strip()
+
+
 def render(
     result: ScanResult, fmt: ReportFormat, *, no_pulse_days: int = 90, now: datetime | None = None
 ) -> str:

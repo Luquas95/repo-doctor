@@ -9,6 +9,7 @@ from __future__ import annotations
 import contextlib
 import os
 import shlex
+import signal
 import subprocess
 from collections.abc import Callable
 
@@ -22,6 +23,15 @@ class TokenError(Exception):
     """Token nelze získat. Zpráva nikdy neobsahuje hodnotu tokenu ani výstup příkazu."""
 
 
+def _kill_group(proc: subprocess.Popen[str]) -> None:
+    with contextlib.suppress(ProcessLookupError, PermissionError):
+        os.killpg(proc.pid, signal.SIGKILL)
+    with contextlib.suppress(subprocess.TimeoutExpired):
+        proc.communicate(timeout=2)
+    if proc.stdout is not None:
+        proc.stdout.close()
+
+
 def _run_cmd(cmd: str, timeout: float) -> str:
     try:
         args = shlex.split(cmd)
@@ -30,23 +40,27 @@ def _run_cmd(cmd: str, timeout: float) -> str:
     if not args:
         raise TokenError("token_cmd je prázdný")
     try:
-        proc = subprocess.run(
+        # vlastní skupina procesů: při timeoutu ukončíme i potomky, kteří by drželi rouru
+        proc = subprocess.Popen(
             args,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            check=False,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
             stdin=subprocess.DEVNULL,
+            text=True,
+            start_new_session=True,
         )
     except FileNotFoundError:
         raise TokenError(f"token_cmd: program {args[0]!r} nebyl nalezen") from None
+    try:
+        stdout, _ = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
+        _kill_group(proc)
         raise TokenError(f"token_cmd nedoběhl do {timeout:g} s") from None
     if proc.returncode != 0:
         raise TokenError(
             f"token_cmd skončil s kódem {proc.returncode} (výstup se z bezpečnostních důvodů nezobrazuje)"
         )
-    for line in proc.stdout.splitlines():
+    for line in stdout.splitlines():
         if line.strip():
             return line.strip()
     raise TokenError("token_cmd nevrátil žádný výstup")

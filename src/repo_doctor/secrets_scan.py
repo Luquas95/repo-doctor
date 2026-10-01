@@ -16,6 +16,7 @@ import tempfile
 from collections import Counter
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path, PurePosixPath
 
 from repo_doctor.gitwrap import Git, git_env
@@ -209,8 +210,18 @@ def _looks_placeholder(value: str) -> bool:
     return len(set(value)) <= 3
 
 
+FINGERPRINT_SALT = b"repo-doctor/secret-fingerprint/v2"
+
+
+@lru_cache(maxsize=2048)
 def fingerprint(value: str) -> str:
-    return hashlib.sha256(value.encode()).hexdigest()[:16]
+    """Stabilní otisk tajemství (pro deduplikaci a allowlist).
+
+    Používá scrypt s pevnou solí: otisk je stejný na všech strojích (allowlist
+    v `.repo-doctor.toml` se commituje), ale ověřit kandidátní heslo stojí ~40 ms
+    místo mikrosekund u holého SHA-256 – slovníkový útok na sdílený report se nevyplatí.
+    """
+    return hashlib.scrypt(value.encode(), salt=FINGERPRINT_SALT, n=2**14, r=8, p=1, dklen=8).hex()
 
 
 CONFIG_FILE = re.compile(

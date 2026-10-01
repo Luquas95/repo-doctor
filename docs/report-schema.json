@@ -58,6 +58,27 @@
         "fixable": {
           "title": "Fixable",
           "type": "boolean"
+        },
+        "data": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "description": "Podrobnosti kontroly (např. chybějící položky, ID zranitelností)",
+          "title": "Data",
+          "type": "object"
         }
       },
       "required": [
