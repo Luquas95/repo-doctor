@@ -33,7 +33,8 @@ def test_aws_secret_with_trailing_symbol() -> None:
 
 
 def test_placeholder_only_whole_words() -> None:
-    assert scan_text('password: "reallyStrongPass123replacement"', "c.yaml")
+    pw = "reallyStrong" + "Pass123replacement"
+    assert scan_text(f'password: "{pw}"', "c.yaml")
     assert scan_text(f"{fx.fake_github_token()[:-4]}Todo", "c.txt")
 
 

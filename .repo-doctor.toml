@@ -9,3 +9,13 @@ check = "secrets-history"
 hash = "d296557b83d1167e"
 reason = "falešný výstup token_cmd v historii testů (tests/test_forges.py)"
 check = "secrets-history"
+
+[[allowlist]]
+hash = "35d90f73e0c72bc6"
+reason = "falešné heslo v historii regresního testu placeholder filtru"
+check = "secrets-history"
+
+[[allowlist]]
+hash = "c0604b28acb15244"
+reason = "falešný GitLab token v historii testu přesměrování (tests/test_httpclient.py)"
+check = "secrets-history"

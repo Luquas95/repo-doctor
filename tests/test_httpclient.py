@@ -216,7 +216,7 @@ async def test_credentials_not_sent_to_other_origin() -> None:
     respx.get("https://evil.example/steal").mock(side_effect=evil)
     async with HttpClient(
         base_url="https://gitlab.example/api/v4",
-        headers={"PRIVATE-TOKEN": "glpat-secret-value-123"},
+        headers={"PRIVATE-TOKEN": "glpat-" + "secret-value-123"},
     ) as c:
         assert await c.get_json("/projects") == [2]
     assert "private-token" not in seen["evil"]
