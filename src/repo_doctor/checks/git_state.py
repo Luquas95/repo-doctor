@@ -99,14 +99,34 @@ class StaleBranches(Check):
         default = repo.default_branch
         current = repo.git.current_branch()
         limit = repo.config.limits.stale_branch_days
-        merged = set(repo.git.merged_branches(default)) if default else set()
+        target = default
+        if default and not repo.git.ref_exists(f"refs/heads/{default}"):
+            remote_ref = next(
+                (
+                    f"{r}/{default}"
+                    for r in repo.git.remotes()
+                    if repo.git.ref_exists(f"refs/remotes/{r}/{default}")
+                ),
+                None,
+            )
+            target = remote_ref
+        merged = set(repo.git.merged_branches(target)) if target else set()
+        default_sha = (
+            repo.git.run(
+                "rev-parse", "--verify", "--quiet", "--end-of-options", target, check=False
+            ).strip()
+            if target
+            else ""
+        )
         findings = []
         for b in repo.git.branches():
             if b.name in {default, current}:
                 continue
             age = _age_days(b.committer_ts, repo.now)
             reasons = []
-            if b.name in merged:
+            if (
+                b.name in merged and b.sha != default_sha
+            ):  # čerstvá větev bez vlastních commitů není „stará“
                 reasons.append(f"mergnutá do {default}")
             if age > limit:
                 reasons.append(f"bez commitu {age} dní")

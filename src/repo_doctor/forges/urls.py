@@ -162,6 +162,8 @@ def parse_remote(url: str, ssh_config: SshConfig | None = None) -> RemoteURL | N
         if host is None:
             return None
         return RemoteURL(scheme, host, port, _clean_path(path), user, alias)
+    if re.match(r"^[A-Za-z]:[\\/]", url):
+        return RemoteURL("file", None, None, _clean_path(url.replace("\\", "/")))  # Windows cesta
     m = _SCP.match(url)
     if not m:
         return None

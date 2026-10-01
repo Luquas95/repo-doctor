@@ -155,8 +155,8 @@ def test_collect_and_missing_locks(tmp_path: Path) -> None:
         "lib/pyproject.toml": '[project]\nname="lib"\ndependencies=["click==8.0.0"]\n',
     }
     data = D.collect(list(files), files.get)
+    # lib/ je člen workspace – uv.lock v kořeni ho pokrývá
     assert sorted(data.missing_locks) == [
-        ("lib/pyproject.toml", "uv.lock"),
         ("rs/Cargo.toml", "Cargo.lock"),
         ("svc/go.mod", "go.sum"),
         ("tool/package.json", "package-lock.json"),
@@ -165,7 +165,7 @@ def test_collect_and_missing_locks(tmp_path: Path) -> None:
     assert by_name["requests"].direct and not by_name["urllib3"].direct
     assert by_name["lodash"].direct
     assert "x" not in by_name  # z fixtury
-    assert by_name["click"].version == "8.0.0"
+    assert "click" not in by_name  # pinované závislosti člena workspace jsou v kořenovém lockfilu
 
 
 def test_compare_versions() -> None:

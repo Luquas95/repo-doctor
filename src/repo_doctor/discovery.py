@@ -183,7 +183,10 @@ def discover(
                 result.warnings.append(f"Nelze číst {current}: {err.strerror}")
                 continue
             for entry in entries:
-                if entry.name in SKIP_DIRS or entry.name == ".git":
+                if entry.name == ".git":
+                    continue
+                # build/, env/, vendor/… přeskakujeme, ledaže jsou samy git repem
+                if entry.name in SKIP_DIRS and not _is_repo_dir(Path(entry.path)):
                     continue
                 try:
                     if entry.is_symlink():

@@ -13,6 +13,12 @@ from repo_doctor.secrets_scan import LOCKFILES
 IPV4 = re.compile(r"(?<![\d.])(\d{1,3}(?:\.\d{1,3}){3})(?![\d.])")
 TS_HOST = re.compile(r"\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.ts\.net\b", re.IGNORECASE)
 TAILSCALE_NET = ipaddress.ip_network("100.64.0.0/10")
+# Jen skutečně privátní rozsahy (RFC 1918) – `is_private` zahrnuje i masky, dokumentační rozsahy apod.
+PRIVATE_NETS = tuple(
+    ipaddress.ip_network(n) for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")
+)
+TAILSCALE_V6 = re.compile(r"(?i)\bfd7a:115c:a1e0:[0-9a-f:]+")
+ULA_V6 = re.compile(r"(?i)(?<![0-9a-f:])fd[0-9a-f]{2}:[0-9a-f]{1,4}:[0-9a-f:]+")
 CONFIG_EXT = frozenset(
     {
         ".yml",
@@ -44,7 +50,7 @@ def classify_ip(raw: str) -> str | None:
         return None
     if ip in TAILSCALE_NET:
         return "adresy 100.x (Tailscale)"
-    if ip.is_private and not ip.is_loopback and not ip.is_link_local and raw != "0.0.0.0":  # noqa: S104
+    if any(ip in net for net in PRIVATE_NETS):
         return "privátní IP adresy"
     return None
 
@@ -55,6 +61,10 @@ def scan_infra(text: str) -> set[str]:
         kind = classify_ip(m.group(1))
         if kind:
             kinds.add(kind)
+    if TAILSCALE_V6.search(text):
+        kinds.add("adresy fd7a:115c:a1e0:: (Tailscale)")
+    elif ULA_V6.search(text):
+        kinds.add("privátní IPv6 (ULA)")
     if TS_HOST.search(text):
         kinds.add("hostname *.ts.net")
     return kinds

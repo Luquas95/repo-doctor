@@ -8,8 +8,9 @@ from pathlib import PurePosixPath
 from repo_doctor import templates
 from repo_doctor.checks.base import Check, RepoContext, register
 from repo_doctor.models import Category, FileChange, Finding, Patch, Severity
-from repo_doctor.secrets_scan import entropy
+from repo_doctor.secrets_scan import _looks_placeholder, entropy
 
+NOT_SECRET_SUFFIX = re.compile(r"(?i)_(file|url|uri|path|dir|endpoint|host|name|user|username)$")
 SECRET_NAME = re.compile(r"(?i)(pass(word)?|secret|token|api[_-]?key|private[_-]?key|credential)")
 
 
@@ -134,8 +135,11 @@ class DockerHygiene(Check):
                 for name, value in _assignments(rest):
                     if (
                         SECRET_NAME.search(name)
+                        and not NOT_SECRET_SUFFIX.search(name)
                         and value
-                        and not value.startswith("$")
+                        and not value.startswith(("$", "/", "./"))
+                        and "://" not in value
+                        and not _looks_placeholder(value)
                         and entropy(value) > 2.5
                     ):
                         findings.append(
@@ -156,7 +160,7 @@ class DockerHygiene(Check):
                         key=f"{path}:add:{lineno}",
                     )
                 )
-        if has_from and (final_user is None or final_user in {"root", "0", "0:0"}):
+        if has_from and (final_user is None or final_user.split(":")[0] in {"root", "0"}):
             findings.append(
                 self.finding(
                     "kontejner běží pod rootem (ve finální fázi chybí USER)",

@@ -206,8 +206,13 @@ def parse_pnpm_lock(text: str, source: str) -> list[Dependency]:
     return list(deps.values())
 
 
+LOCAL_PROTOCOLS = ("@workspace:", "@portal:", "@link:", "@file:", "@patch:")
+
+
 def _yarn_name(spec: str) -> str | None:
     spec = spec.strip().strip('"')
+    if any(p in spec for p in LOCAL_PROTOCOLS):
+        return None  # lokální balíček workspace – nepatří do dotazu na OSV
     at = spec.find("@", 1)
     return spec[:at] if at > 0 else None
 
@@ -289,6 +294,12 @@ def collect(files: list[str], read_text: ReadText) -> DepsData:
         if text is None:
             continue
         siblings = by_dir.get(_dir(f), set())
+        # workspace: lockfile bývá v nadřazené složce (npm/uv/cargo workspaces, monorepa)
+        ancestors: set[str] = set(siblings)
+        parent = PurePosixPath(_dir(f) or ".")
+        while str(parent) not in (".", ""):
+            parent = parent.parent
+            ancestors |= by_dir.get("" if str(parent) == "." else str(parent) + "/", set())
         data.manifests.append(f)
         if name in ("uv.lock", "poetry.lock", "pdm.lock"):
             data.dependencies.extend(parse_toml_packages(text, f, "PyPI"))
@@ -311,7 +322,7 @@ def collect(files: list[str], read_text: ReadText) -> DepsData:
             direct_py.update(names)
             if (
                 has
-                and not siblings & {"uv.lock", "poetry.lock", "pdm.lock", "Pipfile.lock"}
+                and not ancestors & {"uv.lock", "poetry.lock", "pdm.lock", "Pipfile.lock"}
                 and not any(s.startswith("requirements") for s in siblings)
             ):
                 data.missing_locks.append((f, "uv.lock"))
@@ -319,7 +330,7 @@ def collect(files: list[str], read_text: ReadText) -> DepsData:
         elif name == "package.json":
             names_npm, has = package_json_direct(text)
             direct_npm.update(names_npm)
-            if has and not siblings & {
+            if has and not ancestors & {
                 "package-lock.json",
                 "npm-shrinkwrap.json",
                 "yarn.lock",
@@ -330,9 +341,9 @@ def collect(files: list[str], read_text: ReadText) -> DepsData:
                 data.missing_locks.append((f, "package-lock.json"))
         elif name == "Cargo.toml":
             is_app = f"{_dir(f)}src/main.rs" in present
-            if is_app and "[dependencies]" in text and "Cargo.lock" not in siblings:
+            if is_app and "[dependencies]" in text and "Cargo.lock" not in ancestors:
                 data.missing_locks.append((f, "Cargo.lock"))
-        elif name == "go.mod" and "require" in text and "go.sum" not in siblings:
+        elif name == "go.mod" and "require" in text and "go.sum" not in ancestors:
             data.missing_locks.append((f, "go.sum"))
     unique: dict[tuple[str, str, str], Dependency] = {}
     for d in data.dependencies:

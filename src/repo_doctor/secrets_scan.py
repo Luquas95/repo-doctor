@@ -30,6 +30,7 @@ class Rule:
     group: int = 0
     min_entropy: float | None = None
     keywords: tuple[str, ...] = ()
+    config_only: bool = False  # jen v konfiguračních souborech (.env, yaml, ini…)
 
 
 def _r(pattern: str, flags: int = 0) -> re.Pattern[str]:
@@ -47,7 +48,9 @@ RULES: tuple[Rule, ...] = (
     Rule(
         "aws-secret-key",
         "AWS secret key",
-        _r(r"(?i)aws_?secret_?(?:access_?)?key\W{0,5}[:=]\s*[\"']?([A-Za-z0-9/+=]{40})\b"),
+        _r(
+            r"(?i)aws_?secret_?(?:access_?)?key\W{0,5}[:=]\s*[\"']?([A-Za-z0-9/+=]{40})(?![A-Za-z0-9/+=])"
+        ),
         1,
         3.5,
         ("aws",),
@@ -125,12 +128,24 @@ RULES: tuple[Rule, ...] = (
         "generic-secret",
         "Obecné tajemství",
         _r(
-            r"(?i)\b(?:api[_-]?key|apikey|secret[_-]?key|client[_-]?secret|access[_-]?token|auth[_-]?token|"
-            r"private[_-]?token|password|passwd|secret|token)\b[\"']?\s*[:=]\s*[\"']([^\"'\s]{12,200})[\"']"
+            r"(?i)(?<![A-Za-z0-9])(?:api[_-]?key|apikey|secret[_-]?key|client[_-]?secret|access[_-]?token|"
+            r"auth[_-]?token|private[_-]?token|password|passwd|secret|token)\b[\"']?\s*[:=]\s*[\"']([^\"'\s]{12,200})[\"']"
         ),
         1,
         3.5,
         ("key", "secret", "token", "pass"),
+    ),
+    Rule(
+        "generic-secret",
+        "Obecné tajemství",
+        _r(
+            r"(?i)^\s*(?:export\s+)?[\"']?[A-Za-z0-9_.-]*(?:api[_-]?key|apikey|secret|token|password|passwd)"
+            r"[\"']?\s*[:=]\s*([^\"'\s#]{12,200})\s*(?:#.*)?$"
+        ),
+        1,
+        3.5,
+        ("key", "secret", "token", "pass"),
+        config_only=True,
     ),
 )
 
@@ -155,8 +170,8 @@ FIXTURE_DIRS = frozenset(
 )
 SKIP_EXT = (".min.js", ".map", ".snap", ".svg", ".lock")
 PLACEHOLDER = re.compile(
-    r"(?i)(example|sample|dummy|placeholder|changeme|change_me|your[_-]|xxxx|\*\*\*\*|<[^>]*>|\$\{|\{\{|"
-    r"redacted|fake|test[_-]?key|todo|replace)"
+    r"(?i)((?<![a-z])(example|sample|dummy|placeholder|changeme|change_me|redacted|fake|test[_-]?key|todo|"
+    r"replace[_-]?me)(?![a-z])|your[_-]|xxxx|\*\*\*\*|<[^>]*>|\$\{|\{\{)"
 )
 ALLOW_MARKERS = ("gitleaks:allow", "repo-doctor:allow")
 
@@ -198,10 +213,36 @@ def fingerprint(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()[:16]
 
 
+CONFIG_FILE = re.compile(
+    r"(?i)(^|/)(\.env[^/]*|[^/]*\.(env|ya?ml|ini|cfg|conf|properties|toml|tfvars))$"
+)
+# Placeholder filtr se týká jen pravidel bez pevného prefixu (u ghp_… apod. je shoda dost jistá).
+PLACEHOLDER_RULES = {
+    "generic-secret",
+    "connection-string",
+    "aws-access-key",
+    "aws-secret-key",
+    "openai-key",
+}
+DEFAULT_DB_PASSWORDS = {
+    "postgres",
+    "password",
+    "root",
+    "mysql",
+    "admin",
+    "secret",
+    "example",
+    "test",
+    "guest",
+}
+
+
 def _first_match(rule: Rule, line: str) -> str | None:
     for m in rule.pattern.finditer(line):
         value = m.group(rule.group)
-        if rule.id != "private-key" and _looks_placeholder(value):
+        if rule.id in PLACEHOLDER_RULES and _looks_placeholder(value):
+            continue
+        if rule.id == "connection-string" and value.lower() in DEFAULT_DB_PASSWORDS:
             continue
         if rule.min_entropy is not None and entropy(value) < rule.min_entropy:
             continue
@@ -218,7 +259,10 @@ def scan_line(line: str, path: str, lineno: int) -> Iterator[SecretMatch]:
     if any(marker in line for marker in ALLOW_MARKERS):
         return
     lowered = line.lower()
+    is_config = bool(CONFIG_FILE.search(path))
     for rule in RULES:
+        if rule.config_only and not is_config:
+            continue
         if rule.keywords and not any(k.lower() in lowered for k in rule.keywords):
             continue
         value = _first_match(rule, line)
@@ -251,27 +295,45 @@ class HistoryScan:
     complete: bool
 
 
+def _header_path(target: str) -> str | None:
+    target = target.rstrip("\t")  # git přidá TAB za názvy s mezerami
+    if target == "/dev/null":
+        return None
+    if target.startswith('"') and target.endswith('"'):
+        target = target[1:-1]
+    return target[2:] if target.startswith("b/") else target
+
+
 def parse_log_patch(lines: Iterable[str]) -> Iterator[SecretMatch]:
-    """Parsuje `git log -p -U0 --format=%x00commit %H %ct` a skenuje přidané řádky."""
+    """Parsuje `git log -p -U0 --format=%x00commit %H %ct` a skenuje přidané řádky.
+
+    Hlavičky `---`/`+++` se berou jen mezi `diff --git` a prvním `@@` – přidaný řádek
+    začínající na `++ ` by se jinak spletl s hlavičkou souboru.
+    """
     commit: str | None = None
     commit_ts: int | None = None
     path: str | None = None
     lineno = 0
+    in_header = False
     for raw in lines:
         if raw.startswith("\0commit "):
             parts = raw[8:].split()
             commit = parts[0] if parts else None
             commit_ts = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else None
-            path = None
+            path, in_header = None, False
             continue
-        if raw.startswith("+++ "):
-            target = raw[4:]
-            path = (
-                None if target == "/dev/null" else target[2:] if target.startswith("b/") else target
-            )
-            if path and is_excluded_path(path):
-                path = None
+        if raw.startswith("diff --git "):
+            path, in_header = None, True
             continue
+        if in_header:
+            if raw.startswith("+++ "):
+                path = _header_path(raw[4:])
+                if path and is_excluded_path(path):
+                    path = None
+            elif raw.startswith("@@"):
+                in_header = False
+            if in_header:
+                continue
         if raw.startswith("@@"):
             m = re.search(r"\+(\d+)", raw)
             lineno = int(m.group(1)) if m else 0

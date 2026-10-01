@@ -140,7 +140,10 @@ SENSITIVE_NAMES = frozenset(
 )
 SENSITIVE_EXT = (".pem", ".key", ".p12", ".pfx", ".jks", ".keystore", ".kdbx", ".ovpn", ".asc.key")
 SAFE_SUFFIXES = (".example", ".sample", ".template", ".dist", ".tmpl", ".defaults")
-SAFE_PUBLIC = re.compile(r"(?i)(public|pub|cert|chain|fullchain|ca)[._-]?[^/]*\.pem$")
+# veřejné části: cert.pem, ca.pem, fullchain.pem, server-cert.pem, ca_bundle.pem… (celá slova)
+SAFE_PUBLIC = re.compile(
+    r"(?i)(?:^|[._-])(public|pub|cert|crt|chain|fullchain|ca|bundle)(?:[._-]|$)"
+)
 
 
 def is_sensitive_file(path: str) -> bool:
@@ -153,7 +156,8 @@ def is_sensitive_file(path: str) -> bool:
     if lowered.startswith(".env.") or lowered.endswith(".env"):
         return True
     if lowered.endswith(SENSITIVE_EXT):
-        return not SAFE_PUBLIC.search(lowered)
+        stem = lowered.rsplit(".", 1)[0]
+        return not SAFE_PUBLIC.search(stem)
     return False
 
 
