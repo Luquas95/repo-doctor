@@ -95,6 +95,11 @@ def card_header(repo: RepoResult, app: RepoDoctorApp, width: int) -> Text:
         t.append(f"hosting: {repo.skipped['forge-ci-failing']}", style=Style(color=p.dim))
     else:
         t.append("hosting: bez dat", style=Style(color=p.dim))
+    if "fetch" in repo.errors:
+        t.append("\nfetch ✗ ", style=Style(color=p.high))
+        t.append(repo.errors["fetch"], style=Style(color=p.text))
+        if "fetch_detail" in repo.errors:
+            t.append(f"  (git: {repo.errors['fetch_detail']})", style=Style(color=p.dim))
     return t
 
 

@@ -33,6 +33,8 @@ def _isolated_env(
     monkeypatch.setenv("GIT_CONFIG_SYSTEM", "/dev/null")
     monkeypatch.delenv("GIT_SSH_COMMAND", raising=False)
     configure_ssh(batch_mode=True)
+    # SSH sonda „testu připojení“ by šla do sítě – testy ji nahrazují explicitně
+    monkeypatch.setattr("repo_doctor.sshhelp.run_probe", lambda url: None)
     yield
     REGISTRY.clear()
     configure_ssh(batch_mode=True)

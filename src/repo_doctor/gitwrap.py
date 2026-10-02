@@ -637,6 +637,28 @@ class Git:
         self.run("fetch", "--quiet", "--no-write-fetch-head", "--no-prune", timeout=timeout)
 
     @staticmethod
+    def _run_detached(
+        args: list[str], label: list[str], timeout: float, cwd: Path | None = None
+    ) -> None:
+        """Příkaz mimo konkrétní repo (clone, ls-remote) se stejným bezpečným prostředím."""
+        try:
+            proc = subprocess.run(
+                ["git", *args],
+                capture_output=True,
+                timeout=timeout,
+                env=git_env(),
+                check=False,
+                stdin=subprocess.DEVNULL,
+                cwd=cwd,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise GitTimeout(label[:1], timeout) from exc
+        except FileNotFoundError as exc:
+            raise GitNotFound() from exc
+        if proc.returncode != 0:
+            raise GitError(label, proc.returncode, proc.stderr.decode("utf-8", "replace"))
+
+    @staticmethod
     def clone(url: str, dest: Path, timeout: float = 600.0) -> None:
         """`git clone` do neexistující cesty. Existující cíl nikdy nepřepisuje."""
         if dest.exists():
@@ -644,21 +666,16 @@ class Git:
         if url.startswith("-"):
             raise GitError(["clone"], 1, "neplatná URL")
         dest.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            proc = subprocess.run(
-                ["git", "clone", "--quiet", "--", url, str(dest)],
-                capture_output=True,
-                timeout=timeout,
-                env=git_env(),
-                check=False,
-                stdin=subprocess.DEVNULL,
-            )
-        except subprocess.TimeoutExpired as exc:
-            raise GitTimeout(["clone"], timeout) from exc
-        except FileNotFoundError as exc:
-            raise GitNotFound() from exc
-        if proc.returncode != 0:
-            raise GitError(["clone", url], proc.returncode, proc.stderr.decode("utf-8", "replace"))
+        Git._run_detached(["clone", "--quiet", "--", url, str(dest)], ["clone", url], timeout)
+
+    @staticmethod
+    def ls_remote(url: str, timeout: float = 20.0) -> None:
+        """`git ls-remote --heads` – jen čte, slouží jako test SSH připojení."""
+        if url.startswith("-"):
+            raise GitError(["ls-remote"], 1, "neplatná URL")
+        Git._run_detached(
+            ["ls-remote", "--heads", "--", url], ["ls-remote", url], timeout, cwd=Path.home()
+        )
 
 
 class TempIndex:

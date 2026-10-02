@@ -17,6 +17,7 @@ from repo_doctor.forges import ForgeManager
 from repo_doctor.forges.base import ForgeRepo
 from repo_doctor.gitwrap import Git, GitError
 from repo_doctor.httpclient import HttpError
+from repo_doctor.sshhelp import explain_ssh_error
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import BaseScreen
 from repo_doctor.tui.screens.forms import CloneDialog, CloneRequest
@@ -198,7 +199,11 @@ class RemoteScreen(BaseScreen):
         try:
             Git.clone(req.url, req.dest)
         except (GitError, FileExistsError) as err:
-            msg = err.stderr if isinstance(err, GitError) else str(err)
+            if isinstance(err, GitError):
+                hint = explain_ssh_error(err.stderr, req.url)
+                msg = f"{hint}\n(git: {err.stderr[:200]})" if hint else err.stderr
+            else:
+                msg = str(err)
             self.app.call_from_thread(
                 self.notify, f"Klon selhal: {msg}", severity="error", timeout=10
             )

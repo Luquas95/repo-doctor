@@ -28,6 +28,15 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   musí zbylé argumenty předat dál (`exec ssh "$@"`); pokud to neumí, vypne se přidávání
   volbou `ssh_batch_mode = false` v konfiguraci (pak odpovědnost za neinteraktivní běh
   nese wrapper).
+- **České hlášky SSH chyb (0.1.2):** `sshhelp.explain_ssh_error(stderr, url)` je čistá
+  funkce; rozpozná neznámý klíč serveru, odmítnutý klíč a nedostupný server, jinak vrátí
+  None a zobrazí se původní (redigovaný) text. Ve výzvě `ssh -p <port> git@<host>` se `-p`
+  vynechá, když URL port nemá (výchozí 22); uživatel se bere jen z SSH URL a jen když je
+  „bezpečný“ (u https je v userinfo typicky token), jinak `git`. Původní text gitu zůstává
+  vidět: u klonu v notifikaci „(git: …)“, u `--fetch` v `errors.fetch_detail` (reporty, karta
+  repa). „Test připojení“ hostingu je API přes HTTPS – při `clone_protocol = "ssh"` proto
+  navíc zkusí `git ls-remote --heads` na SSH URL prvního repa (jen čte) a problém ukáže
+  jako varování.
 - **`--fetch`** je jediná výjimka z „CLI nic nemění“: aktualizuje jen remote-tracking refy
   a je vypnutý ve výchozím stavu (zadání: „žádný fetch bez `--fetch`“).
 - **Tajemství se v modelu vůbec nevyskytují.** Skener vrací jen maskovanou ukázku

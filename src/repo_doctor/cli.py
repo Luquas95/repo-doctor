@@ -155,6 +155,9 @@ def scan(
         raise typer.Exit(2) from None
     if interactive:
         typer.echo("", err=True)
+    for r in result.repos:
+        if "fetch" in r.errors:
+            _err(f"fetch {r.name}: {r.errors['fetch']}")
     fmt: ReportFormat = report
     text = render(result, fmt, no_pulse_days=config.limits.no_pulse_days)
     if output:
@@ -196,6 +199,7 @@ def forges_test(
     """Ověří připojení nastavených hostingů. Token nikdy nevypíše."""
     from repo_doctor.forges import build_forge
     from repo_doctor.forges.tokens import TokenError, resolve_token
+    from repo_doctor.sshhelp import forge_ssh_warning
 
     config = _load_config()
     targets = [f for f in config.forges if name is None or f.name == name]
@@ -220,6 +224,8 @@ def forges_test(
                 continue
             try:
                 rep = await forge.test_connection()
+                if rep.ok and (ssh := await forge_ssh_warning(forge, fc)):
+                    rep.warnings.append(ssh)
             finally:
                 await forge.client.aclose()
             if rep.ok:

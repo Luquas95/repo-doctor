@@ -37,6 +37,7 @@ from repo_doctor.httpclient import HttpClient, HttpError, ResponseCache
 from repo_doctor.masking import redact, redact_url_credentials
 from repo_doctor.models import RemoteInfo, RepoResult, RepoState, ScanResult
 from repo_doctor.scoring import score
+from repo_doctor.sshhelp import explain_ssh_error
 
 log = logging.getLogger(__name__)
 
@@ -219,16 +220,19 @@ class Scanner:
         except ConfigError as err:
             res.errors["config"] = str(err)
         git = Git(repo.path, timeout=config.limits.git_timeout_s)
+        raw_remotes = git.remotes()
         if self.options.fetch and not self.options.offline:
             try:
                 git.fetch()
             except GitError as err:
-                res.errors["fetch"] = err.stderr[:200]
+                hint = explain_ssh_error(err.stderr, raw_remotes.get("origin"))
+                res.errors["fetch"] = hint or err.stderr[:200]
+                if hint:
+                    res.errors["fetch_detail"] = err.stderr[:300]
         remotes: list[RemoteInfo] = []
         forge_name: str | None = None
         owner_path: str | None = None
         parsed_primary: RemoteURL | None = None
-        raw_remotes = git.remotes()
         ordered = sorted(raw_remotes.items(), key=lambda kv: (kv[0] != "origin", kv[0]))
         for name, url in ordered:
             parsed = parse_remote(url, self.ssh_config)
