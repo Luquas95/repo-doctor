@@ -85,7 +85,10 @@ clone_protocol = "ssh"
 
 Remote typu `ssh://git@git.tailnet-name.ts.net:2222/ja/repo.git` se k hostingu přiřadí podle
 hostname (SSH port se může lišit od webového). Fungují i aliasy z `~/.ssh/config`
-(`Host forgejo` + `HostName …`). `verify_tls = false` jde nastavit, ale UI před tím varuje –
+(`Host forgejo` + `HostName …`). SSH příkaz se bere z proměnné `GIT_SSH_COMMAND`, jinak
+z globálního či systémového `core.sshCommand` (i ze souborů vložených přes `[include]`);
+nastavení z `includeIf` podle složky repo-doctor nepoužije, takové nastavení je potřeba dát
+do proměnné `GIT_SSH_COMMAND` nebo do `~/.ssh/config`. `verify_tls = false` jde nastavit, ale UI před tím varuje –
 raději použij `ca_bundle`. Výpadek hostingu (Tailscale vypnutý) nic neblokuje: kontroly
 hostingu se označí jako „nedostupné“.
 

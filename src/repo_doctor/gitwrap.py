@@ -90,13 +90,19 @@ def reset_ssh_cache() -> None:
 
 
 def _user_ssh_command(timeout: float = 5.0) -> str | None:
-    """`core.sshCommand` z globální a systémové konfigurace – nikdy z lokální konfigurace repa."""
+    """`core.sshCommand` z globální a systémové konfigurace – nikdy z lokální konfigurace repa.
+
+    `--includes` načte i soubory vložené přes `[include]` (konfigurace uživatele je důvěryhodná);
+    dotaz běží v domovské složce, mimo zkoumaná repa. Podmíněné `[includeIf "gitdir:…"]` se
+    mimo repozitář nevyhodnotí – takové nastavení repo-doctor nepoužije, patří do proměnné
+    `GIT_SSH_COMMAND` nebo do `~/.ssh/config`.
+    """
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_CONFIG_PARAMETERS")}
     env.update({"GIT_TERMINAL_PROMPT": "0", "LC_ALL": "C"})
     for scope in ("--global", "--system"):
         try:
             proc = subprocess.run(
-                ["git", "config", scope, "--get", "core.sshCommand"],
+                ["git", "config", scope, "--includes", "--get", "core.sshCommand"],
                 capture_output=True,
                 timeout=timeout,
                 env=env,
