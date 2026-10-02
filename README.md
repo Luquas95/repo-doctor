@@ -256,6 +256,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | [`stashes`](docs/checks/stashes.md) | Stav gitu | LOW |  |  |
 | [`uncommitted`](docs/checks/uncommitted.md) | Stav gitu | LOW |  |  |
 | [`unpushed`](docs/checks/unpushed.md) | Stav gitu | MED |  |  |
+| [`unsafe-ownership`](docs/checks/unsafe-ownership.md) | Stav gitu | LOW |  |  |
 | [`forge-archived-active`](docs/checks/forge-archived-active.md) | Hosting | MED |  | hosting |
 | [`forge-ci-failing`](docs/checks/forge-ci-failing.md) | Hosting | MED |  | hosting |
 | [`forge-mirror-drift`](docs/checks/forge-mirror-drift.md) | Hosting | LOW |  | hosting |

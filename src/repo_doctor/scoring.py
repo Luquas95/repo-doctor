@@ -26,6 +26,7 @@ class Band(StrEnum):
     WATCH = "watch"
     NO_PULSE = "no_pulse"
     HEALTHY = "healthy"
+    UNCHECKED = "unchecked"
 
     @property
     def label(self) -> str:
@@ -34,6 +35,7 @@ class Band(StrEnum):
             "watch": "SLEDOVAT",
             "no_pulse": "BEZ TEPU",
             "healthy": "ZDRAVÉ",
+            "unchecked": "NELZE ZKONTROLOVAT",
         }[self.value]
 
     @property
@@ -50,7 +52,9 @@ def is_no_pulse(repo: RepoResult, days: int = 90, now: datetime | None = None) -
 
 
 def band(repo: RepoResult, no_pulse_days: int = 90, now: datetime | None = None) -> Band:
-    """Priorita: KRITICKÉ > SLEDOVAT > BEZ TEPU > ZDRAVÉ."""
+    """Priorita: KRITICKÉ > SLEDOVAT > BEZ TEPU > ZDRAVÉ; repo bez skóre je zvlášť."""
+    if repo.score is None:
+        return Band.UNCHECKED
     if repo.score < 40 or any(f.severity is Severity.HIGH for f in repo.findings):
         return Band.CRITICAL
     if repo.score < 70:
@@ -78,7 +82,19 @@ def sparkline(values: list[int], width: int | None = None) -> str:
     return "".join(SPARK[min(7, round(v / top * 7))] if v else SPARK[0] for v in values)
 
 
-def gauge(score_value: int, blocks: int = 5) -> str:
+def sort_score(score_value: int | None) -> int:
+    """Řazení vzestupně podle skóre; repo bez skóre až na konec."""
+    return 101 if score_value is None else score_value
+
+
+def score_label(score_value: int | None) -> str:
+    """Skóre k zobrazení; repo, které nešlo zkontrolovat, má „–“."""
+    return "–" if score_value is None else str(score_value)
+
+
+def gauge(score_value: int | None, blocks: int = 5) -> str:
+    if score_value is None:
+        return "·" * blocks
     filled = max(0, min(blocks, round(score_value / 100 * blocks)))
     if score_value > 0 and filled == 0:
         filled = 1

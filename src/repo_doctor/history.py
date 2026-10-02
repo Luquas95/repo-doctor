@@ -51,7 +51,7 @@ def record(
         by_severity=summary.by_severity,
         health=summary.health,
         no_pulse=summary.no_pulse,
-        scores={r.path: r.score for r in result.repos},
+        scores={r.path: r.score for r in result.repos if r.score is not None},
     )
     (directory / f"scan-{ts:%Y%m%dT%H%M%S%f}.json").write_text(entry.model_dump_json(), "utf-8")
     files = sorted(directory.glob("scan-*.json"))

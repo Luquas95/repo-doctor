@@ -52,6 +52,16 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   `/dev/null`; bere se první neprázdný řádek (jako `pass show`). Výstup se nikdy
   nepropisuje do chyb – ani při nenulovém exit kódu. Běží ve vlastní skupině procesů, po
   timeoutu se ukončí celá skupina (i potomci, kteří by drželi rouru).
+- **Cizí vlastník / `safe.directory` (0.1.2):** scanner nejdřív spustí jediné
+  `git rev-parse --git-dir` (bez čtení lokální konfigurace). Když git odpoví „detected dubious
+  ownership“, repo se označí `untrusted_owner`, žádný další příkaz gitu se nespustí, jeho
+  `.repo-doctor.toml` se nečte a vznikne jediný nález `unsafe-ownership` s postupem
+  `git config --global --add safe.directory <cesta>`. repo-doctor `safe.directory` nikdy
+  nenastavuje ani nepřebíjí přes `-c` – rozhodnutí důvěřovat cizímu repu patří uživateli.
+  **Severity LOW** (ne „info“ – žádnou takovou úroveň nemáme a nález je potřeba vidět, ale
+  repo samo o sobě není v nebezpečí; CLI tak skončí s 1 jen při `--fail-on low`).
+  **Skóre se nepočítá** (`score = null` v JSON, `–` v TUI a reportech), repo je v triáži ve
+  skupině NELZE ZKONTROLOVAT na konci a do průměrného zdraví ani historie se nezapočítá.
 - **Skóre:** 100 − 25 za HIGH, 9 za MED, 3 za LOW, s limitem na kontrolu (max 50 / 18 / 6),
   aby deset nálezů jedné kontroly nesrazilo repo na nulu. Kalibrováno podle wireframu.
 - **Pásma triáže mají prioritu** KRITICKÉ > SLEDOVAT > BEZ TEPU > ZDRAVÉ: repo s HIGH

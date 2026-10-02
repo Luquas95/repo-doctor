@@ -7,7 +7,7 @@ from datetime import datetime
 
 from repo_doctor.models import RepoResult, ScanResult, Severity
 from repo_doctor.reports import local_time
-from repo_doctor.scoring import band, gauge
+from repo_doctor.scoring import band, gauge, score_label, sort_score
 
 
 def _code(text: str) -> str:
@@ -51,12 +51,12 @@ def render(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None 
         "| skóre | repozitář | pásmo | nálezy | hosting |",
         "|---:|---|---|---|---|",
     ]
-    ordered = sorted(result.repos, key=lambda r: (r.score, r.name))
+    ordered = sorted(result.repos, key=lambda r: (sort_score(r.score), r.name))
     for r in ordered:
         vis = {"public": "◉ veřejné", "private": "○ privátní"}.get(r.visibility, "")
         host = f"{r.forge or '—'} {vis}".strip()
         lines.append(
-            f"| {r.score} {gauge(r.score)} | `{_cell(r.name)}` | {band(r, no_pulse_days, now).label} | "
+            f"| {score_label(r.score)} {gauge(r.score)} | `{_cell(r.name)}` | {band(r, no_pulse_days, now).label} | "
             f"{_counts(r)} | {_cell(host)} |"
         )
     lines.append("")
@@ -64,7 +64,7 @@ def render(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None 
     for r in ordered:
         if r in clean:
             continue
-        lines += [f"## {_cell(r.name)} – {r.score}/100", "", f"`{_cell(r.path)}`", ""]
+        lines += [f"## {_cell(r.name)} – {score_label(r.score)}/100", "", f"`{_cell(r.path)}`", ""]
         if not r.findings:
             lines += ["Bez nálezů. ✓", ""]
         else:

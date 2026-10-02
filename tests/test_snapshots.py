@@ -73,3 +73,23 @@ def test_wireframe_fix(snap_compare: Any, tmp_path: Path) -> None:
         await pilot.pause()
 
     assert snap_compare(_fix_app(tmp_path, "dark"), terminal_size=(100, 31), run_before=run_before)
+
+
+def test_dashboard_unchecked_repo(snap_compare: Any, tmp_path: Path) -> None:
+    """Repo cizího vlastníka: skóre „–“ a skupina NELZE ZKONTROLOVAT (80×24)."""
+    from repo_doctor.checks.meta import UnsafeOwnership
+    from repo_doctor.models import RepoResult
+
+    result = sample_result()
+    result.repos = result.repos[:2]
+    result.repos.append(
+        RepoResult(
+            path="/srv/sdilene/cizi",
+            name="cizi-repo",
+            root="~/projekty",
+            score=None,
+            untrusted_owner=True,
+            findings=[UnsafeOwnership().for_path("/srv/sdilene/cizi")],
+        )
+    )
+    assert snap_compare(make_app(tmp_path, result=result, theme="dark"), terminal_size=(80, 24))

@@ -51,7 +51,7 @@ async def test_scan_offline_end_to_end(tmp_path: Path) -> None:
     assert set(names) == {"healthy", "leaky", "noreadme"}
     assert {f.check_id for f in names["healthy"].findings} == {"no-remote"}
     assert any(f.check_id == "secrets-history" for f in names["leaky"].findings)
-    assert names["leaky"].score < names["healthy"].score
+    assert (names["leaky"].score or 0) < (names["healthy"].score or 0)
     assert names["noreadme"].skipped["deps-vulnerable"] == "offline režim"
     assert "forge-ci-failing" in names["noreadme"].skipped
     kinds = [e.kind for e in events]

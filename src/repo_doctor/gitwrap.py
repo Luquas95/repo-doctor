@@ -44,6 +44,9 @@ def _clean(text: str) -> str:
     return redact_url_credentials(redact(text))
 
 
+DUBIOUS_OWNERSHIP = "detected dubious ownership"
+
+
 class GitError(RuntimeError):
     """Selhání příkazu git (zpráva je vždy redigovaná)."""
 
@@ -399,6 +402,35 @@ class Git:
 
     def is_detached(self) -> bool:
         return self.current_branch() is None and self.head_sha() is not None
+
+    def dubious_ownership(self) -> bool:
+        """Odmítl git repo kvůli `safe.directory` (vlastník je jiný uživatel)?
+
+        repo-doctor `safe.directory` nikdy nenastavuje ani nepřebíjí přes `-c`."""
+        # bez hardeningu: ten by si četl lokální konfiguraci dalším voláním gitu a
+        # `rev-parse --git-dir` žádný program z konfigurace repa nespouští
+        try:
+            proc = subprocess.run(
+                [
+                    "git",
+                    "--no-pager",
+                    *_SAFE_CONFIG,
+                    "-C",
+                    str(self.path),
+                    "rev-parse",
+                    "--git-dir",
+                ],
+                capture_output=True,
+                timeout=self.timeout,
+                env=git_env(),
+                check=False,
+                stdin=subprocess.DEVNULL,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise GitTimeout(["rev-parse"], self.timeout) from exc
+        except FileNotFoundError as exc:
+            raise GitNotFound() from exc
+        return proc.returncode != 0 and DUBIOUS_OWNERSHIP in proc.stderr.decode("utf-8", "replace")
 
     def remotes(self) -> dict[str, str]:
         out = self.run("config", "--get-regexp", r"^remote\..*\.url$", check=False)

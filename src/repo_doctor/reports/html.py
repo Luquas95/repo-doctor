@@ -7,7 +7,7 @@ from html import escape
 
 from repo_doctor.models import Category, RepoResult, ScanResult, Severity
 from repo_doctor.reports import local_time
-from repo_doctor.scoring import band, gauge
+from repo_doctor.scoring import band, gauge, score_label, sort_score
 
 CSS = """
 :root{--bg:#f6f7f9;--panel:#fff;--text:#1d2330;--muted:#5b6474;--border:#d5d9e0;--accent:#0f8a6c;
@@ -70,7 +70,9 @@ JS = """
 """
 
 
-def _score_class(score: int) -> str:
+def _score_class(score: int | None) -> str:
+    if score is None:
+        return "muted"
     return "s-bad" if score < 40 else "s-warn" if score < 70 else "s-ok"
 
 
@@ -84,7 +86,7 @@ def _repo(r: RepoResult, no_pulse_days: int, now: datetime | None) -> str:
     cls = _score_class(r.score)
     vis = {"public": "◉ veřejné", "private": "○ privátní"}.get(r.visibility, "")
     head = (
-        f'<summary><span class="score {cls}">{r.score} {gauge(r.score)}</span>'
+        f'<summary><span class="score {cls}">{score_label(r.score)} {gauge(r.score)}</span>'
         f"<h2>{escape(r.name)}</h2><span class=muted>{escape(band(r, no_pulse_days, now).label)}</span>"
         + "".join(_count_span(s, counts[s]) for s in Severity)
         + f"<span class=muted>{escape(r.forge or '')} {escape(vis)}</span></summary>"
@@ -129,7 +131,7 @@ def _repo(r: RepoResult, no_pulse_days: int, now: datetime | None) -> str:
 def render(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None = None) -> str:
     s = result.summary(no_pulse_days, now)
     when = local_time(result.finished_at or result.started_at)
-    repos = sorted(result.repos, key=lambda r: (r.score, r.name))
+    repos = sorted(result.repos, key=lambda r: (sort_score(r.score), r.name))
     repo_options = "".join(
         f'<option value="{escape(r.name)}">{escape(r.name)}</option>' for r in repos
     )
