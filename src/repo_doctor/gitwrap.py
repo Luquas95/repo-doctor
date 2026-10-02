@@ -67,6 +67,63 @@ class GitNotFound(GitError):
         super().__init__(["git"], 127, "příkaz git nebyl nalezen v PATH")
 
 
+_SSH_LOCK = threading.Lock()
+_ssh_command: str | None = None
+_ssh_batch_mode = True
+
+
+def configure_ssh(*, batch_mode: bool) -> None:
+    """Nastaví, zda se k SSH příkazu připojuje `-o BatchMode=yes` (volba `ssh_batch_mode`)."""
+    global _ssh_batch_mode, _ssh_command
+    with _SSH_LOCK:
+        _ssh_batch_mode = batch_mode
+        _ssh_command = None
+
+
+def reset_ssh_cache() -> None:
+    global _ssh_command
+    with _SSH_LOCK:
+        _ssh_command = None
+
+
+def _user_ssh_command(timeout: float = 5.0) -> str | None:
+    """`core.sshCommand` z globální a systémové konfigurace – nikdy z lokální konfigurace repa."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_CONFIG_PARAMETERS")}
+    env.update({"GIT_TERMINAL_PROMPT": "0", "LC_ALL": "C"})
+    for scope in ("--global", "--system"):
+        try:
+            proc = subprocess.run(
+                ["git", "config", scope, "--get", "core.sshCommand"],
+                capture_output=True,
+                timeout=timeout,
+                env=env,
+                check=False,
+                stdin=subprocess.DEVNULL,
+                cwd=Path.home() if Path.home().is_dir() else "/",
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            return None
+        value = proc.stdout.decode("utf-8", "replace").strip()
+        if proc.returncode == 0 and value:
+            return value
+    return None
+
+
+def ssh_command() -> str:
+    """SSH příkaz pro git: prostředí → globální/systémový `core.sshCommand` → `ssh`.
+
+    Ke všemu se (nevypne-li to `ssh_batch_mode = false`) připojí `-o BatchMode=yes`, aby se
+    git nikdy neptal na heslo nebo potvrzení klíče hostitele a TUI nezamrzlo. Volby za
+    názvem příkazu jsou platné i pro `ssh -i … -F …`; wrapper skript musí argumenty předat dál.
+    """
+    global _ssh_command
+    with _SSH_LOCK:
+        if _ssh_command is None:
+            base = os.environ.get("GIT_SSH_COMMAND", "").strip() or _user_ssh_command() or "ssh"
+            _ssh_command = f"{base} -o BatchMode=yes" if _ssh_batch_mode else base
+        return _ssh_command
+
+
 def git_env(extra: Mapping[str, str] | None = None) -> dict[str, str]:
     env = dict(os.environ)
     env.update(
@@ -78,7 +135,9 @@ def git_env(extra: Mapping[str, str] | None = None) -> dict[str, str]:
             "GIT_PAGER": "cat",
             "PAGER": "cat",
             "GIT_EDITOR": "true",
-            "GIT_SSH_COMMAND": env.get("GIT_SSH_COMMAND", "ssh") + " -o BatchMode=yes",
+            # Proměnná má přednost před core.sshCommand – tím zároveň nikdy neplatí lokální
+            # core.sshCommand cizího repa (navíc ho přebíjí hardening).
+            "GIT_SSH_COMMAND": ssh_command(),
         }
     )
     # Proměnné, které by mohly přesměrovat git mimo zkoumané repo.

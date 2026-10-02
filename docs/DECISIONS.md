@@ -19,6 +19,15 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   a `--no-ext-diff` (cizí `.git/config` nesmí spouštět programy), `GIT_TERMINAL_PROMPT=0`
   a SSH v `BatchMode`. Uživatelské cesty/refy jdou vždy za `--`/`--end-of-options`,
   názvy větví se ověřují `git check-ref-format --branch`.
+- **SSH příkaz (0.1.2):** git dostává vždy `GIT_SSH_COMMAND` (proměnná má přednost před
+  `core.sshCommand`, takže lokální `core.sshCommand` cizího repa se nikdy nespustí – hardening
+  ho navíc přebíjí prázdnou hodnotou). Základ se bere v pořadí: proměnná `GIT_SSH_COMMAND`
+  z prostředí → globální/systémový `core.sshCommand` (`git config --global/--system`,
+  spuštěno v `$HOME`, timeout 5 s, výsledek cachovaný na běh) → `ssh`. Na konec se přidá
+  `-o BatchMode=yes`, aby se SSH nikdy neptal na heslo a nezasekl TUI. Wrapper skript proto
+  musí zbylé argumenty předat dál (`exec ssh "$@"`); pokud to neumí, vypne se přidávání
+  volbou `ssh_batch_mode = false` v konfiguraci (pak odpovědnost za neinteraktivní běh
+  nese wrapper).
 - **`--fetch`** je jediná výjimka z „CLI nic nemění“: aktualizuje jen remote-tracking refy
   a je vypnutý ve výchozím stavu (zadání: „žádný fetch bez `--fetch`“).
 - **Tajemství se v modelu vůbec nevyskytují.** Skener vrací jen maskovanou ukázku

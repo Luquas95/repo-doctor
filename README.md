@@ -307,6 +307,7 @@ ignore_paths = ["vendor/**"]
 ignore_repos = ["*-fork"]
 license = "MIT"           # MIT | ISC | BSD-2-Clause | Unlicense
 templates_dir = "~/.config/repo-doctor/templates"
+ssh_batch_mode = true     # false = nepřidávat `-o BatchMode=yes` (vlastní SSH wrapper)
 
 [ui]
 theme = "dark"            # dark | light (t přepne)

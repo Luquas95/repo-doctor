@@ -18,6 +18,7 @@ from repo_doctor import __version__, paths
 from repo_doctor.checkdocs import load as load_doc
 from repo_doctor.checks import all_checks, check_ids
 from repo_doctor.config import Config, ConfigError, ConfigStore, RootConfig
+from repo_doctor.gitwrap import configure_ssh
 from repo_doctor.masking import install_log_redaction, redact
 from repo_doctor.models import ScanResult, Severity
 from repo_doctor.reports import FORMATS, ReportFormat, render
@@ -44,10 +45,12 @@ def _err(message: str) -> None:
 
 def _load_config() -> Config:
     try:
-        return ConfigStore().load()
+        config = ConfigStore().load()
     except ConfigError as err:
         _err(str(err))
         raise typer.Exit(2) from None
+    configure_ssh(batch_mode=config.ssh_batch_mode)
+    return config
 
 
 def _split(values: list[str] | None) -> list[str] | None:
