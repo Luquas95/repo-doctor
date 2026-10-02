@@ -74,3 +74,43 @@ def test_local_ssh_command_of_foreign_repo_never_runs(home: Path, tmp_path: Path
         Git(rb.path).fetch(timeout=20)
     assert global_marker.exists()
     assert not local_marker.exists()
+
+
+def test_ssh_command_from_include(home: Path) -> None:
+    inc = home / ".config" / "git" / "ssh.inc"
+    inc.parent.mkdir(parents=True)
+    inc.write_text("[core]\n\tsshCommand = ssh -i /tmp/vlozeny\n")
+    _global_config(home, f"[include]\n\tpath = {inc}\n")
+    reset_ssh_cache()
+    assert ssh_command() == "ssh -i /tmp/vlozeny -o BatchMode=yes"
+
+
+def test_include_if_gitdir_is_not_used(home: Path, tmp_path: Path) -> None:
+    repo = RepoBuilder.create(tmp_path / "pracovni")
+    inc = home / "prace.inc"
+    inc.write_text("[core]\n\tsshCommand = ssh -i /tmp/pracovni\n")
+    _global_config(home, f'[includeIf "gitdir:{repo.path}/"]\n\tpath = {inc}\n')
+    reset_ssh_cache()
+    assert ssh_command() == "ssh -o BatchMode=yes"
+
+
+def test_direct_global_value_unchanged(home: Path) -> None:
+    _global_config(home, "[core]\n\tsshCommand = ssh -i /tmp/primy\n")
+    reset_ssh_cache()
+    assert ssh_command() == "ssh -i /tmp/primy -o BatchMode=yes"
+
+
+def test_cwd_inside_malicious_repo_is_ignored(
+    home: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Dotaz spuštěný z repa (proces i HOME uvnitř repa) lokální core.sshCommand nepoužije."""
+    evil = RepoBuilder.create(tmp_path / "zle")
+    git(evil.path, "config", "core.sshCommand", "touch /tmp/zle-ssh")
+    monkeypatch.chdir(evil.path)
+    reset_ssh_cache()
+    assert ssh_command() == "ssh -o BatchMode=yes"
+    # i když je samotná domovská složka git repem se škodlivou lokální hodnotou
+    git(home, "init", "-q")
+    git(home, "config", "core.sshCommand", "touch /tmp/zle-home")
+    reset_ssh_cache()
+    assert ssh_command() == "ssh -o BatchMode=yes"
