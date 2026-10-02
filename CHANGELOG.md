@@ -2,6 +2,14 @@
 
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze podle SemVer.
 
+## [0.1.3] – 2026-10-02
+
+### Opraveno
+- `core.sshCommand` se najde i v souborech vložených do globální/systémové konfigurace přes
+  `[include]` (`git config --includes`). Podmíněné `includeIf` podle složky se mimo repo
+  nevyhodnotí – takové nastavení patří do `GIT_SSH_COMMAND` nebo `~/.ssh/config`.
+  Lokální konfigurace zkoumaných rep se dál nikdy nečte.
+
 ## [0.1.2] – 2026-10-02
 
 ### Opraveno
