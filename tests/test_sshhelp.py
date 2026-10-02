@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import stat
 from pathlib import Path
+from typing import Any
 
 import pytest
 import respx
@@ -191,3 +192,111 @@ async def test_tui_clone_shows_czech_message(
     failed = [m for m in messages if m.startswith("Klon selhal")]
     assert failed and PUBLICKEY_MSG in failed[0]
     assert "(git: " in failed[0] and "Permission denied" in failed[0]
+
+
+class _Forge:
+    """Náhrada hostingu jen s `list_repos` (sonda nepotřebuje nic dalšího)."""
+
+    def __init__(self, repos: list[object] | None = None, error: bool = False) -> None:
+        self.repos = repos or []
+        self.error = error
+        self.calls = 0
+
+    async def list_repos(self) -> list[object]:
+        from repo_doctor.httpclient import HttpError
+
+        self.calls += 1
+        if self.error:
+            raise HttpError("503 Service Unavailable", status=503)
+        return self.repos
+
+
+def _fc(protocol: str = "ssh") -> Any:
+    from repo_doctor.config import ForgeConfig
+
+    return ForgeConfig(name="home", type="github", clone_protocol=protocol)
+
+
+@pytest.fixture
+def probes(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    calls: list[str] = []
+    monkeypatch.setattr(sshhelp, "run_probe", calls.append)
+    return calls
+
+
+async def test_forge_ssh_warning_skipped_for_https(probes: list[str]) -> None:
+    from repo_doctor.forges.base import ForgeRepo
+
+    forge = _Forge([ForgeRepo("ja/repo", "main", private=False, clone_ssh=PORT_URL)])
+    assert await sshhelp.forge_ssh_warning(forge, _fc("https")) is None  # type: ignore[arg-type]
+    assert forge.calls == 0 and probes == []
+
+
+async def test_forge_ssh_warning_api_error(probes: list[str]) -> None:
+    forge = _Forge(error=True)
+    assert await sshhelp.forge_ssh_warning(forge, _fc()) is None  # type: ignore[arg-type]
+    assert probes == []
+
+
+async def test_forge_ssh_warning_without_ssh_url(probes: list[str]) -> None:
+    from repo_doctor.forges.base import ForgeRepo
+
+    forge = _Forge([ForgeRepo("ja/repo", "main", private=False)])
+    assert await sshhelp.forge_ssh_warning(forge, _fc()) is None  # type: ignore[arg-type]
+    assert probes == []
+
+
+async def test_forge_ssh_warning_success(probes: list[str]) -> None:
+    from repo_doctor.forges.base import ForgeRepo
+
+    forge = _Forge(
+        [
+            ForgeRepo("ja/bez-ssh", "main", private=False),
+            ForgeRepo("ja/repo", "main", private=False, clone_ssh=PORT_URL),
+        ]
+    )
+    assert await sshhelp.forge_ssh_warning(forge, _fc()) is None  # type: ignore[arg-type]
+    assert probes == [PORT_URL]  # první repo s SSH URL
+
+
+@respx.mock
+async def test_tui_forge_test_notifies_ssh_problem(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from repo_doctor.tui.screens.forges import ForgesScreen
+    from tests.tui_helpers import make_app
+
+    def failing(url: str) -> None:
+        raise GitError(["ls-remote", url], 128, "Host key verification failed.")
+
+    monkeypatch.setattr(sshhelp, "run_probe", failing)
+    messages: list[tuple[str, str]] = []
+
+    def capture(self: ForgesScreen, message: str, **kw: Any) -> None:
+        messages.append((message, kw.get("severity", "information")))
+
+    monkeypatch.setattr(ForgesScreen, "notify", capture)
+    api = "https://git.example.ts.net/api/v1"
+    respx.get(f"{api}/users/ja").respond(json={"login": "ja"})
+    respx.get(f"{api}/version").respond(json={"version": "9.0.0+gitea-1.22"})
+    respx.get(f"{api}/users/ja/repos").respond(
+        json=[{"full_name": "ja/repo", "private": False, "ssh_url": PORT_URL}]
+    )
+    cfg = '[[forges]]\nname = "home"\ntype = "forgejo"\nurl = "https://git.example.ts.net"\nuser = "ja"\n'
+    app = make_app(tmp_path, config=cfg)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        await pilot.press("5")
+        await pilot.pause()
+        await pilot.press("T")
+        await pilot.pause(0.3)
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+    ssh = [(m, s) for m, s in messages if "SSH:" in m]
+    assert ssh == [
+        (
+            "home: SSH: Server zatím neznáš. Připoj se k němu jednou ručně: "
+            "`ssh -p 2222 git@git.example.ts.net` a potvrď otisk klíče. Pak to zkus znovu.",
+            "warning",
+        )
+    ]

@@ -163,3 +163,21 @@ async def test_card_header_variants(tmp_path: Path) -> None:
         assert "fetch ✗ Server odmítl SSH klíč.  (git: Permission denied)" in text
         repo.errors = {"fetch": "fatal: něco jiného"}
         assert "(git:" not in card_header(repo, app, 100).plain
+
+
+async def test_ownership_probe_failure_falls_back_to_normal_scan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from repo_doctor.gitwrap import GitTimeout
+
+    root = _repo(tmp_path)
+
+    def timeout(self: Git) -> bool:
+        raise GitTimeout(["rev-parse"], 0.1)
+
+    monkeypatch.setattr(Git, "dubious_ownership", timeout)
+    cfg = Config(roots=[RootConfig(path=str(root))])
+    result = await Scanner(cfg, ScanOptions(offline=True, now=NOW), ssh_config=SshConfig()).run()
+    (repo,) = result.repos
+    assert not repo.untrusted_owner and repo.score is not None
+    assert "unsafe-ownership" not in {f.check_id for f in repo.findings}
