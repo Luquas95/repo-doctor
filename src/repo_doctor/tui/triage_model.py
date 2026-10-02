@@ -7,7 +7,7 @@ from datetime import datetime
 from typing import Literal
 
 from repo_doctor.models import Category, RepoResult, ScanResult, Severity
-from repo_doctor.scoring import Band, band, is_no_pulse
+from repo_doctor.scoring import Band, band, is_no_pulse, sort_score
 from repo_doctor.tui.util import git_state
 
 SORT_COLUMNS: tuple[str, ...] = ("score", "name", "high", "medium", "low", "git", "forge", "pulse")
@@ -92,8 +92,9 @@ def matches(repo: RepoResult, f: Filters) -> bool:
 
 def sort_key(repo: RepoResult, column: str) -> tuple[object, ...]:
     c = repo.counts()
+    score = sort_score(repo.score)  # repo bez skóre až na konec
     keys: dict[str, object] = {
-        "score": repo.score,
+        "score": score,
         "name": repo.name.lower(),
         "high": -c[Severity.HIGH],
         "medium": -c[Severity.MEDIUM],
@@ -102,7 +103,7 @@ def sort_key(repo: RepoResult, column: str) -> tuple[object, ...]:
         "forge": forge_key(repo),
         "pulse": -sum(repo.state.pulse),
     }
-    return (keys[column], repo.score, repo.name.lower())
+    return (keys[column], score, repo.name.lower())
 
 
 def build_groups(
@@ -113,7 +114,13 @@ def build_groups(
     groups: dict[str, Group] = {}
     if state.group_by == "triage":
         for b in Band:
-            note = f"žádný commit {no_pulse_days}+ dní" if b is Band.NO_PULSE else ""
+            note = (
+                f"žádný commit {no_pulse_days}+ dní"
+                if b is Band.NO_PULSE
+                else "cizí vlastník – viz nález"
+                if b is Band.UNCHECKED
+                else ""
+            )
             groups[b.value] = Group(b.value, b.label, [], note, b)
         for r in repos:
             groups[band(r, no_pulse_days, now).value].repos.append(r)

@@ -8,7 +8,7 @@ from rich.style import Style
 from rich.text import Text
 
 from repo_doctor.models import RepoResult, Severity
-from repo_doctor.scoring import Band, gauge, sparkline
+from repo_doctor.scoring import Band, gauge, score_label, sparkline
 from repo_doctor.tui.theme import Palette
 from repo_doctor.tui.triage_model import Group
 from repo_doctor.tui.util import git_state, pad
@@ -62,10 +62,11 @@ def repo_row(repo: RepoResult, cols: Columns, p: Palette) -> Text:
     color = p.score(repo.score)
     t = Text()
     t.append("▌", style=Style(color=color))
-    t.append(f"{repo.score:>3} ", style=Style(color=color, bold=True))
+    t.append(f"{score_label(repo.score):>3} ", style=Style(color=color, bold=True))
     t.append(gauge(repo.score), style=Style(color=color))
     t.append("  ")
-    t.append(pad(repo.name, cols.name_w, Style(color=p.text, bold=repo.score < 40)))
+    critical = repo.score is not None and repo.score < 40
+    t.append(pad(repo.name, cols.name_w, Style(color=p.text, bold=critical)))
     t.append(" ")
     counts = repo.counts()
     for sev in Severity:
@@ -106,7 +107,13 @@ def repo_row(repo: RepoResult, cols: Columns, p: Palette) -> Text:
     return t
 
 
-BAND_COLOR = {Band.CRITICAL: "high", Band.WATCH: "med", Band.NO_PULSE: "muted", Band.HEALTHY: "ok"}
+BAND_COLOR = {
+    Band.CRITICAL: "high",
+    Band.WATCH: "med",
+    Band.NO_PULSE: "muted",
+    Band.HEALTHY: "ok",
+    Band.UNCHECKED: "muted",
+}
 
 
 def group_header(group: Group, width: int, p: Palette, *, collapsed: bool, toggle_key: str) -> Text:

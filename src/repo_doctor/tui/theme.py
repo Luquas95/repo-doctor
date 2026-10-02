@@ -31,7 +31,9 @@ class Palette:
     def severity(self, sev: Severity) -> str:
         return {Severity.HIGH: self.high, Severity.MEDIUM: self.med, Severity.LOW: self.low}[sev]
 
-    def score(self, score: int) -> str:
+    def score(self, score: int | None) -> str:
+        if score is None:
+            return self.muted
         return self.high if score < 40 else self.med if score < 70 else self.ok
 
 

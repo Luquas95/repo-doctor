@@ -157,6 +157,8 @@ class Config(_Model):
     ignore_repos: list[str] = Field(default_factory=list)
     license: LicenseId = "MIT"
     templates_dir: str | None = None
+    # false = nepřipojovat `-o BatchMode=yes` (pro wrapper v core.sshCommand, který argumenty nepředá)
+    ssh_batch_mode: bool = True
     ui: UIConfig = Field(default_factory=UIConfig)
 
     @model_validator(mode="after")

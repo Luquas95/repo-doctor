@@ -36,6 +36,8 @@ def relative_time(when: datetime | None, now: datetime) -> str:
 
 
 def git_state(repo: RepoResult) -> str:
+    if repo.untrusted_owner:
+        return "safe.dir ✗"
     parts = []
     if repo.state.uncommitted:
         parts.append(f"~{repo.state.uncommitted}")

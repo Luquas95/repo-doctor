@@ -19,6 +19,24 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   a `--no-ext-diff` (cizí `.git/config` nesmí spouštět programy), `GIT_TERMINAL_PROMPT=0`
   a SSH v `BatchMode`. Uživatelské cesty/refy jdou vždy za `--`/`--end-of-options`,
   názvy větví se ověřují `git check-ref-format --branch`.
+- **SSH příkaz (0.1.2):** git dostává vždy `GIT_SSH_COMMAND` (proměnná má přednost před
+  `core.sshCommand`, takže lokální `core.sshCommand` cizího repa se nikdy nespustí – hardening
+  ho navíc přebíjí prázdnou hodnotou). Základ se bere v pořadí: proměnná `GIT_SSH_COMMAND`
+  z prostředí → globální/systémový `core.sshCommand` (`git config --global/--system`,
+  spuštěno v `$HOME`, timeout 5 s, výsledek cachovaný na běh) → `ssh`. Na konec se přidá
+  `-o BatchMode=yes`, aby se SSH nikdy neptal na heslo a nezasekl TUI. Wrapper skript proto
+  musí zbylé argumenty předat dál (`exec ssh "$@"`); pokud to neumí, vypne se přidávání
+  volbou `ssh_batch_mode = false` v konfiguraci (pak odpovědnost za neinteraktivní běh
+  nese wrapper).
+- **České hlášky SSH chyb (0.1.2):** `sshhelp.explain_ssh_error(stderr, url)` je čistá
+  funkce; rozpozná neznámý klíč serveru, odmítnutý klíč a nedostupný server, jinak vrátí
+  None a zobrazí se původní (redigovaný) text. Ve výzvě `ssh -p <port> git@<host>` se `-p`
+  vynechá, když URL port nemá (výchozí 22); uživatel se bere jen z SSH URL a jen když je
+  „bezpečný“ (u https je v userinfo typicky token), jinak `git`. Původní text gitu zůstává
+  vidět: u klonu v notifikaci „(git: …)“, u `--fetch` v `errors.fetch_detail` (reporty, karta
+  repa). „Test připojení“ hostingu je API přes HTTPS – při `clone_protocol = "ssh"` proto
+  navíc zkusí `git ls-remote --heads` na SSH URL prvního repa (jen čte) a problém ukáže
+  jako varování.
 - **`--fetch`** je jediná výjimka z „CLI nic nemění“: aktualizuje jen remote-tracking refy
   a je vypnutý ve výchozím stavu (zadání: „žádný fetch bez `--fetch`“).
 - **Tajemství se v modelu vůbec nevyskytují.** Skener vrací jen maskovanou ukázku
@@ -34,6 +52,16 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   `/dev/null`; bere se první neprázdný řádek (jako `pass show`). Výstup se nikdy
   nepropisuje do chyb – ani při nenulovém exit kódu. Běží ve vlastní skupině procesů, po
   timeoutu se ukončí celá skupina (i potomci, kteří by drželi rouru).
+- **Cizí vlastník / `safe.directory` (0.1.2):** scanner nejdřív spustí jediné
+  `git rev-parse --git-dir` (bez čtení lokální konfigurace). Když git odpoví „detected dubious
+  ownership“, repo se označí `untrusted_owner`, žádný další příkaz gitu se nespustí, jeho
+  `.repo-doctor.toml` se nečte a vznikne jediný nález `unsafe-ownership` s postupem
+  `git config --global --add safe.directory <cesta>`. repo-doctor `safe.directory` nikdy
+  nenastavuje ani nepřebíjí přes `-c` – rozhodnutí důvěřovat cizímu repu patří uživateli.
+  **Severity LOW** (ne „info“ – žádnou takovou úroveň nemáme a nález je potřeba vidět, ale
+  repo samo o sobě není v nebezpečí; CLI tak skončí s 1 jen při `--fail-on low`).
+  **Skóre se nepočítá** (`score = null` v JSON, `–` v TUI a reportech), repo je v triáži ve
+  skupině NELZE ZKONTROLOVAT na konci a do průměrného zdraví ani historie se nezapočítá.
 - **Skóre:** 100 − 25 za HIGH, 9 za MED, 3 za LOW, s limitem na kontrolu (max 50 / 18 / 6),
   aby deset nálezů jedné kontroly nesrazilo repo na nulu. Kalibrováno podle wireframu.
 - **Pásma triáže mají prioritu** KRITICKÉ > SLEDOVAT > BEZ TEPU > ZDRAVÉ: repo s HIGH

@@ -164,8 +164,19 @@
           "type": "string"
         },
         "score": {
-          "title": "Score",
-          "type": "integer"
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Score"
+        },
+        "untrusted_owner": {
+          "title": "Untrusted Owner",
+          "type": "boolean"
         },
         "band": {
           "title": "Band",
@@ -259,6 +270,7 @@
         "path",
         "root",
         "score",
+        "untrusted_owner",
         "band",
         "forge",
         "visibility",

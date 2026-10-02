@@ -54,7 +54,8 @@ class JRepo(BaseModel):
     name: str
     path: str
     root: str
-    score: int
+    score: int | None  # null = repo nešlo zkontrolovat
+    untrusted_owner: bool
     band: str
     forge: str | None
     visibility: str
@@ -115,6 +116,7 @@ def build(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None =
                 path=r.path,
                 root=r.root,
                 score=r.score,
+                untrusted_owner=r.untrusted_owner,
                 band=band(r, no_pulse_days, now).value,
                 forge=r.forge,
                 visibility=r.visibility,

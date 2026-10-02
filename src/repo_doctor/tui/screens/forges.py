@@ -22,6 +22,7 @@ from repo_doctor.forges.tokens import (
     store_in_keyring,
 )
 from repo_doctor.masking import redact
+from repo_doctor.sshhelp import forge_ssh_warning
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import BaseScreen
 from repo_doctor.tui.screens.dialogs import ConfirmDialog
@@ -51,7 +52,10 @@ async def test_forge(
     except OSError as err:
         return ConnectionReport(False, error=f"TLS: {err}")
     try:
-        return await forge.test_connection()
+        report = await forge.test_connection()
+        if report.ok and (ssh := await forge_ssh_warning(forge, config)):
+            report.warnings.append(ssh)
+        return report
     finally:
         await forge.client.aclose()
 
@@ -248,6 +252,9 @@ class ForgesScreen(BaseScreen):
             self.notify(
                 f"{forge.name}: připojeno jako {report.user}, vidí {report.repo_count} repozitářů."
             )
+            for w in report.warnings:
+                if w.startswith("SSH: "):
+                    self.notify(f"{forge.name}: {w}", severity="warning", timeout=15)
         else:
             self.notify(
                 f"{forge.name}: {redact(report.error or 'chyba')}", severity="error", timeout=10

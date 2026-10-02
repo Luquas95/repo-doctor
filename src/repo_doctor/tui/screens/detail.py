@@ -17,7 +17,7 @@ from textual.widgets import Static, Tree
 from repo_doctor.checkdocs import load as load_doc
 from repo_doctor.config import AllowEntry, ConfigError
 from repo_doctor.models import Category, Finding, RepoResult
-from repo_doctor.scoring import gauge, sparkline
+from repo_doctor.scoring import gauge, score_label, sparkline
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import BaseScreen
 from repo_doctor.tui.screens.dialogs import InputDialog
@@ -44,8 +44,15 @@ def card_header(repo: RepoResult, app: RepoDoctorApp, width: int) -> Text:
     t = Text()
     t.append("SKÓRE ", style=muted)
     color = p.score(repo.score)
-    t.append(f"{repo.score}/100 ", style=Style(color=color, bold=True))
+    t.append(f"{score_label(repo.score)}/100 ", style=Style(color=color, bold=True))
     t.append(gauge(repo.score), style=Style(color=color))
+    if repo.untrusted_owner:
+        t.append("    nelze zkontrolovat", style=Style(color=p.med, bold=True))
+        t.append(
+            "\ngit repo odmítl – patří jinému uživateli (safe.directory). Postup je v nálezu.",
+            style=Style(color=p.text),
+        )
+        return t
     t.append("    větev ", style=muted)
     t.append(
         repo.state.branch or ("detached" if repo.state.detached else "—"), style=Style(color=p.text)
@@ -95,6 +102,11 @@ def card_header(repo: RepoResult, app: RepoDoctorApp, width: int) -> Text:
         t.append(f"hosting: {repo.skipped['forge-ci-failing']}", style=Style(color=p.dim))
     else:
         t.append("hosting: bez dat", style=Style(color=p.dim))
+    if "fetch" in repo.errors:
+        t.append("\nfetch ✗ ", style=Style(color=p.high))
+        t.append(repo.errors["fetch"], style=Style(color=p.text))
+        if "fetch_detail" in repo.errors:
+            t.append(f"  (git: {repo.errors['fetch_detail']})", style=Style(color=p.dim))
     return t
 
 

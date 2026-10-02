@@ -160,6 +160,7 @@ class Check:
 
 
 INCOMPLETE_ID = "scan-incomplete"
+UNSAFE_OWNERSHIP_ID = "unsafe-ownership"
 
 
 REGISTRY: dict[str, type[Check]] = {}

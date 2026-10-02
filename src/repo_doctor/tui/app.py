@@ -14,6 +14,7 @@ from textual.worker import Worker
 
 from repo_doctor import history, paths
 from repo_doctor.config import Config, ConfigError, ConfigStore, RootConfig
+from repo_doctor.gitwrap import configure_ssh
 from repo_doctor.keymap import BY_ID, KeymapError, build_keymap, key_label
 from repo_doctor.masking import install_log_redaction
 from repo_doctor.models import RepoResult, ScanResult
@@ -69,6 +70,7 @@ class RepoDoctorApp(App[int]):
         except ConfigError as err:
             self.config_error = str(err)
             self.config = Config()
+        configure_ssh(batch_mode=self.config.ssh_batch_mode)
         self.roots_override = roots_override
         self.offline = offline
         self.auto_scan = auto_scan
@@ -165,6 +167,7 @@ class RepoDoctorApp(App[int]):
     # ------------------------------------------------------------------ konfigurace
     def config_changed(self, config: Config) -> None:
         self.config = config
+        configure_ssh(batch_mode=config.ssh_batch_mode)
         for screen in self.screen_stack:
             refresh = getattr(screen, "on_config_changed", None)
             if callable(refresh):

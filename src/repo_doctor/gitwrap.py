@@ -44,6 +44,9 @@ def _clean(text: str) -> str:
     return redact_url_credentials(redact(text))
 
 
+DUBIOUS_OWNERSHIP = "detected dubious ownership"
+
+
 class GitError(RuntimeError):
     """Selhání příkazu git (zpráva je vždy redigovaná)."""
 
@@ -67,6 +70,63 @@ class GitNotFound(GitError):
         super().__init__(["git"], 127, "příkaz git nebyl nalezen v PATH")
 
 
+_SSH_LOCK = threading.Lock()
+_ssh_command: str | None = None
+_ssh_batch_mode = True
+
+
+def configure_ssh(*, batch_mode: bool) -> None:
+    """Nastaví, zda se k SSH příkazu připojuje `-o BatchMode=yes` (volba `ssh_batch_mode`)."""
+    global _ssh_batch_mode, _ssh_command
+    with _SSH_LOCK:
+        _ssh_batch_mode = batch_mode
+        _ssh_command = None
+
+
+def reset_ssh_cache() -> None:
+    global _ssh_command
+    with _SSH_LOCK:
+        _ssh_command = None
+
+
+def _user_ssh_command(timeout: float = 5.0) -> str | None:
+    """`core.sshCommand` z globální a systémové konfigurace – nikdy z lokální konfigurace repa."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_CONFIG_PARAMETERS")}
+    env.update({"GIT_TERMINAL_PROMPT": "0", "LC_ALL": "C"})
+    for scope in ("--global", "--system"):
+        try:
+            proc = subprocess.run(
+                ["git", "config", scope, "--get", "core.sshCommand"],
+                capture_output=True,
+                timeout=timeout,
+                env=env,
+                check=False,
+                stdin=subprocess.DEVNULL,
+                cwd=Path.home() if Path.home().is_dir() else "/",
+            )
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            return None
+        value = proc.stdout.decode("utf-8", "replace").strip()
+        if proc.returncode == 0 and value:
+            return value
+    return None
+
+
+def ssh_command() -> str:
+    """SSH příkaz pro git: prostředí → globální/systémový `core.sshCommand` → `ssh`.
+
+    Ke všemu se (nevypne-li to `ssh_batch_mode = false`) připojí `-o BatchMode=yes`, aby se
+    git nikdy neptal na heslo nebo potvrzení klíče hostitele a TUI nezamrzlo. Volby za
+    názvem příkazu jsou platné i pro `ssh -i … -F …`; wrapper skript musí argumenty předat dál.
+    """
+    global _ssh_command
+    with _SSH_LOCK:
+        if _ssh_command is None:
+            base = os.environ.get("GIT_SSH_COMMAND", "").strip() or _user_ssh_command() or "ssh"
+            _ssh_command = f"{base} -o BatchMode=yes" if _ssh_batch_mode else base
+        return _ssh_command
+
+
 def git_env(extra: Mapping[str, str] | None = None) -> dict[str, str]:
     env = dict(os.environ)
     env.update(
@@ -78,7 +138,9 @@ def git_env(extra: Mapping[str, str] | None = None) -> dict[str, str]:
             "GIT_PAGER": "cat",
             "PAGER": "cat",
             "GIT_EDITOR": "true",
-            "GIT_SSH_COMMAND": env.get("GIT_SSH_COMMAND", "ssh") + " -o BatchMode=yes",
+            # Proměnná má přednost před core.sshCommand – tím zároveň nikdy neplatí lokální
+            # core.sshCommand cizího repa (navíc ho přebíjí hardening).
+            "GIT_SSH_COMMAND": ssh_command(),
         }
     )
     # Proměnné, které by mohly přesměrovat git mimo zkoumané repo.
@@ -341,6 +403,35 @@ class Git:
     def is_detached(self) -> bool:
         return self.current_branch() is None and self.head_sha() is not None
 
+    def dubious_ownership(self) -> bool:
+        """Odmítl git repo kvůli `safe.directory` (vlastník je jiný uživatel)?
+
+        repo-doctor `safe.directory` nikdy nenastavuje ani nepřebíjí přes `-c`."""
+        # bez hardeningu: ten by si četl lokální konfiguraci dalším voláním gitu a
+        # `rev-parse --git-dir` žádný program z konfigurace repa nespouští
+        try:
+            proc = subprocess.run(
+                [
+                    "git",
+                    "--no-pager",
+                    *_SAFE_CONFIG,
+                    "-C",
+                    str(self.path),
+                    "rev-parse",
+                    "--git-dir",
+                ],
+                capture_output=True,
+                timeout=self.timeout,
+                env=git_env(),
+                check=False,
+                stdin=subprocess.DEVNULL,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise GitTimeout(["rev-parse"], self.timeout) from exc
+        except FileNotFoundError as exc:
+            raise GitNotFound() from exc
+        return proc.returncode != 0 and DUBIOUS_OWNERSHIP in proc.stderr.decode("utf-8", "replace")
+
     def remotes(self) -> dict[str, str]:
         out = self.run("config", "--get-regexp", r"^remote\..*\.url$", check=False)
         result: dict[str, str] = {}
@@ -578,6 +669,28 @@ class Git:
         self.run("fetch", "--quiet", "--no-write-fetch-head", "--no-prune", timeout=timeout)
 
     @staticmethod
+    def _run_detached(
+        args: list[str], label: list[str], timeout: float, cwd: Path | None = None
+    ) -> None:
+        """Příkaz mimo konkrétní repo (clone, ls-remote) se stejným bezpečným prostředím."""
+        try:
+            proc = subprocess.run(
+                ["git", *args],
+                capture_output=True,
+                timeout=timeout,
+                env=git_env(),
+                check=False,
+                stdin=subprocess.DEVNULL,
+                cwd=cwd,
+            )
+        except subprocess.TimeoutExpired as exc:
+            raise GitTimeout(label[:1], timeout) from exc
+        except FileNotFoundError as exc:
+            raise GitNotFound() from exc
+        if proc.returncode != 0:
+            raise GitError(label, proc.returncode, proc.stderr.decode("utf-8", "replace"))
+
+    @staticmethod
     def clone(url: str, dest: Path, timeout: float = 600.0) -> None:
         """`git clone` do neexistující cesty. Existující cíl nikdy nepřepisuje."""
         if dest.exists():
@@ -585,21 +698,16 @@ class Git:
         if url.startswith("-"):
             raise GitError(["clone"], 1, "neplatná URL")
         dest.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            proc = subprocess.run(
-                ["git", "clone", "--quiet", "--", url, str(dest)],
-                capture_output=True,
-                timeout=timeout,
-                env=git_env(),
-                check=False,
-                stdin=subprocess.DEVNULL,
-            )
-        except subprocess.TimeoutExpired as exc:
-            raise GitTimeout(["clone"], timeout) from exc
-        except FileNotFoundError as exc:
-            raise GitNotFound() from exc
-        if proc.returncode != 0:
-            raise GitError(["clone", url], proc.returncode, proc.stderr.decode("utf-8", "replace"))
+        Git._run_detached(["clone", "--quiet", "--", url, str(dest)], ["clone", url], timeout)
+
+    @staticmethod
+    def ls_remote(url: str, timeout: float = 20.0) -> None:
+        """`git ls-remote --heads` – jen čte, slouží jako test SSH připojení."""
+        if url.startswith("-"):
+            raise GitError(["ls-remote"], 1, "neplatná URL")
+        Git._run_detached(
+            ["ls-remote", "--heads", "--", url], ["ls-remote", url], timeout, cwd=Path.home()
+        )
 
 
 class TempIndex:

@@ -18,6 +18,7 @@ from repo_doctor import __version__, paths
 from repo_doctor.checkdocs import load as load_doc
 from repo_doctor.checks import all_checks, check_ids
 from repo_doctor.config import Config, ConfigError, ConfigStore, RootConfig
+from repo_doctor.gitwrap import configure_ssh
 from repo_doctor.masking import install_log_redaction, redact
 from repo_doctor.models import ScanResult, Severity
 from repo_doctor.reports import FORMATS, ReportFormat, render
@@ -44,10 +45,12 @@ def _err(message: str) -> None:
 
 def _load_config() -> Config:
     try:
-        return ConfigStore().load()
+        config = ConfigStore().load()
     except ConfigError as err:
         _err(str(err))
         raise typer.Exit(2) from None
+    configure_ssh(batch_mode=config.ssh_batch_mode)
+    return config
 
 
 def _split(values: list[str] | None) -> list[str] | None:
@@ -152,6 +155,9 @@ def scan(
         raise typer.Exit(2) from None
     if interactive:
         typer.echo("", err=True)
+    for r in result.repos:
+        if "fetch" in r.errors:
+            _err(f"fetch {r.name}: {r.errors['fetch']}")
     fmt: ReportFormat = report
     text = render(result, fmt, no_pulse_days=config.limits.no_pulse_days)
     if output:
@@ -193,6 +199,7 @@ def forges_test(
     """Ověří připojení nastavených hostingů. Token nikdy nevypíše."""
     from repo_doctor.forges import build_forge
     from repo_doctor.forges.tokens import TokenError, resolve_token
+    from repo_doctor.sshhelp import forge_ssh_warning
 
     config = _load_config()
     targets = [f for f in config.forges if name is None or f.name == name]
@@ -217,6 +224,8 @@ def forges_test(
                 continue
             try:
                 rep = await forge.test_connection()
+                if rep.ok and (ssh := await forge_ssh_warning(forge, fc)):
+                    rep.warnings.append(ssh)
             finally:
                 await forge.client.aclose()
             if rep.ok:

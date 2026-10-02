@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from repo_doctor.gitwrap import configure_ssh
 from repo_doctor.masking import REGISTRY
 
 os.environ["TZ"] = "UTC"  # deterministické časy ve snapshotech
@@ -29,8 +30,14 @@ def _isolated_env(
         "[user]\n\tname = Test Tester\n\temail = test@example.invalid\n[init]\n\tdefaultBranch = main\n"
     )
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+    monkeypatch.setenv("GIT_CONFIG_SYSTEM", "/dev/null")
+    monkeypatch.delenv("GIT_SSH_COMMAND", raising=False)
+    configure_ssh(batch_mode=True)
+    # SSH sonda „testu připojení“ by šla do sítě – testy ji nahrazují explicitně
+    monkeypatch.setattr("repo_doctor.sshhelp.run_probe", lambda url: None)
     yield
     REGISTRY.clear()
+    configure_ssh(batch_mode=True)
 
 
 @pytest.fixture

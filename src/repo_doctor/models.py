@@ -131,7 +131,8 @@ class RepoResult(BaseModel):
     skipped: dict[str, str] = Field(default_factory=dict)  # check_id → důvod
     errors: dict[str, str] = Field(default_factory=dict)
     forge_info: dict[str, str | int | bool | None] = Field(default_factory=dict)
-    score: int = 100
+    score: int | None = 100  # None = repo nešlo zkontrolovat (např. nedůvěryhodný vlastník)
+    untrusted_owner: bool = False  # git odmítl repo kvůli safe.directory
     duration_ms: int = 0
 
     def counts(self) -> dict[Severity, int]:
@@ -172,7 +173,8 @@ class ScanResult(BaseModel):
         for repo in self.repos:
             for sev, n in repo.counts().items():
                 by[sev] += n
-        health = round(sum(r.score for r in self.repos) / len(self.repos)) if self.repos else 100
+        scored = [r.score for r in self.repos if r.score is not None]
+        health = round(sum(scored) / len(scored)) if scored else 100
         no_pulse = sum(1 for r in self.repos if is_no_pulse(r, no_pulse_days, now))
         return ScanSummary(repos=len(self.repos), by_severity=by, health=health, no_pulse=no_pulse)
 

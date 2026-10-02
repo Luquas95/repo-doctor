@@ -19,7 +19,14 @@ from typing import Literal
 import httpx
 
 from repo_doctor import __version__, paths
-from repo_doctor.checks.base import Check, RepoContext, SkipCheck, select_checks
+from repo_doctor.checks.base import (
+    UNSAFE_OWNERSHIP_ID,
+    Check,
+    RepoContext,
+    SkipCheck,
+    select_checks,
+)
+from repo_doctor.checks.meta import UnsafeOwnership
 from repo_doctor.config import (
     Config,
     ConfigError,
@@ -37,6 +44,7 @@ from repo_doctor.httpclient import HttpClient, HttpError, ResponseCache
 from repo_doctor.masking import redact, redact_url_credentials
 from repo_doctor.models import RemoteInfo, RepoResult, RepoState, ScanResult
 from repo_doctor.scoring import score
+from repo_doctor.sshhelp import explain_ssh_error
 
 log = logging.getLogger(__name__)
 
@@ -211,6 +219,23 @@ class Scanner:
         return result
 
     # ------------------------------------------------------------------ jedno repo
+    def _untrusted(self, repo: DiscoveredRepo) -> bool:
+        try:
+            return Git(repo.path, timeout=self.config.limits.git_timeout_s).dubious_ownership()
+        except GitError:
+            return False  # timeout apod. – ukáže se dál při běžném skenu
+
+    def _untrusted_result(self, repo: DiscoveredRepo) -> RepoResult:
+        """Repo cizího vlastníka: žádné další volání gitu, jen jeden nález a bez skóre.
+
+        `.repo-doctor.toml` z takového repa se nečte – platí jen globální konfigurace."""
+        res = RepoResult(
+            path=repo.display, name=repo.name, root=repo.root, score=None, untrusted_owner=True
+        )
+        if UNSAFE_OWNERSHIP_ID not in self.config.checks.disabled:
+            res.findings = [UnsafeOwnership().for_path(str(repo.path))]
+        return res
+
     def _context(self, repo: DiscoveredRepo, now: datetime) -> tuple[RepoContext, RepoResult]:
         config = self.config
         res = RepoResult(path=repo.display, name=repo.name, root=repo.root)
@@ -219,16 +244,19 @@ class Scanner:
         except ConfigError as err:
             res.errors["config"] = str(err)
         git = Git(repo.path, timeout=config.limits.git_timeout_s)
+        raw_remotes = git.remotes()
         if self.options.fetch and not self.options.offline:
             try:
                 git.fetch()
             except GitError as err:
-                res.errors["fetch"] = err.stderr[:200]
+                hint = explain_ssh_error(err.stderr, raw_remotes.get("origin"))
+                res.errors["fetch"] = hint or err.stderr[:200]
+                if hint:
+                    res.errors["fetch_detail"] = err.stderr[:300]
         remotes: list[RemoteInfo] = []
         forge_name: str | None = None
         owner_path: str | None = None
         parsed_primary: RemoteURL | None = None
-        raw_remotes = git.remotes()
         ordered = sorted(raw_remotes.items(), key=lambda kv: (kv[0] != "origin", kv[0]))
         for name, url in ordered:
             parsed = parse_remote(url, self.ssh_config)
@@ -369,6 +397,10 @@ class Scanner:
         self, repo: DiscoveredRepo, now: datetime, total: int, done: Callable[[], int]
     ) -> RepoResult:
         started = time.monotonic()
+        if await asyncio.to_thread(self._untrusted, repo):
+            res = self._untrusted_result(repo)
+            res.duration_ms = int((time.monotonic() - started) * 1000)
+            return res
         ctx, res = await asyncio.to_thread(self._context, repo, now)
         await self._network(ctx, res)
         findings = []

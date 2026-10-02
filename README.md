@@ -256,6 +256,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | [`stashes`](docs/checks/stashes.md) | Stav gitu | LOW |  |  |
 | [`uncommitted`](docs/checks/uncommitted.md) | Stav gitu | LOW |  |  |
 | [`unpushed`](docs/checks/unpushed.md) | Stav gitu | MED |  |  |
+| [`unsafe-ownership`](docs/checks/unsafe-ownership.md) | Stav gitu | LOW |  |  |
 | [`forge-archived-active`](docs/checks/forge-archived-active.md) | Hosting | MED |  | hosting |
 | [`forge-ci-failing`](docs/checks/forge-ci-failing.md) | Hosting | MED |  | hosting |
 | [`forge-mirror-drift`](docs/checks/forge-mirror-drift.md) | Hosting | LOW |  | hosting |
@@ -307,6 +308,7 @@ ignore_paths = ["vendor/**"]
 ignore_repos = ["*-fork"]
 license = "MIT"           # MIT | ISC | BSD-2-Clause | Unlicense
 templates_dir = "~/.config/repo-doctor/templates"
+ssh_batch_mode = true     # false = nepřidávat `-o BatchMode=yes` (vlastní SSH wrapper)
 
 [ui]
 theme = "dark"            # dark | light (t přepne)

@@ -2,6 +2,25 @@
 
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze podle SemVer.
 
+## [0.1.2] – 2026-10-02
+
+### Opraveno
+- Git respektuje globální/systémový `core.sshCommand` (vlastní klíč, `-F` konfigurace);
+  `-o BatchMode=yes` se jen přidává na konec. Pořadí: proměnná `GIT_SSH_COMMAND` →
+  globální/systémový `core.sshCommand` → `ssh`. Lokální `core.sshCommand` cizího repa se
+  dál nikdy nepoužije. Nová volba `ssh_batch_mode = false` pro wrappery.
+- Typické SSH chyby (neznámý klíč serveru, odmítnutý SSH klíč, nedostupný server) mají
+  srozumitelné české hlášky s postupem při klonu, testu připojení, `--fetch` i v CLI; původní
+  text gitu zůstává v detailu.
+- Repo cizího vlastníka (git: „detected dubious ownership“) už nevyrábí řadu chyb: nespustí
+  se v něm žádný další příkaz gitu a skóre se nepočítá (`–`, skupina NELZE ZKONTROLOVAT).
+
+### Přidáno
+- Kontrola `unsafe-ownership` (LOW) s postupem `git config --global --add safe.directory
+  <cesta>` – repo-doctor sám `safe.directory` nikdy nenastavuje.
+- Test připojení hostingu při `clone_protocol = "ssh"` ověří i SSH (`git ls-remote`).
+- JSON report: `score` může být `null`, nové pole `untrusted_owner`, pásmo `unchecked`.
+
 ## [0.1.1] – 2026-10-01
 
 ### Změněno
