@@ -1,6 +1,6 @@
 [project]
 name = "repo-doctor"
-version = "0.1.3"
+version = "0.1.4"
 description = "TUI pro audit a údržbu lokálních git repozitářů (bezpečnost, hygiena, stav gitu, git hostingy)."
 readme = "README.md"
 license = "MIT"
