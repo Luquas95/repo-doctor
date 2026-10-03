@@ -37,6 +37,37 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   repa). „Test připojení“ hostingu je API přes HTTPS – při `clone_protocol = "ssh"` proto
   navíc zkusí `git ls-remote --heads` na SSH URL prvního repa (jen čte) a problém ukáže
   jako varování.
+- **Hooky a příkazy z cizího repa (0.1.4):**
+  - **Hooky** vypíná `-c core.hooksPath=/dev/null` u každého volání (`_SAFE_CONFIG`, i clone
+    a ls-remote). `/dev/null` není adresář, takže git žádný hook nenajde; ověřeno na gitu
+    2.43 testem (hook `reference-transaction` z `.git/hooks` i z lokálního `core.hooksPath`
+    by jinak zablokoval `git branch`). Vypnou se i globální hooky uživatele – repo-doctor
+    commituje jen do vlastní větve oprav a hooky nepotřebuje.
+  - **`remote.*.uploadpack`/`receivepack` nejde přebít přes `-c`**: git bere *první* hodnotu
+    („more than one uploadpack given, using the first“), tedy tu z lokální konfigurace. Proto
+    fetch, ls-remote i clone předávají `--upload-pack=git-upload-pack`. `receivepack` se
+    nepoužívá – repo-doctor nikdy nepushuje.
+  - **`core.gitProxy`** platí také „první vyhrává“; vypíná ho prázdné `GIT_PROXY_COMMAND`
+    (git pak konfiguraci vůbec nečte). Vypne to i `core.gitProxy` uživatele – `git://` je
+    stejně zakázaný.
+  - **Credential helpery:** pokud lokální konfigurace definuje `credential.helper` nebo
+    `credential.<url>.helper`, přidá se `-c credential.helper=` (v gitu prázdná hodnota
+    vyprázdní seznam, tedy i helpery pro URL) a za něj znovu helpery ze systémové a globální
+    konfigurace uživatele (`git config --system/--global --includes --get-regexp`, cache na
+    běh). Uživatelův helper tak funguje dál; helper z `includeIf` podle složky se mimo repo
+    nevyhodnotí, stejně jako u `core.sshCommand`.
+  - **Navíc oproti zadání:** lokální `core.alternateRefsCommand` se při fetchi s alternates
+    opravdu spustí (ověřeno) → přebíjí se prázdnou hodnotou. Fetch běží s
+    `--no-recurse-submodules` (submodul má vlastní, neošetřenou konfiguraci). Lokální
+    `http.sslVerify=false` (i pro konkrétní URL) se přebíjí na `true`, `http.proxy`
+    a `remote.*.proxy` na prázdnou hodnotu – jinak by šlo s globálním credential helperem
+    uživatele odposlechnout přihlašovací údaje.
+  - **Protokoly:** `GIT_ALLOW_PROTOCOL=https:ssh` (má přednost i před lokálním
+    `protocol.*.allow`). `git://` je nešifrovaný a neověřený a jen u něj se uplatní
+    `core.gitProxy`; `http://` posílá přihlášení v otevřené podobě; `file`/lokální cesta by
+    spustila `upload-pack` lokálně a `ext::` libovolný příkaz. Odmítnutí se překládá na
+    „Remote používá nepovolený protokol X…“. Testy si `file` povolují interním přepínačem
+    `_allow_protocols` (fixture `allow_file`), veřejná volba neexistuje.
 - **`--fetch`** je jediná výjimka z „CLI nic nemění“: aktualizuje jen remote-tracking refy
   a je vypnutý ve výchozím stavu (zadání: „žádný fetch bez `--fetch`“).
 - **Tajemství se v modelu vůbec nevyskytují.** Skener vrací jen maskovanou ukázku

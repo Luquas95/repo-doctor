@@ -18,6 +18,7 @@ byly dořešené v issues #2–#9.
 | 4 | LOW | Otisk tajemství je nesolený `sha256[:16]` – u slabých hesel (generic-secret) jde slovníkově ověřit. ✅ #8: otisk je scrypt (n=2¹⁴) s pevnou solí aplikace – stabilní napříč stroji (allowlist, CI), ale ověření jednoho kandidátního hesla stojí ~40 ms místo mikrosekund. |
 | 5 | LOW | `owner_path` z URL remote se po dekódování vkládal do cesty API (např. `..`). | ✅ `valid_owner_path` – neplatná cesta se na API vůbec nepošle. |
 | 6 | LOW | Soubory HTTP cache krátce čitelné pro ostatní (umask, volnější adresář). | ✅ `os.open(..., 0o600)` a `ensure_private_dir` zpřísní práva adresáře. |
+| 7 | HIGH | (0.1.4, revize po 0.1.3) Cizí repo mohlo spustit program přes hook (`reference-transaction` při `fetch` i `git branch` léčby; z `.git/hooks` nebo lokálního `core.hooksPath`), `remote.*.uploadpack` u lokálního upstreamu, lokální `credential.helper = !příkaz`, `core.gitProxy` u `git://`, `core.alternateRefsCommand` a protokol `ext::`. Klávesa `F` to zpřístupnila jedním stiskem. | ✅ `core.hooksPath=/dev/null` pro každé volání; fetch/ls-remote/clone s `--upload-pack=git-upload-pack` a `--no-recurse-submodules`; reset lokálních credential helperů s obnovou helperů uživatele; `GIT_PROXY_COMMAND=""`; přebití `alternateRefsCommand`, proxy a `http.sslVerify`; `GIT_ALLOW_PROTOCOL=https:ssh` s českou hláškou (`tests/test_untrusted_exec.py`, ověřeno i mutací opravy). |
 
 Dodatečně (#9): `token_cmd` běží ve vlastní skupině procesů a po timeoutu se ukončí celá
 skupina – potomek držící rouru už neobejde časový limit.

@@ -2,7 +2,16 @@
 
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze podle SemVer.
 
-## [Unreleased]
+## [0.1.4] – 2026-10-03
+
+### Bezpečnost
+- Cizí repo už přes `.git/` ani lokální konfiguraci nespustí program při skenu, `--fetch`, `F`
+  ani léčbě: hooky jsou vypnuté (`core.hooksPath=/dev/null`, i globální), fetch/ls-remote/clone
+  předávají `--upload-pack=git-upload-pack` a nestahují submoduly, lokální credential helpery,
+  `core.gitProxy`, `core.alternateRefsCommand`, proxy a `http.sslVerify` se neutralizují.
+  Helpery a SSH nastavení z tvé globální konfigurace fungují dál.
+- Síťové operace jen přes `https` a `ssh` (`GIT_ALLOW_PROTOCOL`); remote s `git://`, `http://`,
+  `file://`, lokální cestou nebo `ext::` se nefetchuje a nahlásí se česky proč.
 
 ### Přidáno
 - TUI: zkratka `F` spustí sken s `git fetch` (jako `repo-doctor scan --fetch`); selhání

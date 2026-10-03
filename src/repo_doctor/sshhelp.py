@@ -24,6 +24,7 @@ _UNREACHABLE = re.compile(
     r"Operation timed out|No route to host|Network is unreachable",
     re.I,
 )
+_PROTOCOL = re.compile(r"transport '([A-Za-z0-9+.-]{1,32})' not allowed")
 _SAFE_HOST = re.compile(r"^[A-Za-z0-9.-]{1,253}$|^\[[0-9A-Fa-f:.]+\]$")
 _SAFE_USER = re.compile(r"^[A-Za-z0-9._-]{1,32}$")
 
@@ -51,7 +52,12 @@ def _ssh_target(url: str | None) -> str:
 
 
 def explain_ssh_error(stderr: str, url: str | None = None) -> str | None:
-    """Česká hláška s postupem pro známou SSH chybu, jinak None."""
+    """Česká hláška s postupem pro známou SSH chybu (nebo zakázaný protokol), jinak None."""
+    if m := _PROTOCOL.search(stderr):
+        return (
+            f"Remote používá nepovolený protokol {m.group(1)}, repo-doctor ho z bezpečnostních "
+            "důvodů nefetchuje (povolené jsou https a ssh)."
+        )
     if _HOST_KEY.search(stderr):
         return (
             "Server zatím neznáš. Připoj se k němu jednou ručně: "

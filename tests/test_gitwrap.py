@@ -200,6 +200,7 @@ def test_temp_index_does_not_touch_worktree(tmp_path: Path) -> None:
     assert git(rb.path, "show", f"{commit}:new.txt") == "hello\n"
 
 
+@pytest.mark.usefixtures("allow_file")
 def test_clone_never_overwrites(tmp_path: Path) -> None:
     rb = RepoBuilder.create(tmp_path / "src")
     rb.write("a", "a").commit()
@@ -215,6 +216,7 @@ def test_clone_never_overwrites(tmp_path: Path) -> None:
         Git.clone(str(tmp_path / "missing"), tmp_path / "y")
 
 
+@pytest.mark.usefixtures("allow_file")
 def test_fetch(tmp_path: Path) -> None:
     rb, _ = with_remote(tmp_path)
     Git(rb.path).fetch()

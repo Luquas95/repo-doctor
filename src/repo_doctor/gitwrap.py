@@ -37,7 +37,33 @@ _SAFE_CONFIG = (
     "log.showSignature=false",
     "-c",
     "core.quotePath=false",
+    # Žádné hooky – ani z `.git/hooks`, ani z lokálního či globálního `core.hooksPath`
+    # (`reference-transaction` jinak běží při fetch i `git branch`). `/dev/null` není adresář,
+    # takže git žádný hook nenajde.
+    "-c",
+    "core.hooksPath=/dev/null",
 )
+
+# Síťové protokoly, které git smí použít (GIT_ALLOW_PROTOCOL má přednost i před lokálním
+# `protocol.*.allow`). `file`, `ext`, `git` (nešifrovaný, spouští `core.gitProxy`) a `http`
+# zakázané – viz DECISIONS.md. Testy mohou přes `_allow_protocols` dočasně přidat `file`.
+ALLOWED_PROTOCOLS = ("https", "ssh")
+_extra_protocols: tuple[str, ...] = ()
+
+
+def _allow_protocols(*extra: str) -> None:
+    """Jen pro testy: dočasně povolí další protokoly (např. `file` pro lokální upstream)."""
+    global _extra_protocols
+    _extra_protocols = tuple(extra)
+
+
+def allowed_protocols() -> str:
+    return ":".join((*ALLOWED_PROTOCOLS, *_extra_protocols))
+
+
+# Výchozí hodnota, kterou fetch/ls-remote/clone předávají explicitně: `remote.*.uploadpack`
+# z lokální konfigurace přes `-c` přebít nejde (git bere první hodnotu, ne poslední).
+UPLOAD_PACK = "--upload-pack=git-upload-pack"
 
 
 def _clean(text: str) -> str:
@@ -45,6 +71,18 @@ def _clean(text: str) -> str:
 
 
 DUBIOUS_OWNERSHIP = "detected dubious ownership"
+
+# Klíče lokální konfigurace repa, které by spustily program nebo přesměrovaly síťový provoz.
+# Každý nalezený se pro všechna volání přebije bezpečnou hodnotou (`hardening_pairs`).
+_HARDEN_REGEX = (
+    r"^(filter|diff|merge)\..*\.(clean|smudge|process|textconv|command|driver)$"
+    r"|^core\.(sshcommand|editor|pager|askpass|alternaterefscommand)$"
+    r"|^remote\..*\.proxy$"
+    r"|^http\.(.*\.)?(proxy|sslverify)$"
+    r"|^credential\.(.*\.)?helper$"
+)
+# Název klíče, který jde bezpečně předat jako `-c klíč=hodnota` (včetně URL v podsekci).
+_SAFE_KEY = re.compile(r"[A-Za-z0-9_.\-]+(\.[^=\s]+)?")
 
 
 class GitError(RuntimeError):
@@ -84,9 +122,52 @@ def configure_ssh(*, batch_mode: bool) -> None:
 
 
 def reset_ssh_cache() -> None:
-    global _ssh_command
+    """Vyčistí cache údajů z globální konfigurace (SSH příkaz, credential helpery)."""
+    global _ssh_command, _credential_helpers
     with _SSH_LOCK:
         _ssh_command = None
+        _credential_helpers = None
+
+
+_credential_helpers: list[tuple[str, str]] | None = None
+
+
+def _user_config_query(scope: str, *args: str, timeout: float = 5.0) -> str:
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_CONFIG_PARAMETERS")}
+    env.update({"GIT_TERMINAL_PROMPT": "0", "LC_ALL": "C"})
+    try:
+        proc = subprocess.run(
+            ["git", "config", scope, "--includes", *args],
+            capture_output=True,
+            timeout=timeout,
+            env=env,
+            check=False,
+            stdin=subprocess.DEVNULL,
+            cwd=Path.home() if Path.home().is_dir() else "/",
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        return ""
+    return proc.stdout.decode("utf-8", "replace") if proc.returncode == 0 else ""
+
+
+def user_credential_helpers() -> list[tuple[str, str]]:
+    """`credential.helper` a `credential.<url>.helper` ze systémové a globální konfigurace.
+
+    Pořadí odpovídá gitu (systém, pak uživatel). Slouží k obnovení helperů uživatele po
+    resetu, kterým se ruší helpery z lokální konfigurace cizího repa. Cachuje se na běh.
+    """
+    global _credential_helpers
+    with _SSH_LOCK:
+        if _credential_helpers is None:
+            pairs: list[tuple[str, str]] = []
+            for scope in ("--system", "--global"):
+                out = _user_config_query(scope, "--get-regexp", r"^credential\..*helper$")
+                for line in out.splitlines():
+                    key, _, value = line.partition(" ")
+                    if key and _SAFE_KEY.fullmatch(key) and "\n" not in value:
+                        pairs.append((key, value))
+            _credential_helpers = pairs
+        return list(_credential_helpers)
 
 
 def _user_ssh_command(timeout: float = 5.0) -> str | None:
@@ -97,23 +178,9 @@ def _user_ssh_command(timeout: float = 5.0) -> str | None:
     mimo repozitář nevyhodnotí – takové nastavení repo-doctor nepoužije, patří do proměnné
     `GIT_SSH_COMMAND` nebo do `~/.ssh/config`.
     """
-    env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_CONFIG_PARAMETERS")}
-    env.update({"GIT_TERMINAL_PROMPT": "0", "LC_ALL": "C"})
     for scope in ("--global", "--system"):
-        try:
-            proc = subprocess.run(
-                ["git", "config", scope, "--includes", "--get", "core.sshCommand"],
-                capture_output=True,
-                timeout=timeout,
-                env=env,
-                check=False,
-                stdin=subprocess.DEVNULL,
-                cwd=Path.home() if Path.home().is_dir() else "/",
-            )
-        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-            return None
-        value = proc.stdout.decode("utf-8", "replace").strip()
-        if proc.returncode == 0 and value:
+        value = _user_config_query(scope, "--get", "core.sshCommand", timeout=timeout).strip()
+        if value:
             return value
     return None
 
@@ -147,6 +214,11 @@ def git_env(extra: Mapping[str, str] | None = None) -> dict[str, str]:
             # Proměnná má přednost před core.sshCommand – tím zároveň nikdy neplatí lokální
             # core.sshCommand cizího repa (navíc ho přebíjí hardening).
             "GIT_SSH_COMMAND": ssh_command(),
+            # Jen povolené síťové protokoly (blokuje i `ext::`, lokální cesty a `file://`).
+            "GIT_ALLOW_PROTOCOL": allowed_protocols(),
+            # Prázdná proměnná vypne `core.gitProxy` – ten přes `-c` přebít nejde (git
+            # použije první nalezenou hodnotu, tedy i tu z lokální konfigurace repa).
+            "GIT_PROXY_COMMAND": "",
         }
     )
     # Proměnné, které by mohly přesměrovat git mimo zkoumané repo.
@@ -235,7 +307,7 @@ class Git:
                         "--includes",
                         "--name-only",
                         "--get-regexp",
-                        r"^(filter|diff|merge)\..*\.(clean|smudge|process|textconv|command|driver)$|^core\.(sshcommand|editor|pager|askpass)$",
+                        _HARDEN_REGEX,
                     ],
                     capture_output=True,
                     timeout=self.timeout,
@@ -253,13 +325,25 @@ class Git:
                 "sshcommand": "ssh",
                 "editor": "true",
                 "pager": "cat",
+                "sslverify": "true",
+                # proxy a alternaterefscommand → "" (žádná proxy, žádný příkaz)
             }
+            helpers = False
             for name in sorted(set(names)):
-                if not re.fullmatch(r"[A-Za-z0-9_.\-]+", name):
+                low = name.lower()
+                if low.startswith("credential."):
+                    helpers = True  # řeší se společným resetem níže
                     continue
-                pairs.append((name, safe.get(name.rsplit(".", 1)[-1].lower(), "")))
-                if name.startswith("filter.") and name.endswith((".clean", ".smudge", ".process")):
+                if not _SAFE_KEY.fullmatch(name):
+                    continue
+                pairs.append((name, safe.get(low.rsplit(".", 1)[-1], "")))
+                if low.startswith("filter.") and low.endswith((".clean", ".smudge", ".process")):
                     pairs.append((name.rsplit(".", 1)[0] + ".required", "false"))
+            if helpers:
+                # Prázdná hodnota v gitu vyprázdní seznam helperů (i těch pro konkrétní URL
+                # z lokální konfigurace); helpery uživatele pak vrátíme v původním pořadí.
+                pairs.append(("credential.helper", ""))
+                pairs.extend(user_credential_helpers())
             self._hardening = pairs
         return self._hardening
 
@@ -276,6 +360,7 @@ class Git:
             ("core.fsmonitor", "false"),
             ("diff.external", ""),
             ("core.pager", "cat"),
+            ("core.hooksPath", "/dev/null"),
         ]
         env = {"GIT_CONFIG_COUNT": str(len(pairs))}
         for i, (key, value) in enumerate(pairs):
@@ -672,7 +757,15 @@ class Git:
 
     # ------------------------------------------------------------------ síť (jen na výslovný pokyn)
     def fetch(self, timeout: float = 120.0) -> None:
-        self.run("fetch", "--quiet", "--no-write-fetch-head", "--no-prune", timeout=timeout)
+        self.run(
+            "fetch",
+            "--quiet",
+            "--no-write-fetch-head",
+            "--no-prune",
+            "--no-recurse-submodules",  # submoduly mají vlastní (neošetřenou) konfiguraci
+            UPLOAD_PACK,
+            timeout=timeout,
+        )
 
     @staticmethod
     def _run_detached(
@@ -681,7 +774,7 @@ class Git:
         """Příkaz mimo konkrétní repo (clone, ls-remote) se stejným bezpečným prostředím."""
         try:
             proc = subprocess.run(
-                ["git", *args],
+                ["git", "--no-pager", *_SAFE_CONFIG, *args],
                 capture_output=True,
                 timeout=timeout,
                 env=git_env(),
@@ -704,7 +797,9 @@ class Git:
         if url.startswith("-"):
             raise GitError(["clone"], 1, "neplatná URL")
         dest.parent.mkdir(parents=True, exist_ok=True)
-        Git._run_detached(["clone", "--quiet", "--", url, str(dest)], ["clone", url], timeout)
+        Git._run_detached(
+            ["clone", "--quiet", UPLOAD_PACK, "--", url, str(dest)], ["clone", url], timeout
+        )
 
     @staticmethod
     def ls_remote(url: str, timeout: float = 20.0) -> None:
@@ -712,7 +807,10 @@ class Git:
         if url.startswith("-"):
             raise GitError(["ls-remote"], 1, "neplatná URL")
         Git._run_detached(
-            ["ls-remote", "--heads", "--", url], ["ls-remote", url], timeout, cwd=Path.home()
+            ["ls-remote", "--heads", UPLOAD_PACK, "--", url],
+            ["ls-remote", url],
+            timeout,
+            cwd=Path.home(),
         )
 
 

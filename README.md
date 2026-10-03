@@ -333,7 +333,20 @@ editor = "nvim"
 - **Tajemství nikdy nevypíše** – v TUI, reportech, logech ani JSON je vidět jen maskovaná podoba
   `AKIA…(20 znaků)`. Totéž platí pro tokeny hostingů. Odmaskovat nejde; soubor otevřeš klávesou `o`.
 - CLI repozitáře nikdy nemění (jen `--fetch` aktualizuje remote-tracking refy, a to jen na požádání).
-- Git v cizích repech nespouští programy z jejich konfigurace (fsmonitor, externí diff, textconv).
+- **Cizí repo přes svou konfiguraci ani obsah `.git/` nespustí program** – při skenu, `--fetch`,
+  `F` ani léčbě. Pro každé volání gitu se neutralizuje:
+  - **hooky** (`core.hooksPath=/dev/null`) – z `.git/hooks`, z lokálního i **globálního**
+    `core.hooksPath`; tvoje globální hooky se tedy při běhu repo-doctoru také nespustí (záměr),
+  - filtry (`clean`/`smudge`/`process`), `textconv`, externí diff a merge drivery, `fsmonitor`,
+    `core.sshCommand`, `core.editor`, `core.pager`, `core.askPass`, `core.alternateRefsCommand`,
+  - `remote.*.uploadpack` (fetch, ls-remote i clone předávají `--upload-pack=git-upload-pack`),
+  - `credential.helper` a `credential.<url>.helper` z lokální konfigurace – použijí se jen
+    helpery z tvé globální a systémové konfigurace,
+  - `core.gitProxy` (`GIT_PROXY_COMMAND=""`), `remote.*.proxy`, `http.proxy` a `http.sslVerify`
+    (lokální vypnutí ověřování TLS neplatí),
+  - submoduly se při fetchi nestahují (mají vlastní konfiguraci).
+- **Síť jen přes `https` a `ssh`** (`GIT_ALLOW_PROTOCOL`): remote s `git://`, `http://`,
+  `file://`, lokální cestou nebo `ext::` repo-doctor nefetchuje ani neklonuje a řekne proč.
 
 ## Použití v CI
 
