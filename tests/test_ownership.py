@@ -128,3 +128,56 @@ def test_triage_puts_unchecked_group_last() -> None:
     assert [r.name for r in groups[-1].repos] == ["cizi"]
     health = result.summary(now=NOW).health
     assert health == sample_result().summary(now=NOW).health
+
+
+def test_html_report_shows_dash_for_unscored_repo() -> None:
+    from repo_doctor.reports import html
+
+    text = html.render(ScanResult(repos=[_untrusted()]), now=NOW)
+    assert '<span class="score muted">– ·····</span>' in text
+    assert "NELZE ZKONTROLOVAT" in text
+
+
+def test_markdown_lists_errors_with_fetch_detail() -> None:
+    repo = _untrusted()
+    repo.untrusted_owner, repo.score, repo.findings = False, 100, []
+    repo.errors = {"fetch": "Server není dostupný.", "fetch_detail": "Connection refused"}
+    text = markdown.render(ScanResult(repos=[repo]), now=NOW)
+    assert "Chyby: `fetch`: Server není dostupný., `fetch_detail`: Connection refused" in text
+
+
+async def test_card_header_variants(tmp_path: Path) -> None:
+    from repo_doctor.tui.screens.detail import card_header
+    from tests.tui_helpers import make_app
+
+    app = make_app(tmp_path)
+    async with app.run_test(size=(100, 30)):
+        untrusted = card_header(_untrusted(), app, 100).plain
+        assert untrusted.startswith("SKÓRE –/100 ·····")
+        assert "nelze zkontrolovat" in untrusted and "safe.directory" in untrusted
+        assert "větev" not in untrusted  # žádné zavádějící údaje o stavu gitu
+
+        repo = sample_result().repos[0]
+        repo.errors = {"fetch": "Server odmítl SSH klíč.", "fetch_detail": "Permission denied"}
+        text = card_header(repo, app, 100).plain
+        assert "fetch ✗ Server odmítl SSH klíč.  (git: Permission denied)" in text
+        repo.errors = {"fetch": "fatal: něco jiného"}
+        assert "(git:" not in card_header(repo, app, 100).plain
+
+
+async def test_ownership_probe_failure_falls_back_to_normal_scan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from repo_doctor.gitwrap import GitTimeout
+
+    root = _repo(tmp_path)
+
+    def timeout(self: Git) -> bool:
+        raise GitTimeout(["rev-parse"], 0.1)
+
+    monkeypatch.setattr(Git, "dubious_ownership", timeout)
+    cfg = Config(roots=[RootConfig(path=str(root))])
+    result = await Scanner(cfg, ScanOptions(offline=True, now=NOW), ssh_config=SshConfig()).run()
+    (repo,) = result.repos
+    assert not repo.untrusted_owner and repo.score is not None
+    assert "unsafe-ownership" not in {f.check_id for f in repo.findings}

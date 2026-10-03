@@ -93,3 +93,23 @@ def test_dashboard_unchecked_repo(snap_compare: Any, tmp_path: Path) -> None:
         )
     )
     assert snap_compare(make_app(tmp_path, result=result, theme="dark"), terminal_size=(80, 24))
+
+
+def test_detail_unchecked_repo(snap_compare: Any, tmp_path: Path) -> None:
+    """Karta repa cizího vlastníka (80×24): jen skóre „–“, vysvětlení a nález s postupem."""
+    from repo_doctor.checks.meta import UnsafeOwnership
+    from repo_doctor.models import RepoResult
+
+    result = sample_result()
+    result.repos = [
+        RepoResult(
+            path="/srv/sdilene/cizi",
+            name="cizi-repo",
+            root="~/projekty",
+            score=None,
+            untrusted_owner=True,
+            findings=[UnsafeOwnership().for_path("/srv/sdilene/cizi")],
+        )
+    ]
+    app = make_app(tmp_path, result=result, theme="dark")
+    assert snap_compare(app, terminal_size=(80, 24), press=["enter"])

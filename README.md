@@ -128,6 +128,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | `/` | hledat |
 | `R` | sken |
 | `r` | sken repa |
+| `F` | sken s git fetch |
 | `x` | zrušit sken |
 | `O` | offline režim |
 | `t` | světlé / tmavé téma |

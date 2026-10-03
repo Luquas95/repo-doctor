@@ -184,7 +184,7 @@ class RepoDoctorApp(App[int]):
             net = NetServices.create(self.config, transport=self.forge_transport)
         return Scanner(self.config, options, on_event=self._on_scan_event, net=net)
 
-    def start_scan(self, repo_path: str | None = None) -> None:
+    def start_scan(self, repo_path: str | None = None, *, fetch: bool = False) -> None:
         if self.scanning:
             self.notify(f"Sken už běží ({self.key('cancel_scan')} ho zruší).", severity="warning")
             return
@@ -195,7 +195,14 @@ class RepoDoctorApp(App[int]):
                 severity="warning",
             )
             return
-        options = ScanOptions(offline=self.offline, now=None)
+        if fetch and self.offline:
+            self.notify(
+                f"Fetch potřebuje síť – vypni offline režim ({self.key('toggle_offline')}).",
+                severity="warning",
+            )
+            return
+        # fetch mění jen remote-tracking refy (stejně jako CLI `scan --fetch`)
+        options = ScanOptions(offline=self.offline, now=None, fetch=fetch)
         self.scanner = self._make_scanner(options)
         self.scan_done, self.scan_total, self.scan_current = 0, 0, ""
         self._seen: set[str] = set()
@@ -212,11 +219,15 @@ class RepoDoctorApp(App[int]):
                 )
             ]
         self.scan_worker = self.run_worker(
-            self._scan(roots, target, full=repo_path is None), group="scan", exclusive=True
+            self._scan(roots, target, full=repo_path is None, fetch=fetch),
+            group="scan",
+            exclusive=True,
         )
         self._refresh_views()
 
-    async def _scan(self, roots: list[RootConfig], target: Any, *, full: bool) -> None:
+    async def _scan(
+        self, roots: list[RootConfig], target: Any, *, full: bool, fetch: bool = False
+    ) -> None:
         assert self.scanner is not None  # noqa: S101
         result = await self.scanner.run(roots, target)
         cancelled = result.cancelled or (self.scanner is not None and self.scanner.cancelled)
@@ -244,6 +255,14 @@ class RepoDoctorApp(App[int]):
             self.notify(
                 f"Sken dokončen: {len(result.repos)} repozitářů, {n} nálezů.", title="repo-doctor"
             )
+            failed = [r.name for r in result.repos if "fetch" in r.errors]
+            if fetch and failed:
+                self.notify(
+                    f"Fetch selhal u {len(failed)} rep ({', '.join(failed[:3])}"
+                    f"{'…' if len(failed) > 3 else ''}) – důvod je v kartě repa.",
+                    severity="warning",
+                    timeout=10,
+                )
 
     def _on_scan_event(self, event: ScanEvent) -> None:
         if event.kind == "discovered":
@@ -279,6 +298,9 @@ class RepoDoctorApp(App[int]):
 
     def action_scan_all(self) -> None:
         self.start_scan()
+
+    def action_scan_fetch(self) -> None:
+        self.start_scan(fetch=True)
 
     def action_scan_repo(self) -> None:
         if self.selected_path is None:
