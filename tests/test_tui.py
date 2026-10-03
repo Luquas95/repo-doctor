@@ -659,6 +659,7 @@ async def test_settings(tmp_path: Path) -> None:
 
 
 @respx.mock
+@pytest.mark.usefixtures("allow_file")
 async def test_remote_repos_and_clone(tmp_path: Path) -> None:
     src = fx.RepoBuilder.create(tmp_path / "srv" / "novy")
     src.write("a", "a").commit()

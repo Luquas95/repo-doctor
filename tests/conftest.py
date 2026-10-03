@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from repo_doctor.gitwrap import configure_ssh
+from repo_doctor.gitwrap import _allow_protocols, configure_ssh, reset_ssh_cache
 from repo_doctor.masking import REGISTRY
 
 os.environ["TZ"] = "UTC"  # deterministické časy ve snapshotech
@@ -33,13 +33,24 @@ def _isolated_env(
     monkeypatch.setenv("GIT_CONFIG_SYSTEM", "/dev/null")
     monkeypatch.delenv("GIT_SSH_COMMAND", raising=False)
     configure_ssh(batch_mode=True)
+    reset_ssh_cache()
+    _allow_protocols()
     # SSH sonda „testu připojení“ by šla do sítě – testy ji nahrazují explicitně
     monkeypatch.setattr("repo_doctor.sshhelp.run_probe", lambda url: None)
     yield
     REGISTRY.clear()
     configure_ssh(batch_mode=True)
+    _allow_protocols()
 
 
 @pytest.fixture
 def home() -> Path:
     return Path.home()
+
+
+@pytest.fixture
+def allow_file() -> Iterator[None]:
+    """Interní přepínač testů: povolí protokol `file` (lokální upstream bez sítě)."""
+    _allow_protocols("file")
+    yield
+    _allow_protocols()
