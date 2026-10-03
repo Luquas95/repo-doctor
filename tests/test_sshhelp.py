@@ -300,3 +300,40 @@ async def test_tui_forge_test_notifies_ssh_problem(
             "warning",
         )
     ]
+
+
+async def test_tui_scan_with_fetch(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """`F` spustí sken s fetch; selhání se ohlásí notifikací, offline se odmítne."""
+    from repo_doctor.scanner import ScanOptions
+    from tests.sample import sample_result
+    from tests.tui_helpers import FakeScanner, make_app
+
+    repos = sample_result().repos[:2]
+    repos[0].errors = {"fetch": "Server není dostupný (síť, VPN/Tailscale, port)."}
+    seen: list[ScanOptions] = []
+
+    def factory(config: Any, options: ScanOptions, on_event: Any) -> FakeScanner:
+        seen.append(options)
+        return FakeScanner(repos, on_event, 0.0)
+
+    app = make_app(tmp_path, scanner_factory=factory)
+    messages: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        app, "notify", lambda m, **kw: messages.append((m, kw.get("severity", "information")))
+    )
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.pause()
+        app.offline = True
+        await pilot.press("F")
+        await pilot.pause()
+        assert seen == [] and "Fetch potřebuje síť" in messages[-1][0]
+        app.offline = False
+        await pilot.press("F")
+        await pilot.pause(0.2)
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+    assert [o.fetch for o in seen] == [True]
+    assert (
+        f"Fetch selhal u 1 rep ({repos[0].name}) – důvod je v kartě repa.",
+        "warning",
+    ) in messages

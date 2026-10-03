@@ -2,6 +2,13 @@
 
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze podle SemVer.
 
+## [Unreleased]
+
+### Přidáno
+- TUI: zkratka `F` spustí sken s `git fetch` (jako `repo-doctor scan --fetch`); selhání
+  fetche ohlásí notifikací, přeložená SSH hláška je v kartě repa. V offline režimu se odmítne. (#15)
+- Testy karty repa, reportů a okrajových větví SSH sondy a detekce cizího vlastníka. (#13, #14)
+
 ## [0.1.3] – 2026-10-02
 
 ### Opraveno

@@ -69,6 +69,7 @@ ACTIONS: tuple[KeyAction, ...] = (
     _a("search", "slash", "global", "hledat", label="/"),
     _a("scan_all", "R", "global", "sken"),
     _a("scan_repo", "r", "global", "sken repa", show=False),
+    _a("scan_fetch", "F", "global", "sken s git fetch", show=False),
     _a("cancel_scan", "x", "global", "zrušit sken", show=False),
     _a("toggle_offline", "O", "global", "offline režim", show=False),
     _a("toggle_theme", "t", "global", "světlé / tmavé téma", show=False),
