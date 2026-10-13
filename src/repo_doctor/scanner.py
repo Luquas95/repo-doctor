@@ -26,6 +26,7 @@ from repo_doctor.checks.base import (
     SkipCheck,
     select_checks,
 )
+from repo_doctor.checks.duplicates import DUPLICATE_ID, add_duplicate_findings
 from repo_doctor.checks.meta import UnsafeOwnership
 from repo_doctor.config import (
     Config,
@@ -164,6 +165,7 @@ class Scanner:
             offline=self.options.offline,
             roots=[r.path for r in roots if r.enabled],
         )
+        full = repos is None  # duplicitní klony jen při skenu všech sledovaných složek
         if repos is None:
             found = await asyncio.to_thread(discover, roots, self.config.ignore_repos)
             repos = found.repos
@@ -215,8 +217,26 @@ class Scanner:
         result.cancelled = self._cancelled
         result.finished_at = datetime.now(UTC) if self.options.now is None else now
         result.repos.sort(key=lambda r: (r.root, r.name))
+        if full and not self._cancelled and DUPLICATE_ID in {c.id for c in self.checks}:
+            self._duplicates(result)
         self.on_event(ScanEvent("finished", total=total, done=done))
         return result
+
+    def _duplicates(self, result: ScanResult) -> None:
+        touched = add_duplicate_findings(result)
+        allowed = {a.hash for a in self.config.allowlist}
+        for repo in result.repos:
+            if repo.path not in touched:
+                continue
+            kept = [
+                f
+                for f in repo.findings
+                if f.check_id != DUPLICATE_ID or f.fingerprint(repo.name) not in allowed
+            ]
+            repo.allowlisted += len(repo.findings) - len(kept)
+            repo.findings = kept
+            if repo.score is not None:
+                repo.score = score(kept)
 
     # ------------------------------------------------------------------ jedno repo
     def _untrusted(self, repo: DiscoveredRepo) -> bool:
@@ -328,6 +348,7 @@ class Scanner:
             last_commit=datetime.fromtimestamp(last, UTC) if last else None,
             pulse=pulse,
             commit_count=git.commit_count(),
+            root_commit=git.root_commit() if head else None,
         )
 
     async def _network(self, ctx: RepoContext, res: RepoResult) -> None:

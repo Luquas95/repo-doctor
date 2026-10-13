@@ -13,6 +13,8 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 - Kontrola `ci-security`: nepřipnuté akce, `pull_request_target` s kódem z PR, injekce výrazů
   do `run:`, široká oprávnění tokenu, tajemství v logu, self-hosted runner ve veřejném repu;
   léčba připne akce na SHA zjištěné přes API GitHubu (`@<sha> # v4`).
+- Kontrola `duplicate-clone`: stejný remote (SSH/HTTPS, aliasy) nebo kořenový commit napříč
+  sledovanými složkami, s porovnáním stavu klonů; přehled jde seskupit podle remotu (`alt+g`).
 - Léčba umí i lokální akce bez commitu (`.git/config`, hook) a varianty oprav.
 
 ### Bezpečnost

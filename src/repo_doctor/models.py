@@ -111,6 +111,7 @@ class RepoState(BaseModel):
     last_commit: datetime | None = None
     pulse: list[int] = Field(default_factory=list)  # commity za den, nejstarší první
     commit_count: int = 0
+    root_commit: str | None = None  # nejstarší kořenový commit HEAD (duplicitní klony bez remote)
 
 
 Visibility = Literal["public", "private", "unknown"]

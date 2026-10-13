@@ -94,7 +94,13 @@ ACTIONS: tuple[KeyAction, ...] = (
     _a("filter_medium", "alt+2", "dashboard", "filtr ◆ MED", show=False),
     _a("filter_low", "alt+3", "dashboard", "filtr ● LOW", show=False),
     _a("problems_only", "p", "dashboard", "jen problémová repa", show=False),
-    _a("group_cycle", "alt+g", "dashboard", "seskupit: triáž / složka / hosting", show=False),
+    _a(
+        "group_cycle",
+        "alt+g",
+        "dashboard",
+        "seskupit: triáž / složka / hosting / remote",
+        show=False,
+    ),
     _a("toggle_sidebar", "b", "dashboard", "levý panel", show=False),
     # karta repa
     _a("detail_fix", "f", "detail", "léčba", "open_fix"),

@@ -179,7 +179,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | `alt+2` | filtr ◆ MED |
 | `alt+3` | filtr ● LOW |
 | `p` | jen problémová repa |
-| `alt+g` | seskupit: triáž / složka / hosting |
+| `alt+g` | seskupit: triáž / složka / hosting / remote |
 | `b` | levý panel |
 
 **Karta repa**
@@ -275,6 +275,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | [`scan-incomplete`](docs/checks/scan-incomplete.md) | Údržba | LOW |  |  |
 | [`default-branch-behind`](docs/checks/default-branch-behind.md) | Stav gitu | LOW |  |  |
 | [`detached-head`](docs/checks/detached-head.md) | Stav gitu | LOW |  |  |
+| [`duplicate-clone`](docs/checks/duplicate-clone.md) | Stav gitu | LOW |  |  |
 | [`no-remote`](docs/checks/no-remote.md) | Stav gitu | MED |  |  |
 | [`stale-branches`](docs/checks/stale-branches.md) | Stav gitu | LOW |  |  |
 | [`stashes`](docs/checks/stashes.md) | Stav gitu | LOW |  |  |

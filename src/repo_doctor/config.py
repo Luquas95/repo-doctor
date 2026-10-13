@@ -142,7 +142,7 @@ class AllowEntry(_Model):
 class UIConfig(_Model):
     theme: Literal["dark", "light"] = "dark"
     editor: str | None = None
-    group_by: Literal["triage", "root", "forge"] = "triage"
+    group_by: Literal["triage", "root", "forge", "remote"] = "triage"
     show_sidebar: bool = True
 
 

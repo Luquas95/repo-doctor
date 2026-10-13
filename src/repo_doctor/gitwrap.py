@@ -737,6 +737,10 @@ class Git:
                 result.append(StashInfo(parts[0], int(parts[1] or 0), parts[2]))
         return result
 
+    def root_commit(self) -> str | None:
+        out = self.run("rev-list", "--max-parents=0", "HEAD", "--", check=False).split()
+        return out[-1] if out else None
+
     def last_commit_ts(self) -> int | None:
         out = self.run("log", "-1", "--format=%ct", "--branches", check=False).strip()
         return int(out) if out.isdigit() else None
