@@ -14,13 +14,32 @@ from repo_doctor.forges.tokens import TokenError, resolve_token
 from repo_doctor.httpclient import HttpClient, ResponseCache, build_verify
 
 __all__ = [
+    "HTTP_NOTE",
     "ConnectionReport",
     "Forge",
     "ForgeManager",
     "ForgeRepo",
     "ForgeSnapshot",
     "build_forge",
+    "insecure_reason",
 ]
+
+
+HTTP_NOTE = "nešifrované spojení, povoleno v allow_http_hosts"
+
+
+def insecure_reason(config: ForgeConfig) -> str | None:
+    """Chyba pro hosting s `http://` URL, jehož host není v `allow_http_hosts` (jinak None)."""
+    from repo_doctor import netpolicy
+
+    url = config.base_url
+    if not netpolicy.is_http(url) or netpolicy.policy().allows_http_url(url):
+        return None
+    return (
+        "URL instance používá nešifrovaný http:// – token by šel po síti v otevřené podobě. "
+        "Pokud je server v důvěryhodné síti (Tailscale), přidej jeho host do allow_http_hosts "
+        "(Nastavení, 7)."
+    )
 
 
 def build_forge(
@@ -83,6 +102,9 @@ class ForgeManager:
         ttl = config.limits.http_cache_minutes * 60
         for fc in config.forges:
             if not fc.enabled:
+                continue
+            if reason := insecure_reason(fc):
+                mgr.unavailable[fc.name] = reason
                 continue
             try:
                 token = resolve_token(fc)

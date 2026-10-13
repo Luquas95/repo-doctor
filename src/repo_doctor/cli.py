@@ -14,7 +14,7 @@ from typing import Annotated
 
 import typer
 
-from repo_doctor import __version__, paths
+from repo_doctor import __version__, netpolicy, paths
 from repo_doctor.checkdocs import load as load_doc
 from repo_doctor.checks import all_checks, check_ids
 from repo_doctor.config import Config, ConfigError, ConfigStore, RootConfig
@@ -50,6 +50,7 @@ def _load_config() -> Config:
         _err(str(err))
         raise typer.Exit(2) from None
     configure_ssh(batch_mode=config.ssh_batch_mode)
+    netpolicy.configure(config.allow_http_hosts)
     return config
 
 
@@ -197,7 +198,7 @@ def forges_test(
     name: Annotated[str | None, typer.Argument(help="Název hostingu (jinak všechny).")] = None,
 ) -> None:
     """Ověří připojení nastavených hostingů. Token nikdy nevypíše."""
-    from repo_doctor.forges import build_forge
+    from repo_doctor.forges import HTTP_NOTE, build_forge, insecure_reason
     from repo_doctor.forges.tokens import TokenError, resolve_token
     from repo_doctor.sshhelp import forge_ssh_warning
 
@@ -210,6 +211,10 @@ def forges_test(
     async def run_all() -> int:
         failures = 0
         for fc in targets:
+            if reason := insecure_reason(fc):
+                typer.echo(f"✗ {fc.name}: {reason}")
+                failures += 1
+                continue
             try:
                 token = resolve_token(fc)
             except TokenError as err:
@@ -239,6 +244,8 @@ def forges_test(
                 typer.echo(f"  ! {w}")
             if not fc.verify_tls and not fc.ca_bundle:
                 typer.echo("  ! ověřování TLS je vypnuté")
+            if fc.base_url.startswith("http://"):
+                typer.echo(f"  ! {HTTP_NOTE}")
         return failures
 
     failures = asyncio.run(run_all())

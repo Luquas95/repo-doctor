@@ -2,6 +2,13 @@
 
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze podle SemVer.
 
+## [0.2.0] – nevydáno
+
+### Bezpečnost
+- `http://` jen pro hosty výslovně povolené v `allow_http_hosts` (hostname, `*.domena`, IP,
+  CIDR) – rozhoduje se pro každý příkaz gitu zvlášť, přesměrování se nenásledují, token
+  hostingu po `http` odejde jen na povolené hosty. Výchozí chování se nemění.
+
 ## [0.1.4] – 2026-10-03
 
 ### Bezpečnost

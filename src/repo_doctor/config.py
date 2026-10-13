@@ -159,7 +159,17 @@ class Config(_Model):
     templates_dir: str | None = None
     # false = nepřipojovat `-o BatchMode=yes` (pro wrapper v core.sshCommand, který argumenty nepředá)
     ssh_batch_mode: bool = True
+    # Hosty, pro které je povolený nešifrovaný http (např. Forgejo za Tailscale). Jen v globální
+    # konfiguraci – `.repo-doctor.toml` cizího repa si http povolit nemůže.
+    allow_http_hosts: list[str] = Field(default_factory=list)
     ui: UIConfig = Field(default_factory=UIConfig)
+
+    @field_validator("allow_http_hosts")
+    @classmethod
+    def _http_hosts(cls, value: list[str]) -> list[str]:
+        from repo_doctor.netpolicy import validate_entries
+
+        return validate_entries(value)
 
     @model_validator(mode="after")
     def _unique_forges(self) -> Config:

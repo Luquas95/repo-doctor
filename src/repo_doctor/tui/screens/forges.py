@@ -12,8 +12,9 @@ from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.widgets import DataTable, Static
 
+from repo_doctor import netpolicy
 from repo_doctor.config import ConfigError, ForgeConfig
-from repo_doctor.forges import build_forge
+from repo_doctor.forges import HTTP_NOTE, build_forge, insecure_reason
 from repo_doctor.forges.base import ConnectionReport
 from repo_doctor.forges.tokens import (
     TokenError,
@@ -41,6 +42,8 @@ async def test_forge(
     """Otestuje připojení (token se řeší ve vlákně, protože může spouštět příkaz)."""
     import asyncio
 
+    if reason := insecure_reason(config):
+        return ConnectionReport(False, error=reason)
     try:
         token = await asyncio.to_thread(resolve_token, config)
     except TokenError as err:
@@ -105,6 +108,12 @@ class ForgesScreen(BaseScreen):
                 tls = Text("vlastní CA", style=Style(color=p.ok))
             elif not f.verify_tls:
                 tls = Text("⚠ vypnuto", style=Style(color=p.high))
+            if netpolicy.is_http(f.base_url):
+                tls = (
+                    Text("⚠ http (povoleno)", style=Style(color=p.med))
+                    if insecure_reason(f) is None
+                    else Text("✗ http", style=Style(color=p.high))
+                )
             rep = self.reports.get(f.name, None)
             if f.name in self.reports and rep is None:
                 status = Text("testuji…", style=Style(color=p.muted))
@@ -145,6 +154,12 @@ class ForgesScreen(BaseScreen):
         text = Text()
         if idx is not None:
             f = self.rd.config.forges[idx]
+            if netpolicy.is_http(f.base_url):
+                reason = insecure_reason(f)
+                text.append(
+                    f"! {HTTP_NOTE}\n" if reason is None else f"✗ {reason}\n",
+                    style=Style(color=p.med if reason is None else p.high),
+                )
             rep = self.reports.get(f.name)
             if rep is not None:
                 if rep.error:

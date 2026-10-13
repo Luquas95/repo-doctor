@@ -12,7 +12,7 @@ from textual.app import App
 from textual.binding import Binding
 from textual.worker import Worker
 
-from repo_doctor import history, paths
+from repo_doctor import history, netpolicy, paths
 from repo_doctor.config import Config, ConfigError, ConfigStore, RootConfig
 from repo_doctor.gitwrap import configure_ssh
 from repo_doctor.keymap import BY_ID, KeymapError, build_keymap, key_label
@@ -71,6 +71,7 @@ class RepoDoctorApp(App[int]):
             self.config_error = str(err)
             self.config = Config()
         configure_ssh(batch_mode=self.config.ssh_batch_mode)
+        netpolicy.configure(self.config.allow_http_hosts)
         self.roots_override = roots_override
         self.offline = offline
         self.auto_scan = auto_scan
@@ -168,6 +169,7 @@ class RepoDoctorApp(App[int]):
     def config_changed(self, config: Config) -> None:
         self.config = config
         configure_ssh(batch_mode=config.ssh_batch_mode)
+        netpolicy.configure(config.allow_http_hosts)
         for screen in self.screen_stack:
             refresh = getattr(screen, "on_config_changed", None)
             if callable(refresh):

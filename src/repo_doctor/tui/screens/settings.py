@@ -122,6 +122,18 @@ class SettingsScreen(BaseScreen):
             )
             yield Label("Ignorované repozitáře (název nebo glob, čárkami)")
             yield Input(compact=True, value=", ".join(cfg.ignore_repos), id="ignore_repos")
+            yield Label("Hosty s povoleným nešifrovaným http (čárkami)")
+            yield Static(
+                "Jen pro důvěryhodnou síť (Tailscale/VPN) – po http jde i token hostingu. "
+                "Hostname, *.domena, IP nebo síť CIDR, bez portu.",
+                classes="hint",
+            )
+            yield Input(
+                compact=True,
+                value=", ".join(cfg.allow_http_hosts),
+                placeholder="git.tailnet-name.ts.net, 100.64.0.0/10",
+                id="allow_http_hosts",
+            )
             yield Label("Allowlist nálezů (d odebere vybraný)")
             yield DataTable(id="allowlist", cursor_type="row")
             yield Static("", classes="error", id="settings-error")
@@ -193,7 +205,7 @@ class SettingsScreen(BaseScreen):
             self._save(store.set_value, "ui", "editor", value or None)
         elif wid == "templates_dir" and value != (self.rd.config.templates_dir or ""):
             self._save(store.set_top, "templates_dir", value or None)
-        elif wid in ("ignore_paths", "ignore_repos"):
+        elif wid in ("ignore_paths", "ignore_repos", "allow_http_hosts"):
             items = split_list(value)
             if items != getattr(self.rd.config, wid):
                 self._save(store.set_top, wid, items or None)

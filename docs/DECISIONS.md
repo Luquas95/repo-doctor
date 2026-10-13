@@ -68,6 +68,28 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
     spustila `upload-pack` lokálně a `ext::` libovolný příkaz. Odmítnutí se překládá na
     „Remote používá nepovolený protokol X…“. Testy si `file` povolují interním přepínačem
     `_allow_protocols` (fixture `allow_file`), veřejná volba neexistuje.
+- **`http://` jen pro hosty z `allow_http_hosts` (0.2.0):**
+  - **Per-host, ne globální přepínač:** výchozí stav (prázdný seznam) se chová jako 0.1.4.
+    Uživatel povolí jen konkrétní důvěryhodné hosty (Forgejo v Tailscale). Volba je jen
+    v globálním `config.toml` – `RepoOverrides` ji nezná (`extra="forbid"`), takže cizí repo
+    si `http` nepovolí.
+  - **Per-operace:** `GIT_ALLOW_PROTOCOL` se o `http` rozšíří jen pro jeden příkaz, a jen když
+    všechny `http://` URL, na které se může připojit, mají povolený host. U fetch se berou
+    všechny remoty (i víc URL jednoho remotu a `branch.*.remote` zadané jako URL), vždy po
+    přepisu `insteadOf` (`git ls-remote --get-url`) – jinak by lokální konfigurace cizího repa
+    přesměrovala povolenou URL jinam. URL přes https/ssh seznam nepotřebují (zůstávají
+    šifrované); proto jeden `https` remote na GitHub `http` pro Tailscale remote neblokuje.
+  - **Přesměrování:** s povoleným `http` běží příkaz s `http.followRedirects=false` –
+    `GIT_ALLOW_PROTOCOL` hlídá jen schéma, ne host, takže `initial` by pustil přesměrování
+    z povoleného hosta na libovolný jiný http host. Lokální `http.followRedirects`
+    (i pro konkrétní URL) hardening přebíjí na `false`.
+  - **Porovnání hosta:** malá písmena, bez koncové tečky, IDN → punycode; IP adresy přes
+    `ipaddress`. Nestandardní číselné zápisy (`100.1`, `0x64.1.1.1`) se neuznají ani jako
+    hostname, ani jako IP – curl by je převedl jinak, než vypadají.
+  - **API hostingů:** `HttpClient` odmítne každý `http://` požadavek (i po přesměrování) na host
+    mimo seznam ještě před odesláním (`InsecureHostError`) – token tak nikdy neodejde po http
+    jinam. Hosting s `http://` URL mimo seznam je „nedostupný“ s vysvětlením (načtení
+    konfigurace kvůli tomu neselže, aby šlo seznam doplnit v Nastavení).
 - **`--fetch`** je jediná výjimka z „CLI nic nemění“: aktualizuje jen remote-tracking refy
   a je vypnutý ve výchozím stavu (zadání: „žádný fetch bez `--fetch`“).
 - **Tajemství se v modelu vůbec nevyskytují.** Skener vrací jen maskovanou ukázku

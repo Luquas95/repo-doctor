@@ -133,7 +133,7 @@ class WizardScreen(NavMixin, Screen[None]):
                     + ", ".join(f"{f.config.name} ({f.config.type})" for f in self.forges)
                 )
 
-        self.app.push_screen(ForgeDialog(None, names), done)
+        self.app.push_screen(ForgeDialog(None, names, offer_http_allow=True), done)
 
     @on(Button.Pressed, "#add-forge")
     def _add_forge_btn(self) -> None:
@@ -170,6 +170,10 @@ class WizardScreen(NavMixin, Screen[None]):
         try:
             for path in paths:
                 store.upsert_root(RootConfig(path=path, depth=depth))
+            hosts = [f.allow_http_host for f in self.forges if f.allow_http_host]
+            if hosts:
+                current = list(store.config.allow_http_hosts)
+                store.set_top("allow_http_hosts", current + [h for h in hosts if h not in current])
             for f in self.forges:
                 store.upsert_forge(f.config)
             config = store.save()

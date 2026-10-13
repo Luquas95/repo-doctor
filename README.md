@@ -83,6 +83,24 @@ ca_bundle = "~/.local/share/certs/homelab-ca.pem"  # pro self-signed certifikát
 clone_protocol = "ssh"
 ```
 
+Pokud Forgejo v Tailscale běží jen na `http://` (šifrování zajišťuje Tailscale), povol jeho
+host výslovně v globální konfiguraci – jinak repo-doctor `http` odmítne (fetch, klon i API):
+
+```toml
+# Hosty, pro které je povolený nešifrovaný http (např. Forgejo za Tailscale).
+allow_http_hosts = ["git.tailnet-name.ts.net"]   # nebo "*.ts.net", "100.64.0.0/10"
+
+[[forges]]
+name = "domaci-forgejo"
+type = "forgejo"
+url = "http://git.tailnet-name.ts.net:3000"
+```
+
+Položka je přesný hostname, `*.domena` (jen subdomény), IP adresa nebo síť CIDR, bez portu.
+`.repo-doctor.toml` repa volbu nezná – cizí repo si `http` povolit nemůže. Na obrazovce
+Hostingy je takový hosting označený „nešifrované spojení, povoleno v allow_http_hosts“;
+průvodce prvním spuštěním přidání hosta nabídne s vysvětlením rizika.
+
 Remote typu `ssh://git@git.tailnet-name.ts.net:2222/ja/repo.git` se k hostingu přiřadí podle
 hostname (SSH port se může lišit od webového). Fungují i aliasy z `~/.ssh/config`
 (`Host forgejo` + `HostName …`). SSH příkaz se bere z proměnné `GIT_SSH_COMMAND`, jinak
@@ -347,6 +365,10 @@ editor = "nvim"
   - submoduly se při fetchi nestahují (mají vlastní konfiguraci).
 - **Síť jen přes `https` a `ssh`** (`GIT_ALLOW_PROTOCOL`): remote s `git://`, `http://`,
   `file://`, lokální cestou nebo `ext::` repo-doctor nefetchuje ani neklonuje a řekne proč.
+  Výjimka: `http://` na hosty, které výslovně povolíš v `allow_http_hosts` (globální
+  konfigurace). Rozhoduje se pro každý příkaz zvlášť – `http` dostane jen fetch/klon, jehož
+  všechny `http` URL (po přepisech `insteadOf`) jsou na seznamu, a přesměrování se přitom
+  nenásledují. Token hostingu po `http` odejde jen na povolené hosty.
 
 ## Použití v CI
 
