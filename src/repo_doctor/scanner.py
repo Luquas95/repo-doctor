@@ -380,6 +380,8 @@ class Scanner:
             if vis != "unknown":
                 ctx.visibility = vis  # type: ignore[assignment]
                 res.visibility = vis  # type: ignore[assignment]
+        if "ci-security" in ids:
+            await self._resolve_actions(ctx, net)
         if ids & {"deps-vulnerable", "deps-outdated", "deps-lockfile-missing"}:
             data: DepsData = await asyncio.to_thread(collect, ctx.tracked_files, ctx.read_text)
             ctx.deps = data
@@ -394,6 +396,28 @@ class Scanner:
                 if data.errors and not data.vulns and any(e.startswith("OSV") for e in data.errors):
                     ctx.deps_status = "OSV.dev nedostupné"
                     data.network_done = False
+
+    async def _resolve_actions(self, ctx: RepoContext, net: NetServices) -> None:
+        """SHA tagů nepřipnutých akcí z GitHubu (pro léčbu ci-security). Max. 30 na repo."""
+        from repo_doctor.checks.ci_security import load_workflows, trusted_owners, unpinned_refs
+
+        workflows = await asyncio.to_thread(load_workflows, ctx)
+        refs = [r for r in unpinned_refs(workflows, trusted_owners(ctx)) if "://" not in r.uses]
+        github = next(
+            (
+                f
+                for f in net.forges.forges.values()
+                if isinstance(f, GitHubForge) and not f.config.url
+            ),
+            net.github_public,
+        )
+        if not refs or github is None:
+            return
+        for key in sorted({r.key for r in refs})[:30]:
+            repo_name, _, ref = key.rpartition("@")
+            sha = await github.resolve_ref(repo_name, ref)
+            if sha:
+                ctx.action_shas[key] = sha
 
     async def _scan_repo(
         self, repo: DiscoveredRepo, now: datetime, total: int, done: Callable[[], int]

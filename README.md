@@ -255,6 +255,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 
 | ID | Kategorie | Severity | Automatická oprava | Síť / hosting |
 |---|---|---|---|---|
+| [`ci-security`](docs/checks/ci-security.md) | Bezpečnost | MED | ✓ |  |
 | [`deps-lockfile-missing`](docs/checks/deps-lockfile-missing.md) | Bezpečnost | MED |  |  |
 | [`deps-vulnerable`](docs/checks/deps-vulnerable.md) | Bezpečnost | HIGH |  | síť |
 | [`docker-hygiene`](docs/checks/docker-hygiene.md) | Bezpečnost | MED | ✓ |  |
@@ -331,6 +332,9 @@ ignore_paths = ["vendor/**"]
 ignore_repos = ["*-fork"]
 license = "MIT"           # MIT | ISC | BSD-2-Clause | Unlicense
 templates_dir = "~/.config/repo-doctor/templates"
+[ci]
+trusted_action_owners = ["ja"]   # akce z vlastního účtu nemusí být připnuté na SHA (ci-security)
+
 [mcp]
 network = false           # true = MCP sken smí i síťové kontroly (OSV, hostingy)
 

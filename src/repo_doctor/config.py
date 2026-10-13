@@ -146,6 +146,11 @@ class UIConfig(_Model):
     show_sidebar: bool = True
 
 
+class CIConfig(_Model):
+    # Vlastníci akcí, které kontrola ci-security nemusí mít připnuté na SHA (např. tvůj účet).
+    trusted_action_owners: list[str] = Field(default_factory=list)
+
+
 class MCPConfig(_Model):
     # false (výchozí) = MCP server skenuje jen offline; true = i síťové kontroly (OSV, hostingy)
     network: bool = False
@@ -171,6 +176,7 @@ class Config(_Model):
     my_emails: list[str] = Field(default_factory=list)
     ui: UIConfig = Field(default_factory=UIConfig)
     mcp: MCPConfig = Field(default_factory=MCPConfig)
+    ci: CIConfig = Field(default_factory=CIConfig)
 
     @field_validator("allow_http_hosts")
     @classmethod

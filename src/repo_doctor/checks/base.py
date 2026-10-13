@@ -43,6 +43,7 @@ class RepoContext:
     deps: DepsData | None = None
     deps_status: str | None = None
     noreply_email: str | None = None  # noreply adresa uživatele na hostingu (z API)
+    action_shas: dict[str, str] = field(default_factory=dict)  # "owner/repo@ref" → commit SHA
 
     # -- soubory --------------------------------------------------------
     @cached_property

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from urllib.parse import quote, urlsplit
 
 from repo_doctor.config import ForgeConfig
@@ -13,6 +14,7 @@ from repo_doctor.forges.base import (
     ForgeRepo,
     PullRequest,
     parse_time,
+    valid_owner_path,
 )
 from repo_doctor.httpclient import ForbiddenError, HttpClient, HttpError, NotFoundError
 
@@ -154,6 +156,17 @@ class GitHubForge(Forge):
             )
             for i in items
         ]
+
+    async def resolve_ref(self, owner_repo: str, ref: str) -> str | None:
+        """SHA commitu, na který ukazuje tag/větev akce (pro připnutí v ci-security)."""
+        if not valid_owner_path(owner_repo) or not ref or ref.startswith("-"):
+            return None
+        try:
+            data = await self.client.get_json(f"/repos/{owner_repo}/commits/{quote(ref, safe='')}")
+        except HttpError:
+            return None
+        sha = str(data.get("sha", "")) if isinstance(data, dict) else ""
+        return sha if re.fullmatch(r"[0-9a-f]{40}", sha) else None
 
     async def _fetch_noreply(self) -> str | None:
         if not self.authenticated:

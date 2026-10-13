@@ -10,6 +10,9 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
   ve výchozím stavu (`[mcp] network`), maskované výstupy, stránkování.
 - Kontrola `email-exposure`: tvůj osobní e-mail v historii veřejného repa (maskovaný
   `l***@proton.me`); léčba nastaví v repu lokálně `user.email` na noreply adresu hostingu.
+- Kontrola `ci-security`: nepřipnuté akce, `pull_request_target` s kódem z PR, injekce výrazů
+  do `run:`, široká oprávnění tokenu, tajemství v logu, self-hosted runner ve veřejném repu;
+  léčba připne akce na SHA zjištěné přes API GitHubu (`@<sha> # v4`).
 - Léčba umí i lokální akce bez commitu (`.git/config`, hook) a varianty oprav.
 
 ### Bezpečnost
