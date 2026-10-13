@@ -8,6 +8,9 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 - `repo-doctor mcp`: MCP server (stdio) jen pro čtení – nástroje `list_repos`, `repo_status`,
   `repo_findings`, `search_findings`, `last_scan_summary`, `scan`, `explain_check`; offline
   ve výchozím stavu (`[mcp] network`), maskované výstupy, stránkování.
+- Kontrola `email-exposure`: tvůj osobní e-mail v historii veřejného repa (maskovaný
+  `l***@proton.me`); léčba nastaví v repu lokálně `user.email` na noreply adresu hostingu.
+- Léčba umí i lokální akce bez commitu (`.git/config`, hook) a varianty oprav.
 
 ### Bezpečnost
 - `http://` jen pro hosty výslovně povolené v `allow_http_hosts` (hostname, `*.domena`, IP,

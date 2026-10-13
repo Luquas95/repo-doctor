@@ -139,11 +139,36 @@ def configure_ssh(*, batch_mode: bool) -> None:
 
 
 def reset_ssh_cache() -> None:
-    """Vyčistí cache údajů z globální konfigurace (SSH příkaz, credential helpery)."""
-    global _ssh_command, _credential_helpers
+    """Vyčistí cache údajů z globální konfigurace (SSH příkaz, credential helpery, identita)."""
+    global _ssh_command, _credential_helpers, _identity
     with _SSH_LOCK:
         _ssh_command = None
         _credential_helpers = None
+        _identity = None
+
+
+_identity: tuple[frozenset[str], frozenset[str]] | None = None
+
+
+def user_identity() -> tuple[frozenset[str], frozenset[str]]:
+    """(jména, e-maily) uživatele z globální a systémové konfigurace (`user.name`, `user.email`).
+
+    Nikdy z lokální konfigurace repa – ta může patřit komukoli. Cachuje se na běh.
+    """
+    global _identity
+    with _SSH_LOCK:
+        if _identity is None:
+            names: set[str] = set()
+            emails: set[str] = set()
+            for scope in ("--global", "--system"):
+                name = _user_config_query(scope, "--get", "user.name").strip()
+                email = _user_config_query(scope, "--get", "user.email").strip()
+                if name:
+                    names.add(name.casefold())
+                if email:
+                    emails.add(email.casefold())
+            _identity = (frozenset(names), frozenset(emails))
+        return _identity
 
 
 _credential_helpers: list[tuple[str, str]] | None = None
@@ -493,6 +518,34 @@ class Git:
     def git_dir(self) -> Path:
         out = self.run("rev-parse", "--absolute-git-dir").strip()
         return Path(out)
+
+    def common_dir(self) -> Path:
+        out = self.run("rev-parse", "--path-format=absolute", "--git-common-dir").strip()
+        return Path(out)
+
+    def hooks_dir(self) -> Path:
+        """Výchozí složka hooků repa (`.git/hooks`), bez ohledu na `core.hooksPath`."""
+        return self.common_dir() / "hooks"
+
+    def user_hooks_path(self) -> str | None:
+        """`core.hooksPath`, jak ho uvidí uživatelův vlastní `git push` (globální i lokální).
+
+        Jen čte konfiguraci; repo-doctor sám hooky nikdy nespouští (`core.hooksPath=/dev/null`
+        platí jen pro jeho vlastní volání gitu).
+        """
+        try:
+            proc = subprocess.run(
+                ["git", "-C", str(self.path), "config", "--get", "core.hooksPath"],
+                capture_output=True,
+                timeout=self.timeout,
+                env=git_env(),
+                check=False,
+                stdin=subprocess.DEVNULL,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return None
+        value = proc.stdout.decode("utf-8", "replace").strip()
+        return value or None
 
     def is_bare(self) -> bool:
         return self.run("rev-parse", "--is-bare-repository", check=False).strip() == "true"

@@ -193,6 +193,7 @@ async def test_network_enrichment_with_forge(
     respx.get(f"{api}/repos/nekdo/proj/dependabot/alerts").respond(json=[{"n": 1}])
     respx.get(f"{api}/repos/nekdo/proj/secret-scanning/alerts").respond(404)
     respx.get(f"{api}/repos/nekdo/proj/issues").respond(json=[])
+    respx.get(f"{api}/user").respond(json={"id": 7, "login": "nekdo"})  # noreply adresa
     respx.post("https://api.osv.dev/v1/querybatch").respond(
         json={"results": [{"vulns": [{"id": "GHSA-x"}]}]}
     )

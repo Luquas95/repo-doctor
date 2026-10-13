@@ -114,6 +114,14 @@ class GiteaForge(Forge):
             for i in items
         ]
 
+    async def _fetch_noreply(self) -> str | None:
+        if not self.authenticated:
+            return None
+        user = await self.client.get_json("/user")
+        value = str(user.get("email") or "")
+        # se skrytým e-mailem vrací Gitea/Forgejo adresu typu `login@noreply.<instance>`
+        return value if "noreply" in value.split("@", 1)[-1] else None
+
     async def test_connection(self) -> ConnectionReport:
         warnings: list[str] = []
         try:

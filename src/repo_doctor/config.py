@@ -167,6 +167,8 @@ class Config(_Model):
     # Hosty, pro které je povolený nešifrovaný http (např. Forgejo za Tailscale). Jen v globální
     # konfiguraci – `.repo-doctor.toml` cizího repa si http povolit nemůže.
     allow_http_hosts: list[str] = Field(default_factory=list)
+    # Tvoje e-maily navíc ke `git config --global user.email` (kontrola email-exposure).
+    my_emails: list[str] = Field(default_factory=list)
     ui: UIConfig = Field(default_factory=UIConfig)
     mcp: MCPConfig = Field(default_factory=MCPConfig)
 

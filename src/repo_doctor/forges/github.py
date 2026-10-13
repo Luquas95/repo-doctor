@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 from repo_doctor.config import ForgeConfig
 from repo_doctor.forges.base import (
@@ -154,6 +154,17 @@ class GitHubForge(Forge):
             )
             for i in items
         ]
+
+    async def _fetch_noreply(self) -> str | None:
+        if not self.authenticated:
+            return None
+        user = await self.client.get_json("/user")
+        uid, login = user.get("id"), user.get("login")
+        if not uid or not login:
+            return None
+        host = urlsplit(api_base(self.config.url)).hostname or "api.github.com"
+        domain = "users.noreply.github.com" if host == "api.github.com" else f"users.noreply.{host}"
+        return f"{uid}+{login}@{domain}"
 
     async def test_connection(self) -> ConnectionReport:
         warnings: list[str] = []

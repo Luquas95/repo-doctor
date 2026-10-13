@@ -42,6 +42,7 @@ class RepoContext:
     visibility: Visibility = "unknown"
     deps: DepsData | None = None
     deps_status: str | None = None
+    noreply_email: str | None = None  # noreply adresa uživatele na hostingu (z API)
 
     # -- soubory --------------------------------------------------------
     @cached_property
@@ -116,6 +117,11 @@ class Check:
     def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
         """Navrhne opravu. Nesmí nic měnit – jen vrací Patch."""
         return None
+
+    def fixes(self, repo: RepoContext, findings: list[Finding]) -> list[Patch]:
+        """Všechny varianty opravy (výchozí: jediná z `fix`). Uživatel vybere nejvýš jednu."""
+        patch = self.fix(repo, findings)
+        return [patch] if patch is not None else []
 
     def finding(
         self,

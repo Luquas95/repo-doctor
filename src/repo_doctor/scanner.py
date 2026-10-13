@@ -363,6 +363,8 @@ class Scanner:
                         )
                     for e in snap.errors:
                         res.errors.setdefault("forge", e)
+                    if "email-exposure" in ids and ctx.visibility == "public":
+                        ctx.noreply_email = await forge.noreply_email()
                 except HttpError as err:
                     ctx.forge_status = f"hosting {ctx.forge_name} nedostupný: {err}"
         elif not self.options.use_forges:

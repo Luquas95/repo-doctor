@@ -157,10 +157,15 @@ class FixScreen(BaseScreen):
                 Text("Žádné automaticky opravitelné nálezy. Esc zpět.", style=Style(color=p.muted))
             )
         elif dirty:
+            local = (
+                " Jen lokální úpravy (.git/) jde provést i tak."
+                if any(pt.local_only for pt in patches)
+                else ""
+            )
             self._header(
                 Text(
-                    f"Repo má necommitnuté změny (~{dirty}) – oprava se nespustí, repo-doctor na ně nesahá. "
-                    "Commitni je nebo ulož do stashe.",
+                    f"Repo má necommitnuté změny (~{dirty}) – opravy souborů se nespustí, repo-doctor "
+                    f"na ně nesahá. Commitni je nebo ulož do stashe.{local}",
                     style=Style(color=p.med),
                 )
             )
@@ -180,22 +185,27 @@ class FixScreen(BaseScreen):
         lst = self.query_one("#rx", OptionList)
         if self.selected is None:
             # na repu s necommitnutými změnami nic nepředvybíráme – oprava se stejně nespustí
-            self.selected = (
-                set()
-                if self.dirty
-                else {pt.check_id for pt in self.patches if self.focus_check in (None, pt.check_id)}
-            )
+            chosen: dict[str, str] = {}
+            if not self.dirty:
+                for pt in self.patches:
+                    if self.focus_check in (None, pt.check_id):
+                        chosen.setdefault(pt.check_id, pt.key)  # první varianta
+            self.selected = set(chosen.values())
         highlighted = lst.highlighted
         lst.clear_options()
         width = max(20, lst.size.width - 6) if lst.size.width else 60
         for patch in self.patches:
-            on_ = patch.check_id in self.selected
+            on_ = patch.key in self.selected
+            variant = any(o.check_id == patch.check_id and o is not patch for o in self.patches)
             box = Text(
-                "[x] " if on_ else "[ ] ", style=Style(color=p.ok if on_ else p.muted, bold=on_)
+                ("(•) " if on_ else "( ) ") if variant else ("[x] " if on_ else "[ ] "),
+                style=Style(color=p.ok if on_ else p.muted, bold=on_),
             )
             box.append(patch.check_id, style=Style(color=p.text, bold=True))
+            if patch.variant:
+                box.append(f" · {patch.title}", style=Style(color=p.accent))
             box.append("\n    " + patch.summary[:width], style=Style(color=p.muted))
-            lst.add_option(Option(box, id=patch.check_id))
+            lst.add_option(Option(box, id=patch.key))
         if highlighted is not None and highlighted < len(self.patches):
             lst.highlighted = highlighted
         elif self.focus_check and self.focus_check in [pt.check_id for pt in self.patches]:
@@ -206,7 +216,7 @@ class FixScreen(BaseScreen):
         self._render_diff()
         bar = self.query_one(KeyBar)
         keys: list[str | tuple[str, str]] = ["toggle_fix", "select_all", ("j/k", "pohyb")]
-        if not self.dirty and self.patches:
+        if self.patches and (not self.dirty or any(pt.local_only for pt in self.patches)):
             keys.append("confirm_fix")
         bar.set_items([*keys, ("esc", "zpět"), "help"])
 
@@ -225,7 +235,13 @@ class FixScreen(BaseScreen):
         if patch is None:
             self.query_one("#diff", Static).update("")
             return
-        files = ", ".join(c.path for c in patch.changes[:3])
+        files = ", ".join(
+            [c.path for c in patch.changes[:3]]
+            + [
+                f".git/{'config' if a.kind == 'git_config' else 'hooks/' + a.key}"
+                for a in patch.local
+            ]
+        )
         panel.border_title = f" NÁHLED ZMĚN · {files} "
         width = max(20, panel.size.width - 4)
         text = diff_text(patch.diff(), self.rd.palette, width)
@@ -237,8 +253,8 @@ class FixScreen(BaseScreen):
 
     @on(OptionList.OptionHighlighted, "#rx")
     def _highlighted(self, event: OptionList.OptionHighlighted) -> None:
-        check_id = event.option.id
-        self.current = next((pt for pt in self.patches if pt.check_id == check_id), None)
+        key = event.option.id
+        self.current = next((pt for pt in self.patches if pt.key == key), None)
         self._render_diff()
 
     @on(OptionList.OptionSelected, "#rx")
@@ -249,24 +265,34 @@ class FixScreen(BaseScreen):
         lst = self.query_one("#rx", OptionList)
         if lst.highlighted is None or self.selected is None or not self.patches:
             return
-        check_id = self.patches[lst.highlighted].check_id
-        self.selected ^= {check_id}
+        patch = self.patches[lst.highlighted]
+        if patch.key in self.selected:
+            self.selected.discard(patch.key)
+        else:
+            # varianty jedné kontroly se vylučují
+            self.selected -= {o.key for o in self.patches if o.check_id == patch.check_id}
+            self.selected.add(patch.key)
         self._render_list()
 
     def action_select_all(self) -> None:
         if self.selected is None:
             return
-        ids = {pt.check_id for pt in self.patches}
+        firsts: dict[str, str] = {}
+        for pt in self.patches:
+            firsts.setdefault(pt.check_id, pt.key)
+        ids = set(firsts.values())
         self.selected = set() if self.selected >= ids else ids
         self._render_list()
 
     def action_confirm_fix(self) -> None:
         if not self.ready:
             return
-        if self.dirty:
-            self.notify("Repo má necommitnuté změny – oprava se nespustí.", severity="error")
+        chosen = [pt for pt in self.patches if pt.key in (self.selected or set())]
+        if self.dirty and any(pt.changes for pt in chosen):
+            self.notify(
+                "Repo má necommitnuté změny – opravy souborů se nespustí.", severity="error"
+            )
             return
-        chosen = [pt for pt in self.patches if pt.check_id in (self.selected or set())]
         if not chosen:
             self.notify(
                 f"Nic není vybráno ({self.rd.key('toggle_fix')} vybere, {self.rd.key('select_all')} vše).",
@@ -275,14 +301,20 @@ class FixScreen(BaseScreen):
             return
         repo = self.repo
         default = (repo.state.default_branch or repo.state.branch or "main") if repo else "main"
-        n = len(chosen)
+        n = len([pt for pt in chosen if pt.changes])
         body = Text()
-        body.append("\nVznikne nová větev\n  ")
-        body.append(self.branch, style=Style(color=self.rd.palette.accent, bold=True))
-        body.append(
-            f"\nse {n} {commits_word(n)}. Nic se nepushne, {default} zůstane\n"
-            "beze změny a necommitnuté soubory nedotčené.\n"
-        )
+        if n:
+            body.append("\nVznikne nová větev\n  ")
+            body.append(self.branch, style=Style(color=self.rd.palette.accent, bold=True))
+            body.append(
+                f"\nse {n} {commits_word(n)}. Nic se nepushne, {default} zůstane\n"
+                "beze změny a necommitnuté soubory nedotčené.\n"
+            )
+        local = [a.description for pt in chosen for a in pt.local]
+        if local:
+            body.append("\nJen lokálně v .git/ (nic se necommituje):\n")
+            for desc in local:
+                body.append(f"  • {desc}\n")
 
         def decided(ok: bool | None) -> None:
             if ok:
@@ -315,7 +347,14 @@ class FixScreen(BaseScreen):
 
     def _applied(self, result: ApplyResult) -> None:
         n = len(result.commits)
-        msg = f"Vytvořena větev {result.branch} s {n} {commits_word(n)}. Nic se nepushnulo – zkontroluj ji: git log {result.branch}"
+        parts = []
+        if result.branch:
+            parts.append(
+                f"Vytvořena větev {result.branch} s {n} {commits_word(n)}. Nic se nepushnulo – "
+                f"zkontroluj ji: git log {result.branch}"
+            )
+        parts.extend(f"✓ {desc}" for desc in result.local)
+        msg = "\n".join(parts)
         for note in result.notes:
             msg += f"\n! {note}"
         self.notify(msg, title="Léčba hotová", timeout=15)

@@ -258,6 +258,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | [`deps-lockfile-missing`](docs/checks/deps-lockfile-missing.md) | Bezpečnost | MED |  |  |
 | [`deps-vulnerable`](docs/checks/deps-vulnerable.md) | Bezpečnost | HIGH |  | síť |
 | [`docker-hygiene`](docs/checks/docker-hygiene.md) | Bezpečnost | MED | ✓ |  |
+| [`email-exposure`](docs/checks/email-exposure.md) | Bezpečnost | MED | ✓ | síť |
 | [`env-committed`](docs/checks/env-committed.md) | Bezpečnost | HIGH | ✓ |  |
 | [`public-sensitive`](docs/checks/public-sensitive.md) | Bezpečnost | HIGH |  | síť |
 | [`secrets-history`](docs/checks/secrets-history.md) | Bezpečnost | HIGH |  |  |
@@ -333,6 +334,7 @@ templates_dir = "~/.config/repo-doctor/templates"
 [mcp]
 network = false           # true = MCP sken smí i síťové kontroly (OSV, hostingy)
 
+my_emails = ["ja@proton.me"]   # tvoje další adresy pro kontrolu email-exposure
 ssh_batch_mode = true     # false = nepřidávat `-o BatchMode=yes` (vlastní SSH wrapper)
 
 [ui]
