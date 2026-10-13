@@ -191,6 +191,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | `o` | editor |
 | `w` | web |
 | `y` | kopírovat cestu |
+| `b` | export SBOM (CycloneDX) |
 
 **Léčba**
 
@@ -269,6 +270,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | [`gitignore-incomplete`](docs/checks/gitignore-incomplete.md) | Údržba | MED | ✓ |  |
 | [`gitignore-missing`](docs/checks/gitignore-missing.md) | Údržba | MED | ✓ |  |
 | [`large-files`](docs/checks/large-files.md) | Údržba | MED |  |  |
+| [`license-compat`](docs/checks/license-compat.md) | Údržba | LOW |  | síť |
 | [`license-missing`](docs/checks/license-missing.md) | Údržba | LOW | ✓ |  |
 | [`precommit-missing`](docs/checks/precommit-missing.md) | Údržba | LOW | ✓ |  |
 | [`readme-missing`](docs/checks/readme-missing.md) | Údržba | LOW | ✓ |  |
@@ -408,6 +410,8 @@ limitem) a `explain_check`. Výstupy jsou strukturované a stránkované (`offse
 repo-doctor scan [PATH…] --report md|json|html [--output FILE] [--offline] [--no-forges] \
     [--only/--skip CHECKS] [--jobs N] [--fail-on high|medium|low] [--fetch]
 repo-doctor explain CHECK_ID
+repo-doctor sbom REPO [--format cyclonedx-json] [-o FILE]   # SBOM z lockfilů, bez sítě
+repo-doctor mcp                     # MCP server jen pro čtení (stdio)
 repo-doctor checks
 repo-doctor forges test [NAME]      # token nikdy nevypíše
 repo-doctor config path|validate

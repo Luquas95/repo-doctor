@@ -201,6 +201,9 @@ async def test_network_enrichment_with_forge(
         json={"database_specific": {"severity": "HIGH"}}
     )
     respx.get("https://pypi.org/pypi/requests/json").respond(json={"info": {"version": "2.32.0"}})
+    respx.get("https://pypi.org/pypi/requests/2.19.0/json").respond(
+        json={"info": {"license": "Apache 2.0"}}
+    )
     cfg = Config(
         roots=[RootConfig(path=str(rb.path))],
         forges=[ForgeConfig(name="github", type="github", token_env="GH_TOKEN_TEST")],

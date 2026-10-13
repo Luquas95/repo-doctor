@@ -59,6 +59,7 @@ class DepsData:
     )  # (manifest, doporučený lock)
     vulns: dict[Dependency, list[Vuln]] = field(default_factory=dict)
     outdated: list[Outdated] = field(default_factory=list)
+    licenses: dict[Dependency, str | None] = field(default_factory=dict)  # přímé závislosti
     errors: list[str] = field(default_factory=list)
     network_done: bool = False
 
@@ -284,6 +285,32 @@ def package_json_direct(text: str) -> tuple[set[str], bool]:
     return names, bool(names)
 
 
+def cargo_direct(text: str) -> set[str]:
+    """Názvy přímých závislostí z Cargo.toml (i přejmenované přes `package = "…"`)."""
+    try:
+        data = tomllib.loads(text)
+    except tomllib.TOMLDecodeError:
+        return set()
+    tables = [data.get(k) for k in ("dependencies", "dev-dependencies", "build-dependencies")]
+    tables.append((data.get("workspace") or {}).get("dependencies"))
+    names: set[str] = set()
+    for table in tables:
+        if not isinstance(table, dict):
+            continue
+        for key, spec in table.items():
+            names.add(str(spec.get("package", key)) if isinstance(spec, dict) else str(key))
+    return names
+
+
+_GO_REQ = re.compile(
+    r"^\s*(?:require\s+)?([\w.\-/~]+\.[\w.\-/~]+)\s+(v[\w.\-+]+)(\s*//\s*indirect)?", re.M
+)
+
+
+def go_direct(text: str) -> set[str]:
+    return {m.group(1) for m in _GO_REQ.finditer(text) if not m.group(3)}
+
+
 def _dir(path: str) -> str:
     parent = str(PurePosixPath(path).parent)
     return "" if parent == "." else parent + "/"
@@ -300,6 +327,7 @@ def collect(files: list[str], read_text: ReadText) -> DepsData:
         by_dir.setdefault(_dir(f), set()).add(PurePosixPath(f).name)
     direct_py: set[str] = set()
     direct_npm: set[str] = set()
+    direct_other: set[tuple[str, str]] = set()  # (ekosystém, název) – Cargo a Go
     for f in sorted(present):
         name = PurePosixPath(f).name
         if (
@@ -362,15 +390,20 @@ def collect(files: list[str], read_text: ReadText) -> DepsData:
             }:
                 data.missing_locks.append((f, "package-lock.json"))
         elif name == "Cargo.toml":
+            direct_other.update(("crates.io", n) for n in cargo_direct(text))
             is_app = f"{_dir(f)}src/main.rs" in present
             if is_app and "[dependencies]" in text and "Cargo.lock" not in ancestors:
                 data.missing_locks.append((f, "Cargo.lock"))
-        elif name == "go.mod" and "require" in text and "go.sum" not in ancestors:
-            data.missing_locks.append((f, "go.sum"))
+        elif name == "go.mod":
+            direct_other.update(("Go", n) for n in go_direct(text))
+            if "require" in text and "go.sum" not in ancestors:
+                data.missing_locks.append((f, "go.sum"))
     unique: dict[tuple[str, str, str], Dependency] = {}
     for d in data.dependencies:
-        direct = (d.ecosystem == "PyPI" and d.name in direct_py) or (
-            d.ecosystem == "npm" and d.name in direct_npm
+        direct = (
+            (d.ecosystem == "PyPI" and d.name in direct_py)
+            or (d.ecosystem == "npm" and d.name in direct_npm)
+            or (d.ecosystem, d.name) in direct_other
         )
         unique.setdefault(
             (d.ecosystem, d.name, d.version),
@@ -455,6 +488,7 @@ async def enrich(
     ttl: float,
     want_vulns: bool = True,
     want_outdated: bool = True,
+    want_licenses: bool = False,
     max_details: int = 50,
 ) -> None:
     """Doplní zranitelnosti (OSV batch) a zastaralé přímé závislosti. Chyby jen zaznamená."""
@@ -488,4 +522,12 @@ async def enrich(
 
         await asyncio.gather(*(one(d) for d in direct[:200]))
         data.outdated.sort(key=lambda o: (o.dep.ecosystem, o.dep.name))
+    if want_licenses:
+        from repo_doctor.licenses import fetch_license
+
+        targets = [
+            d for d in data.dependencies if d.direct and d.ecosystem in ("PyPI", "npm", "crates.io")
+        ][:200]
+        licences = await asyncio.gather(*(fetch_license(client, d, ttl=ttl) for d in targets))
+        data.licenses = dict(zip(targets, licences, strict=True))
     data.network_done = True

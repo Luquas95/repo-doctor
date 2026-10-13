@@ -15,6 +15,10 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
   léčba připne akce na SHA zjištěné přes API GitHubu (`@<sha> # v4`).
 - Kontrola `duplicate-clone`: stejný remote (SSH/HTTPS, aliasy) nebo kořenový commit napříč
   sledovanými složkami, s porovnáním stavu klonů; přehled jde seskupit podle remotu (`alt+g`).
+- Kontrola `license-compat`: licence přímých závislostí (PyPI, npm, crates.io) vs. permisivní
+  licence projektu – silný copyleft a chybějící licence; informativní, ne právní rada.
+- `repo-doctor sbom REPO` a export z karty repa (`b`): SBOM CycloneDX 1.5 z lockfilů, bez sítě
+  (licence z cache registrů).
 - Léčba umí i lokální akce bez commitu (`.git/config`, hook) a varianty oprav.
 
 ### Bezpečnost

@@ -183,6 +183,42 @@ def explain(
     typer.echo(doc.text, nl=False)
 
 
+@app.command("sbom")
+def sbom_cmd(
+    repo: Annotated[Path, typer.Argument(help="Cesta k repozitáři.")],
+    fmt: Annotated[
+        str, typer.Option("--format", help="Formát (zatím jen cyclonedx-json).")
+    ] = "cyclonedx-json",
+    output: Annotated[
+        Path | None, typer.Option("--output", "-o", help="Soubor (jinak stdout). Nepřepisuje.")
+    ] = None,
+) -> None:
+    """SBOM repozitáře (CycloneDX 1.5) z lockfilů. Bez sítě – licence jen z cache."""
+    import json
+
+    from repo_doctor.sbom import FORMATS, sbom_for_repo, write_sbom
+
+    if fmt not in FORMATS:
+        _err(f"Neznámý formát {fmt!r} (podporováno: {', '.join(FORMATS)}).")
+        raise typer.Exit(2)
+    path = repo.expanduser()
+    if not (path / ".git").exists():
+        _err(f"{repo} není git repozitář.")
+        raise typer.Exit(2)
+    try:
+        if output is not None:
+            write_sbom(path, output.expanduser())
+            _err(f"SBOM uložen: {output}")
+        else:
+            typer.echo(json.dumps(sbom_for_repo(path), indent=2, ensure_ascii=False))
+    except FileExistsError:
+        _err(f"{output} už existuje – repo-doctor ho nepřepíše.")
+        raise typer.Exit(2) from None
+    except (ValueError, OSError) as err:
+        _err(f"SBOM nejde vytvořit: {err}")
+        raise typer.Exit(2) from None
+
+
 @app.command("mcp")
 def mcp_server() -> None:
     """Spustí MCP server (stdio) jen pro čtení – pro Claude Code, Claude Desktop apod.

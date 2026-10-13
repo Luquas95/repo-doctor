@@ -108,6 +108,7 @@ ACTIONS: tuple[KeyAction, ...] = (
     _a("open_editor", "o", "detail", "editor"),
     _a("open_web", "w", "detail", "web"),
     _a("copy_path", "y", "detail", "kopírovat cestu"),
+    _a("export_sbom", "b", "detail", "export SBOM (CycloneDX)", show=False),
     # léčba
     _a("toggle_fix", "space", "fix", "vybrat", label="space"),
     _a("select_all", "A", "fix", "vše"),
