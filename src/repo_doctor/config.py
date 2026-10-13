@@ -146,6 +146,11 @@ class UIConfig(_Model):
     show_sidebar: bool = True
 
 
+class MCPConfig(_Model):
+    # false (výchozí) = MCP server skenuje jen offline; true = i síťové kontroly (OSV, hostingy)
+    network: bool = False
+
+
 class Config(_Model):
     roots: list[RootConfig] = Field(default_factory=list)
     forges: list[ForgeConfig] = Field(default_factory=list)
@@ -163,6 +168,7 @@ class Config(_Model):
     # konfiguraci – `.repo-doctor.toml` cizího repa si http povolit nemůže.
     allow_http_hosts: list[str] = Field(default_factory=list)
     ui: UIConfig = Field(default_factory=UIConfig)
+    mcp: MCPConfig = Field(default_factory=MCPConfig)
 
     @field_validator("allow_http_hosts")
     @classmethod

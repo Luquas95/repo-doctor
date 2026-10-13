@@ -174,6 +174,19 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - **Barvy světlého tématu** jsou ztmavené varianty palety, aby text severit měl na pozadí
   `#f5f6f8` kontrast alespoň 4.5:1 (WCAG AA).
 
+## MCP server (0.2.0)
+
+- **SDK `mcp` 2.x** (`MCPServer`, dřív FastMCP). Logika nástrojů je v `RepoDoctorTools` bez
+  závislosti na MCP – MCP vrstva (`build_server`) jen registruje funkce s docstringy.
+- **Jen čtení:** nástroje pracují nad posledním výsledkem skenu (cache repo-doctoru);
+  `scan` spouští běžný sken s `offline = not mcp.network` a `fetch = False`. Jediný zápis je
+  `last-scan.json` v cache repo-doctoru – stejně jako po skenu v TUI. Všechny nástroje mají
+  anotaci `readOnlyHint`.
+- **Maskování:** nálezy už nesou jen maskované ukázky; výstupy navíc procházejí redakčním
+  registrem a texty se zkracují (500 znaků). Stránkování `offset`/`limit` (max 100).
+- **Podpříkazy CLI** se zjišťují z registru typeru (`subcommands()`), ne z ručního seznamu –
+  nový příkaz (`mcp`) by jinak skončil v TUI větvi a stdio server by vypsal nápovědu.
+
 ## Výkon
 
 - Repozitáře běží paralelně (`--jobs`, výchozí počet CPU) jako asyncio úlohy; git příkazy

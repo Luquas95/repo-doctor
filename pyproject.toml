@@ -24,6 +24,7 @@ dependencies = [
     "keyring>=24",
     "packaging>=23",
     "rich>=13.7",
+    "mcp>=2.3",
 ]
 
 [project.scripts]

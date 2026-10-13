@@ -4,6 +4,11 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 
 ## [0.2.0] – nevydáno
 
+### Přidáno
+- `repo-doctor mcp`: MCP server (stdio) jen pro čtení – nástroje `list_repos`, `repo_status`,
+  `repo_findings`, `search_findings`, `last_scan_summary`, `scan`, `explain_check`; offline
+  ve výchozím stavu (`[mcp] network`), maskované výstupy, stránkování.
+
 ### Bezpečnost
 - `http://` jen pro hosty výslovně povolené v `allow_http_hosts` (hostname, `*.domena`, IP,
   CIDR) – rozhoduje se pro každý příkaz gitu zvlášť, přesměrování se nenásledují, token

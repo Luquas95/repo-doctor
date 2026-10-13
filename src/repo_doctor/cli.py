@@ -23,8 +23,6 @@ from repo_doctor.masking import install_log_redaction, redact
 from repo_doctor.models import ScanResult, Severity
 from repo_doctor.reports import FORMATS, ReportFormat, render
 
-SUBCOMMANDS = {"scan", "explain", "forges", "config", "checks"}
-
 app = typer.Typer(
     name="repo-doctor",
     help="Audit a údržba git repozitářů. Bez příkazu spustí TUI (jen na terminálu).",
@@ -185,6 +183,17 @@ def explain(
     typer.echo(doc.text, nl=False)
 
 
+@app.command("mcp")
+def mcp_server() -> None:
+    """Spustí MCP server (stdio) jen pro čtení – pro Claude Code, Claude Desktop apod.
+
+    Nic neopravuje, nefetchuje ani neklonuje; bez `[mcp] network = true` skenuje offline.
+    """
+    from repo_doctor.mcpserver import run
+
+    run(_load_config())
+
+
 @app.command("checks")
 def list_checks() -> None:
     """Vypíše všechny kontroly (ID, kategorie, severity, automatická oprava)."""
@@ -289,10 +298,19 @@ def run_tui(roots_override: list[str] | None) -> int:
     return run(roots_override)
 
 
+def subcommands() -> set[str]:
+    """Názvy podpříkazů CLI (cokoli jiného je složka pro TUI)."""
+    names = {
+        c.name or (c.callback.__name__.replace("_", "-") if c.callback else "")
+        for c in app.registered_commands
+    }
+    return (names | {g.name for g in app.registered_groups if g.name}) - {""}
+
+
 def main(argv: list[str] | None = None) -> int:
     args = list(sys.argv[1:] if argv is None else argv)
     install_log_redaction()
-    if not args or (args[0] not in SUBCOMMANDS and not args[0].startswith("-")):
+    if not args or (args[0] not in subcommands() and not args[0].startswith("-")):
         if not (sys.stdout.isatty() and sys.stdin.isatty()):
             _print_help()
             return 0 if not args else 2

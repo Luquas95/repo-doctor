@@ -330,6 +330,9 @@ ignore_paths = ["vendor/**"]
 ignore_repos = ["*-fork"]
 license = "MIT"           # MIT | ISC | BSD-2-Clause | Unlicense
 templates_dir = "~/.config/repo-doctor/templates"
+[mcp]
+network = false           # true = MCP sken smí i síťové kontroly (OSV, hostingy)
+
 ssh_batch_mode = true     # false = nepřidávat `-o BatchMode=yes` (vlastní SSH wrapper)
 
 [ui]
@@ -369,6 +372,28 @@ editor = "nvim"
   konfigurace). Rozhoduje se pro každý příkaz zvlášť – `http` dostane jen fetch/klon, jehož
   všechny `http` URL (po přepisech `insteadOf`) jsou na seznamu, a přesměrování se přitom
   nenásledují. Token hostingu po `http` odejde jen na povolené hosty.
+
+## MCP server pro AI asistenty
+
+`repo-doctor mcp` spustí [MCP](https://modelcontextprotocol.io) server přes stdio, takže se
+Claude (nebo jiný klient) může ptát na stav tvých repozitářů. Server je **jen pro čtení**:
+nic neopravuje, nefetchuje, neklonuje a ve výchozím stavu ani nepoužívá síť (sken je
+offline; síťové kontroly povolí `[mcp] network = true`). Tajemství a e-maily jsou maskované
+stejně jako v reportech.
+
+```sh
+claude mcp add repo-doctor -- repo-doctor mcp          # Claude Code
+```
+
+Claude Desktop (`claude_desktop_config.json`):
+
+```json
+{ "mcpServers": { "repo-doctor": { "command": "repo-doctor", "args": ["mcp"] } } }
+```
+
+Nástroje: `list_repos` (filtr podle složky, stavu a skóre), `repo_status`, `repo_findings`,
+`search_findings`, `last_scan_summary`, `scan` (offline sken všech rep nebo jednoho, s časovým
+limitem) a `explain_check`. Výstupy jsou strukturované a stránkované (`offset`, `limit` ≤ 100).
 
 ## Použití v CI
 
