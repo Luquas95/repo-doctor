@@ -223,7 +223,7 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - **Repo s vlastními filtry/drivery v `.git/config` se nedohání:** hardening by filtry
   (např. git-crypt, smudge) při checkoutu vypnul a do pracovního stromu by se zapsal
   nefiltrovaný obsah. Takové repo je potřeba dohnat ručně (`git pull --ff-only`).
-- **Fetch je samostatný krok** (`f` v TUI, výchozí v CLI) a řídí se pravidly sítě z 0.1.4
+- **Fetch je samostatný krok** (`f` v TUI, `--fetch` v CLI, výchozí nikde) a řídí se pravidly sítě z 0.1.4
   a `allow_http_hosts`.
 - **Pracovní strom musí být samotné repo:** cizí `core.worktree` by fast-forward přesměroval
   jinam (třeba do `$HOME`), proto se repo, jehož `--show-toplevel` není jeho cesta, nedohání.

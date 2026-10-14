@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from pathlib import Path
 
 import pytest
@@ -149,6 +150,12 @@ def test_cli_clean_dry_run_then_apply(tmp_path: Path, capsys: pytest.CaptureFixt
     assert not (dirty.path / "node_modules").exists()
     assert (dirty.path / "src/main.py").read_text() == "print(2)\n"
     capsys.readouterr()
+    assert cli.main(["clean", root]) == 0
+    assert "Nic k úklidu." in capsys.readouterr().out
+    active = _repo(tmp_path, "aktivni", ts=int(time.time()) - 86400)
+    assert cli.main(["clean", str(active.path.parent)]) == 0
+    assert "s nedávnou aktivitou přeskočeno" in capsys.readouterr().out
+    assert cli.main(["clean", str(tmp_path / "neni")]) == 2
 
 
 def test_duplicate_clone_reverified_before_trash(tmp_path: Path) -> None:
@@ -250,3 +257,21 @@ async def test_cleanup_screen_confirm_default_cancel_and_trash(tmp_path: Path) -
         await pilot.pause()
     assert not (rb.path / "node_modules").exists()
     assert (Path(os.environ["XDG_DATA_HOME"]) / "Trash" / "files" / "node_modules").exists()
+
+
+async def test_long_confirm_keeps_buttons_visible_at_80x24(tmp_path: Path) -> None:
+    from rich.text import Text
+    from textual.widgets import Button
+
+    from repo_doctor.tui.screens.dialogs import ConfirmDialog
+    from tests.tui_helpers import make_app
+
+    app = make_app(tmp_path)
+    async with app.run_test(size=(80, 24)) as pilot:
+        body = Text("\n".join(f"  • /velmi/dlouha/cesta/{i}/node_modules" for i in range(40)))
+        app.push_screen(ConfirmDialog("Trvale smazat", body, danger=True))
+        await pilot.pause()
+        for bid in ("#cancel", "#ok"):
+            region = app.screen.query_one(bid, Button).region
+            assert region.height and region.bottom <= 24, bid
+        assert app.focused is app.screen.query_one("#cancel", Button)

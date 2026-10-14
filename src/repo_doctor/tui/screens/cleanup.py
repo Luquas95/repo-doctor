@@ -20,6 +20,7 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import DataTable, Static
 
+from repo_doctor import czech
 from repo_doctor.cleanup import (
     Candidate,
     CleanResult,
@@ -51,6 +52,17 @@ class Item:
     @property
     def key(self) -> str:
         return str(self.candidate.path)
+
+    @property
+    def label(self) -> str:
+        """`repo/node_modules` místo dlouhé absolutní cesty; celý klon jako `~/…`."""
+        c = self.candidate
+        if c.kind == "clone" or c.path == c.repo:
+            return home_path(str(c.path))
+        try:
+            return f"{self.repo_name}/{c.path.relative_to(c.repo)}"
+        except ValueError:
+            return home_path(str(c.path))
 
 
 class CleanupScreen(BaseScreen):
@@ -92,7 +104,8 @@ class CleanupScreen(BaseScreen):
             Text(
                 f"Složky ignorované gitem ({', '.join(cfg.dirs[:6])}…), které jde znovu vytvořit. "
                 f"Předvybraná jsou repa neaktivní {cfg.inactive_days}+ dní bez změn. "
-                "Maže se do koše – nic trvale, nic sledovaného gitem.",
+                "Výchozí je koš; trvalé smazání (D) jen po dvojím potvrzení. "
+                "Nic sledovaného gitem se nemaže.",
                 style=Style(color=p.muted),
             )
         )
@@ -215,12 +228,14 @@ class CleanupScreen(BaseScreen):
         body = Text()
         total = sum(i.candidate.size for i in chosen)
         verb = "trvale smaže" if permanent else "přesune do koše"
-        body.append(f"\nrepo-doctor {verb} {len(chosen)} položek ({human(total)}):\n")
-        for i in chosen[:8]:
-            label = home_path(str(i.candidate.path))
-            body.append(f"  • {label}  {human(i.candidate.size)}\n", style=Style(color=p.text))
-        if len(chosen) > 8:
-            body.append(f"  … a {len(chosen) - 8} dalších\n", style=Style(color=p.muted))
+        if permanent:
+            body.append("\nTrvalé smazání nejde vrátit.\n", style=Style(color=p.high, bold=True))
+        body.append(f"\nrepo-doctor {verb} {czech.items(len(chosen))} ({human(total)}):\n")
+        shown = 5
+        for i in chosen[:shown]:
+            body.append(f"  • {i.label}  {human(i.candidate.size)}\n", style=Style(color=p.text))
+        if len(chosen) > shown:
+            body.append(f"  {czech.more(len(chosen) - shown)}\n", style=Style(color=p.muted))
         dirty = sorted({i.repo_name for i in chosen if i.dirty})
         if dirty:
             body.append(
@@ -231,12 +246,10 @@ class CleanupScreen(BaseScreen):
         clones = [i for i in chosen if i.candidate.kind == "clone"]
         if clones:
             body.append(
-                f"\n{len(clones)}× celý duplicitní klon (i s ignorovanými soubory, např. .env). "
-                "Těsně před smazáním se znovu ověří, že nemá změny ani nepushnuté commity.\n",
+                f"\n{len(clones)}× celý duplicitní klon. Těsně před smazáním se znovu ověří, že "
+                "nemá změny, nepushnuté commity, stashe ani vlastní ignorované soubory (.env).\n",
                 style=Style(color=p.med),
             )
-        if permanent:
-            body.append("\nTrvalé smazání nejde vrátit.\n", style=Style(color=p.high, bold=True))
         return body
 
     def action_cleanup_apply(self) -> None:
@@ -279,7 +292,7 @@ class CleanupScreen(BaseScreen):
             self.app.push_screen(
                 ConfirmDialog(
                     "Opravdu trvale smazat?",
-                    Text(f"\nPoslední potvrzení: {len(chosen)} položek zmizí bez koše.\n"),
+                    Text(f"\nPoslední potvrzení: {czech.items(len(chosen))} zmizí bez koše.\n"),
                     confirm_label="Trvale smazat",
                     danger=True,
                 ),
@@ -303,7 +316,7 @@ class CleanupScreen(BaseScreen):
 
     def _applied(self, result: CleanResult, permanent: bool) -> None:
         where = "Trvale smazáno" if permanent else "Přesunuto do koše"
-        msg = f"{where}: {len(result.removed)} položek, uvolněno {human(result.freed)}."
+        msg = f"{where}: {czech.items(len(result.removed))}, uvolněno {human(result.freed)}."
         for path, reason in result.skipped[:5]:
             msg += f"\n! {home_path(str(path))}: {reason}"
         self.notify(

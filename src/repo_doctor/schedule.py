@@ -58,8 +58,25 @@ def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
 def parse_time(value: str) -> tuple[int, int]:
     m = _TIME.match(value.strip())
     if not m:
-        raise ScheduleError(f"čas {value!r} musí být ve tvaru HH:MM (např. 08:00)")
+        raise ScheduleError(f"neplatný čas {value!r} – zadej HH:MM v rozsahu 00:00–23:59")
     return int(m.group(1)), int(m.group(2))
+
+
+def parse_calendar(value: str | None) -> tuple[Interval, str] | None:
+    """Opak `on_calendar`: `Mon *-*-* 08:00:00` → ("weekly", "08:00")."""
+    m = re.match(r"^(Mon )?\*-\*-\* (\d\d):(\d\d)(?::00)?$", (value or "").strip())
+    if not m:
+        return None
+    return ("weekly" if m.group(1) else "daily"), f"{m.group(2)}:{m.group(3)}"
+
+
+def describe(value: str | None) -> str:
+    """Čitelný popis rozvrhu timeru (`týdně v pondělí 08:00`)."""
+    parsed = parse_calendar(value)
+    if parsed is None:
+        return value or "?"
+    interval, time = parsed
+    return f"týdně v pondělí {time}" if interval == "weekly" else f"denně {time}"
 
 
 def on_calendar(interval: Interval, time: str) -> str:

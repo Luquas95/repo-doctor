@@ -18,6 +18,7 @@ from textual.binding import Binding
 from textual.containers import Vertical
 from textual.widgets import DataTable, Static
 
+from repo_doctor import czech
 from repo_doctor.sync import STATE_LABELS, SyncResult, SyncStatus, fast_forward, status
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import BaseScreen
@@ -119,7 +120,8 @@ class SyncScreen(BaseScreen):
         failed = [s.name for s in statuses if s.fetch_error]
         if fetched and failed:
             self.notify(
-                f"Fetch selhal u {len(failed)} rep ({', '.join(failed[:3])}…) – důvod je ve sloupci stav.",
+                f"Fetch selhal u {len(failed)} {czech.plural(len(failed), 'repa', 'rep', 'rep')} "
+                f"({', '.join(failed[:3])}{'…' if len(failed) > 3 else ''}) – důvod je ve sloupci stav.",
                 severity="warning",
             )
 
@@ -143,7 +145,8 @@ class SyncScreen(BaseScreen):
             state = Text(STATE_LABELS[s.state], style=Style(color=colors.get(s.state, p.muted)))
             if s.can_fast_forward:
                 state.append(
-                    f" → {s.behind} commitů, {len(s.files)} souborů", style=Style(color=p.text)
+                    f" → {czech.commits(s.behind)}, {czech.files(len(s.files))}",
+                    style=Style(color=p.text),
                 )
             elif s.reason and s.state != "clean":
                 state.append(f" · {s.reason}", style=Style(color=p.muted))
@@ -166,8 +169,9 @@ class SyncScreen(BaseScreen):
         chosen = self.chosen()
         self.query_one("#sync-summary", Static).update(
             Text(
-                f"vybráno {len(chosen)} · dožene se {sum(s.behind for s in chosen)} commitů "
-                f"· {sum(len(s.files) for s in chosen)} souborů",
+                f"vybráno {czech.repos(len(chosen))} · dožene se "
+                f"{czech.commits(sum(s.behind for s in chosen))} "
+                f"· {czech.files(sum(len(s.files) for s in chosen))}",
                 style=Style(color=p.text),
             )
         )
@@ -201,11 +205,12 @@ class SyncScreen(BaseScreen):
         body = Text("\nFast-forward (git merge --ff-only) změní pracovní strom:\n")
         for s in chosen[:8]:
             body.append(
-                f"  • {s.name}: {s.branch} ← {s.upstream} · {s.behind} commitů, {len(s.files)} souborů\n",
+                f"  • {s.name}: {s.branch} ← {s.upstream} · {czech.commits(s.behind)}, "
+                f"{czech.files(len(s.files))}\n",
                 style=Style(color=p.text),
             )
         if len(chosen) > 8:
-            body.append(f"  … a {len(chosen) - 8} dalších\n", style=Style(color=p.muted))
+            body.append(f"  {czech.more(len(chosen) - 8)}\n", style=Style(color=p.muted))
         body.append(
             "\nŽádný merge commit, rebase, reset ani push. Hooky se nespouští.\n",
             style=Style(color=p.muted),
@@ -225,7 +230,10 @@ class SyncScreen(BaseScreen):
         self.app.call_from_thread(self._applied, result)
 
     def _applied(self, result: SyncResult) -> None:
-        msg = f"Dohnáno: {len(result.updated)} rep ({sum(n for _, n in result.updated)} commitů). Nic se nepushnulo."
+        msg = (
+            f"Dohnáno: {czech.repos(len(result.updated))} "
+            f"({czech.commits(sum(n for _, n in result.updated))}). Nic se nepushnulo."
+        )
         for path, reason in result.skipped[:5]:
             msg += f"\n! {path.name}: {reason}"
         self.notify(

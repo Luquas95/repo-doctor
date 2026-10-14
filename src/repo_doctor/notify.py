@@ -18,7 +18,7 @@ from pathlib import Path
 
 import httpx
 
-from repo_doctor import netpolicy, paths
+from repo_doctor import czech, netpolicy, paths
 from repo_doctor.config import NotifyConfig
 from repo_doctor.models import RepoResult, ScanResult, Severity
 
@@ -38,19 +38,26 @@ class Changes:
     def text(self) -> str:
         def repos(items: list[str]) -> str:
             shown = ", ".join(items[:3])
-            return shown + (f" a {len(items) - 3} dalších" if len(items) > 3 else "")
+            return shown + (f" {czech.more(len(items) - 3)[2:]}" if len(items) > 3 else "")
 
         parts: list[str] = []
         if self.new_high:
             n = sum(self.new_high.values())
-            parts.append(f"{n} nové HIGH nálezy ({repos(sorted(self.new_high))})")
+            what = czech.plural(n, "nový HIGH nález", "nové HIGH nálezy", "nových HIGH nálezů")
+            parts.append(f"{n} {what} ({repos(sorted(self.new_high))})")
         if self.newly_public:
             parts.append(
                 f"nově veřejné repo s citlivým obsahem: {repos(sorted(self.newly_public))}"
             )
         if self.new_vulns:
             n = sum(self.new_vulns.values())
-            parts.append(f"{n} nové zranitelné závislosti ({repos(sorted(self.new_vulns))})")
+            what = czech.plural(
+                n,
+                "nová zranitelná závislost",
+                "nové zranitelné závislosti",
+                "nových zranitelných závislostí",
+            )
+            parts.append(f"{n} {what} ({repos(sorted(self.new_vulns))})")
         return "; ".join(parts)
 
 

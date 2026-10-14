@@ -182,7 +182,7 @@ def test_scheduled_scan_notifies_only_on_change(
     rb.write("config/prod.env", f"AWS={secret}\n").commit("omylem")
     assert cli.main(args) == 0
     out = capsys.readouterr().out
-    assert len(sent) == 1 and "nové HIGH" in sent[0] and "app" in sent[0]
+    assert len(sent) == 1 and "nové HIGH nálezy" in sent[0] and "app" in sent[0]
     assert secret not in sent[0] and "prod.env" not in sent[0] and secret not in out
     state = notify.load_state()
     assert state is not None and state.changes == sent[0] and state.deliveries[0]["ok"] is True
@@ -246,6 +246,7 @@ def test_settings_schedule_snapshot(
 async def test_settings_install_and_remove(tmp_path: Path) -> None:
     from textual.widgets import Button, Input
 
+    from repo_doctor.tui.screens.dialogs import ConfirmDialog
     from tests.tui_helpers import make_app
 
     backend = FakeBackend()
@@ -253,14 +254,27 @@ async def test_settings_install_and_remove(tmp_path: Path) -> None:
     async with app.run_test(size=(140, 40)) as pilot:
         await pilot.press("7")
         await pilot.pause()
-        app.screen.query_one("#schedule-time", Input).value = "06:45"
-        app.screen.query_one("#schedule-install", Button).press()
+        settings = app.screen
+        settings.query_one("#schedule-time", Input).value = "06:45"
+        settings.query_one("#schedule-install", Button).press()
+        await pilot.pause()
+        assert isinstance(app.screen, ConfirmDialog)  # náhled souborů, výchozí Zrušit
+        assert "repo-doctor.timer" in str(app.screen.query_one("#confirm-body").render())
+        await pilot.press("enter")
+        await pilot.pause()
+        assert backend.installed is None
+        settings.query_one("#schedule-install", Button).press()
+        await pilot.pause()
+        app.screen.query_one("#ok", Button).press()
         await pilot.pause(0.3)
         await app.workers.wait_for_complete()
         await pilot.pause()
         assert backend.installed == ("weekly", "06:45")
-        assert "zapnutý" in str(app.screen.query_one("#schedule-status").render())
-        app.screen.query_one("#schedule-remove", Button).press()
+        status = str(settings.query_one("#schedule-status").render())
+        assert "zapnutý" in status and "týdně v pondělí 06:45" in status
+        settings.query_one("#schedule-remove", Button).press()
+        await pilot.pause()
+        app.screen.query_one("#ok", Button).press()
         await pilot.pause(0.3)
         await app.workers.wait_for_complete()
         assert backend.installed is None

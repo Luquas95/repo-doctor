@@ -128,10 +128,10 @@ def build_groups(
         return [g for g in groups.values() if g.repos]
     for r in repos:
         if state.group_by == "remote":
-            key = remote_key(r) or "-"
+            key = remote_key(r) or ("?" if r.remotes else "-")
         else:
             key = r.root if state.group_by == "root" else forge_key(r)
-        label = key if key != "-" else "bez remote"
+        label = {"-": "bez remote", "?": "neznámý remote"}.get(key, key)
         groups.setdefault(
             key, Group(key, label.upper() if state.group_by == "forge" else label, [])
         ).repos.append(r)

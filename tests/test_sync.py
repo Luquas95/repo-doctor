@@ -116,12 +116,15 @@ def test_reverified_before_apply(tmp_path: Path) -> None:
 def test_cli_sync(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     local, other = _setup(tmp_path)
     root = str(tmp_path / "projekty")
-    assert cli.main(["sync", root]) == 0
+    assert cli.main(["sync", root]) == 0  # výchozí bez fetch – nic nového nevidí
+    assert "aktuální" in capsys.readouterr().out
+    assert cli.main(["sync", root, "--fetch"]) == 0
     out = capsys.readouterr().out
-    assert "pozadu" in out and "dožene 2 commitů" in out and "Nic se nezměnilo" in out
+    assert "pozadu" in out and "dožene 2 commity" in out and "Nic se nezměnilo" in out
+    assert cli.main(["sync", str(tmp_path / "neni")]) == 2
     assert local.head() != other.head()
-    assert cli.main(["sync", root, "--apply", "--no-fetch"]) == 0
-    assert "Dohnáno fast-forwardem: 1" in capsys.readouterr().out
+    assert cli.main(["sync", root, "--apply"]) == 0
+    assert "Dohnáno fast-forwardem: 1 repo" in capsys.readouterr().out
     assert local.head() == other.head()
 
 

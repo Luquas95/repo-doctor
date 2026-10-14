@@ -12,12 +12,14 @@ from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Button, DataTable, Input, Label, Select, SelectionList, Static
 from textual.widgets.selection_list import Selection
 
+from repo_doctor import schedule
 from repo_doctor.checks import all_checks
 from repo_doctor.config import ConfigError, LimitsConfig
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import BaseScreen
 from repo_doctor.tui.screens.dialogs import ConfirmDialog
 from repo_doctor.tui.theme import DARK_NAME, LIGHT_NAME
+from repo_doctor.tui.util import home_path
 from repo_doctor.tui.widgets.forms import IntRange, PositiveNumber, split_list
 from repo_doctor.tui.widgets.keybar import KeyBar
 
@@ -69,6 +71,7 @@ class SettingsScreen(BaseScreen):
                     id="schedule-interval",
                 )
                 yield Input(compact=True, value="08:00", id="schedule-time", classes="short")
+            with Horizontal(classes="row"):
                 yield Button("Zapnout", id="schedule-install", compact=True)
                 yield Button("Vypnout", id="schedule-remove", compact=True)
                 yield Button("Test upozornění", id="schedule-test", compact=True)
@@ -172,7 +175,13 @@ class SettingsScreen(BaseScreen):
             text = f"stav nejde zjistit: {type(err).__name__}"
         else:
             if st.installed:
-                text = f"{'zapnutý' if st.active else 'nainstalovaný, ale neaktivní'} · {st.schedule or '?'}"
+                text = (
+                    f"{'zapnutý' if st.active else 'nainstalovaný, ale neaktivní'} · "
+                    f"{schedule.describe(st.schedule)}"
+                )
+                parsed = schedule.parse_calendar(st.schedule)
+                if parsed:
+                    self.app.call_from_thread(self._show_schedule, *parsed)
                 if st.next_run:
                     text += f" · další běh {st.next_run}"
             elif not st.systemd:
@@ -186,15 +195,51 @@ class SettingsScreen(BaseScreen):
             )
         self.app.call_from_thread(self.query_one("#schedule-status", Static).update, text)
 
+    def _show_schedule(self, interval: str, time: str) -> None:
+        """Pole ukazují skutečně nainstalovaný rozvrh, ne výchozí hodnoty."""
+        self.query_one("#schedule-interval", Select).value = interval
+        self.query_one("#schedule-time", Input).value = time
+
     @on(Button.Pressed, "#schedule-install")
     def _schedule_install(self) -> None:
         interval = str(self.query_one("#schedule-interval", Select).value)
         time = self.query_one("#schedule-time", Input).value.strip()
-        self.do_schedule("install", interval, time)
+        try:
+            when = schedule.on_calendar("weekly" if interval == "weekly" else "daily", time)
+        except schedule.ScheduleError as err:
+            self.notify(str(err), severity="error")
+            return
+        unit = schedule.unit_dir()
+        body = Text(
+            f"\nZapíše uživatelský systemd timer (bez roota):\n"
+            f"  {home_path(str(unit / 'repo-doctor.service'))}\n"
+            f"  {home_path(str(unit / 'repo-doctor.timer'))}\n\n"
+            f"OnCalendar={when} ({schedule.describe(when)})\n"
+            "Spouští `repo-doctor scan --scheduled`; upozorní jen na změny.\n"
+        )
+
+        def done(ok: bool | None) -> None:
+            if ok:
+                self.do_schedule("install", interval, time)
+
+        self.app.push_screen(
+            ConfirmDialog("Zapnout plánovaný sken", body, confirm_label="Zapnout"), done
+        )
 
     @on(Button.Pressed, "#schedule-remove")
     def _schedule_remove(self) -> None:
-        self.do_schedule("remove", "", "")
+        def done(ok: bool | None) -> None:
+            if ok:
+                self.do_schedule("remove", "", "")
+
+        self.app.push_screen(
+            ConfirmDialog(
+                "Vypnout plánovaný sken",
+                Text("\nZastaví a smaže uživatelský systemd timer repo-doctor.\n"),
+                confirm_label="Vypnout",
+            ),
+            done,
+        )
 
     @on(Button.Pressed, "#schedule-test")
     def _schedule_test(self) -> None:

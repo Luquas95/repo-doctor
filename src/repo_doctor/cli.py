@@ -14,7 +14,7 @@ from typing import Annotated
 
 import typer
 
-from repo_doctor import __version__, netpolicy, paths
+from repo_doctor import __version__, czech, netpolicy, paths
 from repo_doctor.checkdocs import load as load_doc
 from repo_doctor.checks import all_checks, check_ids
 from repo_doctor.config import Config, ConfigError, ConfigStore, RootConfig
@@ -121,13 +121,20 @@ def scan(
         bool,
         typer.Option(
             "--scheduled",
-            help="Plánovaný běh: uloží výsledek, porovná s minulým a upozorní jen na změny.",
+            help="Plánovaný běh: uloží výsledek, porovná s minulým a upozorní jen na změny. "
+            "Nevypisuje report a končí 0 (kromě chyby).",
         ),
     ] = False,
 ) -> None:
-    """Naskenuje repozitáře a vypíše report. Exit: 0 bez nálezů nad prahem, 1 nálezy, 2 chyba."""
+    """Naskenuje repozitáře a vypíše report. Exit: 0 bez nálezů nad prahem, 1 nálezy, 2 chyba.
+
+    S --scheduled se report nevypisuje (--report/--output nejdou kombinovat) a exit je 0.
+    """
     from repo_doctor.scanner import ScanEvent, Scanner, ScanOptions
 
+    if scheduled and (output is not None or report != "md"):
+        _err("--scheduled nejde kombinovat s --report ani --output.")
+        raise typer.Exit(2)
     if report not in FORMATS:
         _err(f"Neznámý formát reportu {report!r} (povolené: {', '.join(FORMATS)}).")
         raise typer.Exit(2)
@@ -240,12 +247,16 @@ def clean_cmd(
         bool,
         typer.Option("--duplicates", help="I celé duplicitní klony bez změn (z posledního skenu)."),
     ] = False,
-    depth: Annotated[int, typer.Option("--depth", min=0, max=12)] = 3,
+    depth: Annotated[
+        int, typer.Option("--depth", min=0, max=12, help="Hloubka hledání rep v zadaných složkách.")
+    ] = 3,
 ) -> None:
     """Úklid místa: regenerovatelné složky ignorované gitem (node_modules, .venv, target…).
 
     Výchozí je náhled. S --apply se složky přesunou do koše (freedesktop Trash) – nikdy
     trvale, nikdy nic sledovaného gitem ani mimo repo, nikdy repo cizího vlastníka.
+
+    Exit: 0 = hotovo, 1 = něco se přeskočilo, 2 = chyba zadání.
     """
     from repo_doctor import history
     from repo_doctor.cleanup import (
@@ -259,16 +270,15 @@ def clean_cmd(
     from repo_doctor.discovery import discover
 
     config = _load_config()
-    roots = [RootConfig(path=str(p), depth=depth) for p in path] if path else config.roots
-    if not roots:
-        _err("Nejsou nastavené žádné složky. Zadej cestu.")
-        raise typer.Exit(2)
+    roots = _cli_roots(path, depth, config)
     chosen = []
+    active, active_size = 0, 0
     for repo in discover(roots, config.ignore_repos).repos:
         info = inspect_repo(repo.path, config.cleanup.dirs)
         if info.error or not info.candidates:
             continue
         if not all_repos and not is_inactive(info, config.cleanup.inactive_days):
+            active, active_size = active + 1, active_size + info.size
             continue
         mark_busy(info.candidates)
         note = (
@@ -287,13 +297,42 @@ def clean_cmd(
             typer.echo(f"{c.path}  {human(c.size)}  (celý duplicitní klon)")
             chosen.append(c)
     total = sum(c.size for c in chosen)
+    if active:
+        typer.echo(
+            f"\n{czech.repos(active)} s nedávnou aktivitou přeskočeno ({human(active_size)}) "
+            f"– zahrne je --all."
+        )
+    if not chosen:
+        typer.echo("Nic k úklidu.")
+        return
     if dry_run:
         typer.echo(f"\nCelkem k uvolnění: {human(total)}. Nic se nesmazalo – použij --apply.")
         return
     result = apply_cleanup(chosen)
     for p, reason in result.skipped:
         typer.echo(f"  ! přeskočeno {p}: {reason}")
-    typer.echo(f"Přesunuto do koše: {len(result.removed)} položek, uvolněno {human(result.freed)}.")
+    typer.echo(
+        f"Přesunuto do koše: {czech.items(len(result.removed))}, uvolněno {human(result.freed)}."
+    )
+    if result.skipped:
+        raise typer.Exit(1)
+
+
+def _jde(n: int) -> str:
+    return czech.plural(n, "jde", "jdou", "jde")
+
+
+def _cli_roots(path: list[Path] | None, depth: int, config: Config) -> list[RootConfig]:
+    if path:
+        missing = [p for p in path if not p.expanduser().is_dir()]
+        if missing:
+            _err(f"Složka {missing[0]} neexistuje.")
+            raise typer.Exit(2)
+        return [RootConfig(path=str(p), depth=depth) for p in path]
+    if not config.roots:
+        _err("Nejsou nastavené žádné složky. Zadej cestu.")
+        raise typer.Exit(2)
+    return config.roots
 
 
 @app.command("sync")
@@ -308,44 +347,60 @@ def sync_cmd(
         ),
     ] = True,
     fetch: Annotated[
-        bool, typer.Option("--fetch/--no-fetch", help="Před porovnáním git fetch (výchozí ano).")
-    ] = True,
-    depth: Annotated[int, typer.Option("--depth", min=0, max=12)] = 3,
+        bool,
+        typer.Option(
+            "--fetch/--no-fetch",
+            help="Nejdřív git fetch (aktualizuje jen remote-tracking refy; výchozí ne).",
+        ),
+    ] = False,
+    depth: Annotated[
+        int, typer.Option("--depth", min=0, max=12, help="Hloubka hledání rep v zadaných složkách.")
+    ] = 3,
 ) -> None:
     """Stav rep vůči remotu a „rychle dohnat“ – jen `git merge --ff-only`.
 
     Jen čistá repa na sledované větvi, která jsou pozadu (ne rozdělená). Nikdy merge commit,
-    rebase, reset ani push. Výchozí je náhled; --apply dožene.
+    rebase, reset ani push. Výchozí je náhled bez sítě; --fetch stáhne novinky, --apply dožene.
+
+    Exit: 0 = hotovo, 1 = fetch selhal nebo se něco přeskočilo, 2 = chyba zadání.
     """
     from repo_doctor.discovery import discover
     from repo_doctor.sync import STATE_LABELS, fast_forward, status
 
     config = _load_config()
-    roots = [RootConfig(path=str(p), depth=depth) for p in path] if path else config.roots
-    if not roots:
-        _err("Nejsou nastavené žádné složky. Zadej cestu.")
-        raise typer.Exit(2)
+    roots = _cli_roots(path, depth, config)
     ready = []
+    fetch_failed = False
     for repo in discover(roots, config.ignore_repos).repos:
         st = status(repo.path, fetch=fetch)
         line = f"{repo.display}  {STATE_LABELS[st.state]}"
         if st.behind or st.ahead:
             line += f" (↓{st.behind} ↑{st.ahead})"
         if st.can_fast_forward:
-            line += f" → dožene {st.behind} commitů, změní {len(st.files)} souborů"
+            line += f" → dožene {czech.commits(st.behind)}, změní {czech.files(len(st.files))}"
             ready.append(repo.path)
         elif st.reason and st.state not in ("clean",):
             line += f" · {st.reason}"
         if st.fetch_error:
             line += f" · fetch: {st.fetch_error}"
+            fetch_failed = True
         typer.echo(line)
     if dry_run:
-        typer.echo(f"\nRychle dohnat jde {len(ready)} rep. Nic se nezměnilo – použij --apply.")
+        typer.echo(
+            f"\nRychle dohnat {_jde(len(ready))} {czech.repos(len(ready))}. "
+            "Nic se nezměnilo"
+            + (" – použij --apply." if ready else ".")
+            + ("" if fetch else " Bez --fetch se porovnává s naposledy staženým stavem.")
+        )
+        if fetch_failed:
+            raise typer.Exit(1)
         return
     result = fast_forward(ready)
     for p, reason in result.skipped:
         typer.echo(f"  ! {p}: {reason}")
-    typer.echo(f"Dohnáno fast-forwardem: {len(result.updated)} rep. Nic se nepushnulo.")
+    typer.echo(f"Dohnáno fast-forwardem: {czech.repos(len(result.updated))}. Nic se nepushnulo.")
+    if result.skipped or fetch_failed:
+        raise typer.Exit(1)
 
 
 @app.command("guard")
@@ -511,19 +566,21 @@ def schedule_install(
 def schedule_status() -> None:
     """Stav plánovaného skenu a poslední běh."""
     from repo_doctor import notify
-    from repo_doctor.schedule import status
+    from repo_doctor.schedule import describe, status
 
     st = status()
     if not st.installed:
         typer.echo("Plánovaný sken není nainstalovaný (repo-doctor schedule install).")
     else:
         typer.echo(
-            f"Plánovaný sken: {'aktivní' if st.active else 'neaktivní'} · {st.schedule or '?'}"
+            f"Plánovaný sken: {'aktivní' if st.active else 'neaktivní'} · {describe(st.schedule)}"
             + (f" · další běh {st.next_run}" if st.next_run else "")
         )
     last = notify.load_state()
     if last:
-        typer.echo(f"Poslední běh: {last.ts} · {last.repos} rep · {last.changes or 'beze změn'}")
+        typer.echo(
+            f"Poslední běh: {last.ts} · {czech.repos(last.repos)} · {last.changes or 'beze změn'}"
+        )
 
 
 @schedule_app.command("remove")
