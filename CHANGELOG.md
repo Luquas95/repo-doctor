@@ -2,6 +2,55 @@
 
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze podle SemVer.
 
+## [0.2.0] – 2026-10-14
+
+### Přidáno
+- `repo-doctor mcp`: MCP server (stdio) jen pro čtení – nástroje `list_repos`, `repo_status`,
+  `repo_findings`, `search_findings`, `last_scan_summary`, `scan`, `explain_check`; offline
+  ve výchozím stavu (`[mcp] network`), maskované výstupy, stránkování.
+- Kontrola `email-exposure`: tvůj osobní e-mail v historii veřejného repa (maskovaný
+  `l***@proton.me`); léčba nastaví v repu lokálně `user.email` na noreply adresu hostingu.
+- Kontrola `ci-security`: nepřipnuté akce, `pull_request_target` s kódem z PR, injekce výrazů
+  do `run:`, široká oprávnění tokenu, tajemství v logu, self-hosted runner ve veřejném repu;
+  léčba připne akce na SHA zjištěné přes API GitHubu (`@<sha> # v4`).
+- Kontrola `duplicate-clone`: stejný remote (SSH/HTTPS, aliasy) nebo kořenový commit napříč
+  sledovanými složkami, s porovnáním stavu klonů; přehled jde seskupit podle remotu (`alt+g`).
+- Kontrola `license-compat`: licence přímých závislostí (PyPI, npm, crates.io) vs. permisivní
+  licence projektu – silný copyleft a chybějící licence; informativní, ne právní rada.
+- `repo-doctor sbom REPO` a export z karty repa (`b`): SBOM CycloneDX 1.5 z lockfilů, bez sítě
+  (licence z cache registrů).
+- Úklid místa: kontrola `disk-usage`, obrazovka **Úklid** (`9`) a `repo-doctor clean`
+  (náhled / `--apply`) – jen složky ignorované gitem, přes koš (freedesktop Trash), trvalé
+  smazání jen s dvojím potvrzením; nabízí i celé duplicitní klony bez změn.
+- Kontrola `prepush-guard` a `repo-doctor guard`: hlídač tajemství při pushi – léčba přidá hook
+  do pre-commitu (stage pre-push), nebo jen lokálně `.git/hooks/pre-push`.
+- Synchronizace: obrazovka **Synchronizace** (`0`) a `repo-doctor sync` – stav rep vůči remotu
+  (pozadu / napřed / rozdělené) a „Rychle dohnat“ jen `git merge --ff-only` u čistých rep,
+  s náhledem a potvrzením; nikdy merge commit, rebase, reset ani push.
+- Plánovaný sken: `repo-doctor schedule install|status|remove|test` a sekce v Nastavení –
+  uživatelský systemd timer spouští `scan --scheduled`, který upozorní jen na změny (nové HIGH,
+  nově veřejné repo s citlivým obsahem, nové zranitelné závislosti) přes `notify-send`, ntfy
+  nebo `sendmail`; text bez tajemství a cest. Poslední běh ukazuje horní panel TUI.
+- Léčba umí i lokální akce bez commitu (`.git/config`, hook) a varianty oprav.
+
+### Bezpečnost
+- `http://` jen pro hosty výslovně povolené v `allow_http_hosts` (hostname, `*.domena`, IP,
+  CIDR) – rozhoduje se pro každý příkaz gitu zvlášť, přesměrování se nenásledují, token
+  hostingu po `http` odejde jen na povolené hosty. Výchozí chování se nemění.
+- Nové funkce, které mění soubory nebo repa (úklid, synchronizace, lokální léčba, plánování),
+  mají vždy náhled a potvrzení s výchozí volbou „Zrušit“ a nikdy nepushují; úklid maže jen
+  přes koš, synchronizace jen fast-forwardem a odmítne repo cizího vlastníka nebo s vlastními
+  filtry. Všechna volání gitu dál běží s hardeningem z 0.1.4 (hooky vypnuté).
+- MCP server je jen pro čtení a ve výchozím stavu offline; upozornění plánovaného skenu
+  neobsahují tajemství ani cesty k souborům; ntfy po `http` jen na `allow_http_hosts`.
+
+### Změněno
+- Nové závislosti `mcp` a `pyyaml` (MCP server, čtení workflow GitHub Actions).
+- Přehled jde seskupit i podle remotu (`alt+g`: triáž / složka / hosting / remote).
+- Nastavení (`7`) má novou sekci *Plánovaný sken*; horní panel ukazuje poslední plánovaný běh.
+- Vlastní CI workflow má akce připnuté na SHA (dogfooding `ci-security`).
+- Tabulky klávesových zkratek v README se kontrolují testem proti `keymap.py`.
+
 ## [0.1.4] – 2026-10-03
 
 ### Bezpečnost

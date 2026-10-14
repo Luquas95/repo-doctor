@@ -20,7 +20,7 @@ from typing import Any
 
 import httpx
 
-from repo_doctor import __version__
+from repo_doctor import __version__, netpolicy
 from repo_doctor.masking import redact
 from repo_doctor.paths import ensure_private_dir
 
@@ -54,6 +54,10 @@ class RateLimitError(HttpError):
 
 class UnavailableError(HttpError):
     """Instance nedostupná (síť, TLS, timeout, 5xx)."""
+
+
+class InsecureHostError(HttpError):
+    """Požadavek přes nešifrovaný http na host, který není v `allow_http_hosts`."""
 
 
 @dataclass
@@ -179,6 +183,13 @@ class HttpClient:
         httpx při přesměrování na cizí origin maže jen `Authorization`, ne např. GitLabí
         `PRIVATE-TOKEN` – proto to hlídáme sami u každého požadavku.
         """
+        if request.url.scheme == "http" and not netpolicy.policy().allows_host(request.url.host):
+            # Nešifrovaný http jen na hosty z `allow_http_hosts` – platí i pro přesměrování,
+            # takže token ani jiná data nikdy neodejdou po http jinam.
+            raise InsecureHostError(
+                f"http://{request.url.host} není v allow_http_hosts – nešifrované spojení odmítnuto",
+                url=str(request.url),
+            )
         if self._origin is not None and _origin(request.url) != self._origin:
             for name in SENSITIVE_HEADERS:
                 request.headers.pop(name, None)

@@ -59,6 +59,7 @@ ModalScreen { align: center middle; background: $background 60%; }
     background: $panel;
     padding: 1 2;
 }
+#confirm-scroll { height: auto; max-height: 50vh; scrollbar-size-vertical: 1; }
 .dialog .buttons { height: 3; align: center middle; margin-top: 1; }
 .dialog Button { margin: 0 2; min-width: 12; }
 .dialog .hint { color: $rd-muted; margin-top: 1; }
@@ -106,3 +107,4 @@ HelpScreen VerticalScroll { width: 90; max-width: 95%; height: 90%; border: roun
 .dialog Input { width: 100%; }
 Checkbox { border: none; padding: 0; background: $background 0%; margin-top: 1; }
 Checkbox:focus { border: none; background: $rd-selection; }
+.form Input.short { width: 8; }

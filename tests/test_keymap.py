@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from repo_doctor.keymap import (
@@ -57,3 +59,11 @@ def test_helpers() -> None:
     assert ("R", "sken") in g["Globální"]
     g2 = grouped({**build_keymap({"scan_all": "F5"})})
     assert ("f5", "sken") in g2["Globální"]
+
+
+def test_readme_key_tables_match_keymap() -> None:
+    readme = (Path(__file__).parent.parent / "README.md").read_text("utf-8")
+    for ctx, rows in grouped().items():
+        assert f"**{ctx}**" in readme
+        for key, desc in rows:
+            assert f"| `{key}` | {desc} |" in readme, (ctx, key)

@@ -8,13 +8,14 @@ a nakonec se vytvoří nová branch `repo-doctor/fixes-<datum>`. Nic se nepushuj
 from __future__ import annotations
 
 import difflib
+import os
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date
 
 from repo_doctor.checks.base import Check, RepoContext, get_check
 from repo_doctor.gitwrap import Git, GitError
-from repo_doctor.models import Finding, Patch
+from repo_doctor.models import Finding, LocalAction, Patch
 
 BRANCH_PREFIX = "repo-doctor/fixes-"
 
@@ -25,13 +26,26 @@ class FixRefused(Exception):
 
 @dataclass
 class ApplyResult:
-    branch: str
+    branch: str | None  # None, pokud se nic necommitovalo (jen lokální akce)
     commits: list[tuple[str, str]] = field(default_factory=list)  # (check_id, sha)
     notes: list[str] = field(default_factory=list)
+    local: list[str] = field(default_factory=list)  # popisy provedených lokálních akcí
 
 
 def render_diff(patch: Patch) -> str:
     out: list[str] = []
+    for action in patch.local:
+        if action.kind == "git_config":
+            out.append("--- .git/config (jen lokálně, nic se necommituje)\n+++ .git/config\n")
+            out.append(f"@@ [{action.key.split('.', 1)[0]}] @@\n")
+            if action.display_old is not None:
+                out.append(f"-{action.key} = {action.display_old}\n")
+            out.append(f"+{action.key} = {action.display_new or action.value}\n")
+        else:
+            out.append(f"--- /dev/null\n+++ .git/hooks/{action.key} (jen lokálně, spustitelný)\n")
+            lines = action.value.splitlines()
+            out.append(f"@@ -0,0 +1,{len(lines)} @@\n")
+            out.extend(f"+{line}\n" for line in lines)
     for change in patch.changes:
         new = change.result(change.old)
         if new is None:
@@ -59,9 +73,9 @@ def plan(repo: RepoContext, findings: list[Finding]) -> list[Patch]:
         check: Check | None = get_check(check_id)
         if check is None:
             continue
-        patch = check.fix(repo, items)
-        if patch is not None and patch.changes:
-            patches.append(patch)
+        for patch in check.fixes(repo, items):
+            if patch.changes or patch.local:
+                patches.append(patch)
     return patches
 
 
@@ -88,13 +102,67 @@ def preflight(git: Git) -> str:
     return head
 
 
+# Lokální změny, které léčba smí provést (nic jiného v `.git/config` nemění).
+LOCAL_CONFIG_KEYS = frozenset({"user.email"})
+LOCAL_HOOKS = frozenset({"pre-push"})
+HOOK_MARKER = "# repo-doctor guard"
+
+
 def apply(git: Git, patches: list[Patch], *, today: date | None = None) -> ApplyResult:
-    """Vytvoří branch s jedním commitem na kontrolu. Pracovní strom ani HEAD se nemění."""
+    """Soubory: větev s jedním commitem na kontrolu (pracovní strom ani HEAD se nemění).
+    Lokální akce (`user.email`, hook pre-push) se zapíší jen do `.git/` repa."""
     if not patches:
         raise FixRefused("Nebyla vybrána žádná oprava.")
+    if git.dubious_ownership():
+        raise FixRefused("Repo patří jinému uživateli – repo-doctor ho nikdy nemění.")
+    if len({p.check_id for p in patches}) != len(patches):
+        raise FixRefused("Od každé kontroly jde vybrat jen jednu variantu opravy.")
+    result = ApplyResult(branch=None)
+    file_patches = [p for p in patches if p.changes]
+    if file_patches:
+        _apply_files(git, file_patches, result, today or date.today())
+    for patch in patches:
+        for action in patch.local:
+            _apply_local(git, action)
+            result.local.append(action.description)
+        if patch.local and not patch.changes:
+            result.notes.extend(patch.notes)
+    if not result.commits and not result.local:
+        raise FixRefused("Vybrané opravy nic nemění (už jsou nejspíš aplikované).")
+    return result
+
+
+def _apply_local(git: Git, action: LocalAction) -> None:
+    if action.kind == "git_config":
+        if action.key not in LOCAL_CONFIG_KEYS:
+            raise FixRefused(f"Lokální nastavení {action.key} léčba neumí.")
+        git.run("config", "--local", "--end-of-options", action.key, action.value)
+        return
+    if action.key not in LOCAL_HOOKS:
+        raise FixRefused(f"Hook {action.key} léčba neinstaluje.")
+    hooks = git.hooks_dir()
+    target = hooks / action.key
+    # cizí .git může hooks/ nebo hook podstrčit jako symlink (např. do ~/.local/bin)
+    if hooks.is_symlink() or target.is_symlink():
+        raise FixRefused(f"{target} je symlink – repo-doctor do něj nezapisuje.")
+    if hasattr(os, "getuid") and hooks.parent.stat().st_uid != os.getuid():
+        raise FixRefused(f"{hooks.parent} patří jinému uživateli – hook se neinstaluje.")
+    if target.exists() and HOOK_MARKER not in target.read_text("utf-8", "replace"):
+        raise FixRefused(
+            f"{target} už existuje (vlastní hook) – repo-doctor ho nepřepíše. "
+            "Doplň do něj ručně: repo-doctor guard"
+        )
+    hooks.mkdir(exist_ok=True)
+    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o755)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(action.value)
+    target.chmod(0o755)
+
+
+def _apply_files(git: Git, patches: list[Patch], result: ApplyResult, today: date) -> None:
     head = preflight(git)
-    name = branch_name(git, today or date.today())
-    result = ApplyResult(branch=name)
+    name = branch_name(git, today)
+    result.branch = name
     overlay: dict[str, str | None] = {}
     parent = head
     with git.temp_index() as idx:
@@ -121,9 +189,9 @@ def apply(git: Git, patches: list[Patch], *, today: date | None = None) -> Apply
             result.commits.append((patch.check_id, parent))
             result.notes.extend(patch.notes)
     if not result.commits:
-        raise FixRefused("Vybrané opravy nic nemění (už jsou nejspíš aplikované).")
+        result.branch = None
+        return
     try:
         git.create_branch(name, parent)
     except GitError as err:  # pragma: no cover - závod s jiným procesem
         raise FixRefused(f"Branch {name} nelze vytvořit: {err.stderr}") from err
-    return result

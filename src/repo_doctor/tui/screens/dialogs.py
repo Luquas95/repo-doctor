@@ -6,7 +6,7 @@ from rich.text import Text
 from textual import on
 from textual.app import ComposeResult
 from textual.binding import Binding
-from textual.containers import Horizontal, Vertical
+from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Static
 
@@ -32,13 +32,14 @@ class ConfirmDialog(ModalScreen[bool]):
     def compose(self) -> ComposeResult:
         with Vertical(classes="dialog", id="confirm") as box:
             box.border_title = f" {self.title_text} "
-            yield Static(self.body, id="confirm-body")
+            with VerticalScroll(id="confirm-scroll"):
+                yield Static(self.body, id="confirm-body")  # dlouhý seznam se posouvá
             with Horizontal(classes="buttons"):
                 yield Button("Zrušit", id="cancel")
                 yield Button(
                     self.confirm_label, id="ok", variant="error" if self.danger else "primary"
                 )
-            yield Static("tab přepnout · enter potvrdit · esc zrušit", classes="hint")
+            yield Static("tab přepnout · enter = zvolené tlačítko · esc zrušit", classes="hint")
 
     def on_mount(self) -> None:
         self.query_one("#cancel", Button).focus()

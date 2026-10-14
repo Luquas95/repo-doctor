@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Literal
 
+from repo_doctor.checks.duplicates import remote_key
 from repo_doctor.models import Category, RepoResult, ScanResult, Severity
 from repo_doctor.scoring import Band, band, is_no_pulse, sort_score
 from repo_doctor.tui.util import git_state
@@ -21,8 +22,8 @@ SORT_LABELS = {
     "forge": "hosting",
     "pulse": "tep",
 }
-GroupBy = Literal["triage", "root", "forge"]
-GROUP_LABELS = {"triage": "triáž", "root": "složka", "forge": "hosting"}
+GroupBy = Literal["triage", "root", "forge", "remote"]
+GROUP_LABELS = {"triage": "triáž", "root": "složka", "forge": "hosting", "remote": "remote"}
 
 
 @dataclass
@@ -126,8 +127,11 @@ def build_groups(
             groups[band(r, no_pulse_days, now).value].repos.append(r)
         return [g for g in groups.values() if g.repos]
     for r in repos:
-        key = r.root if state.group_by == "root" else forge_key(r)
-        label = key if key != "-" else "bez remote"
+        if state.group_by == "remote":
+            key = remote_key(r) or ("?" if r.remotes else "-")
+        else:
+            key = r.root if state.group_by == "root" else forge_key(r)
+        label = {"-": "bez remote", "?": "neznámý remote"}.get(key, key)
         groups.setdefault(
             key, Group(key, label.upper() if state.group_by == "forge" else label, [])
         ).repos.append(r)

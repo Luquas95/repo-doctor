@@ -138,6 +138,16 @@ class GitLabForge(Forge):
             )
         return result
 
+    async def _fetch_noreply(self) -> str | None:
+        if not self.authenticated:
+            return None
+        user = await self.client.get_json("/user")
+        for key in ("private_commit_email", "commit_email"):
+            value = str(user.get(key) or "")
+            if "noreply" in value:
+                return value
+        return None
+
     async def test_connection(self) -> ConnectionReport:
         warnings: list[str] = []
         scopes: list[str] = []

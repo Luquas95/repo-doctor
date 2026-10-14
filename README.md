@@ -13,6 +13,10 @@ opravy – vždy jako commity v nové větvi, kterou si zkontroluješ sám.
 - **Léčba:** barevný diff navrhovaných oprav, výběr zaškrtávátky a potvrzení dialogem.
 - **Funguje úplně offline** a bez hostingů; síťové kontroly (OSV.dev, PyPI, npm, API hostingů) jsou nadstavba.
 - **Minimální CLI** pro CI (`repo-doctor scan --report md|json|html`).
+- **Novinky 0.2:** kontroly `ci-security` (GitHub Actions), `email-exposure`, `duplicate-clone`,
+  `license-compat`, `disk-usage` a `prepush-guard`; SBOM (CycloneDX), **Úklid** místa přes koš,
+  **Synchronizace** jen fast-forwardem, plánovaný sken s upozorněním a MCP server pro AI
+  asistenty (jen čtení).
 
 ## Instalace
 
@@ -83,6 +87,24 @@ ca_bundle = "~/.local/share/certs/homelab-ca.pem"  # pro self-signed certifikát
 clone_protocol = "ssh"
 ```
 
+Pokud Forgejo v Tailscale běží jen na `http://` (šifrování zajišťuje Tailscale), povol jeho
+host výslovně v globální konfiguraci – jinak repo-doctor `http` odmítne (fetch, klon i API):
+
+```toml
+# Hosty, pro které je povolený nešifrovaný http (např. Forgejo za Tailscale).
+allow_http_hosts = ["git.tailnet-name.ts.net"]   # nebo "*.ts.net", "100.64.0.0/10"
+
+[[forges]]
+name = "domaci-forgejo"
+type = "forgejo"
+url = "http://git.tailnet-name.ts.net:3000"
+```
+
+Položka je přesný hostname, `*.domena` (jen subdomény), IP adresa nebo síť CIDR, bez portu.
+`.repo-doctor.toml` repa volbu nezná – cizí repo si `http` povolit nemůže. Na obrazovce
+Hostingy je takový hosting označený „nešifrované spojení, povoleno v allow_http_hosts“;
+průvodce prvním spuštěním přidání hosta nabídne s vysvětlením rizika.
+
 Remote typu `ssh://git@git.tailnet-name.ts.net:2222/ja/repo.git` se k hostingu přiřadí podle
 hostname (SSH port se může lišit od webového). Fungují i aliasy z `~/.ssh/config`
 (`Host forgejo` + `HostName …`). SSH příkaz se bere z proměnné `GIT_SSH_COMMAND`, jinak
@@ -125,6 +147,8 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | `6` | vzdálená repa |
 | `7` | nastavení |
 | `8` | export |
+| `9` | úklid místa |
+| `0` | synchronizace |
 | `/` | hledat |
 | `R` | sken |
 | `r` | sken repa |
@@ -161,7 +185,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | `alt+2` | filtr ◆ MED |
 | `alt+3` | filtr ● LOW |
 | `p` | jen problémová repa |
-| `alt+g` | seskupit: triáž / složka / hosting |
+| `alt+g` | seskupit: triáž / složka / hosting / remote |
 | `b` | levý panel |
 
 **Karta repa**
@@ -173,6 +197,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | `o` | editor |
 | `w` | web |
 | `y` | kopírovat cestu |
+| `b` | export SBOM (CycloneDX) |
 
 **Léčba**
 
@@ -220,6 +245,23 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 |---|---|
 | `e` | exportovat |
 
+**Úklid**
+
+| Klávesa | Akce |
+|---|---|
+| `space` | vybrat |
+| `A` | vše / nic |
+| `⏎` | do koše |
+| `D` | trvale smazat |
+
+**Synchronizace**
+
+| Klávesa | Akce |
+|---|---|
+| `f` | fetch všech |
+| `space` | vybrat |
+| `⏎` | rychle dohnat |
+
 **Průvodce prvním spuštěním**
 
 | Klávesa | Akce |
@@ -237,24 +279,30 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 
 | ID | Kategorie | Severity | Automatická oprava | Síť / hosting |
 |---|---|---|---|---|
+| [`ci-security`](docs/checks/ci-security.md) | Bezpečnost | MED | ✓ |  |
 | [`deps-lockfile-missing`](docs/checks/deps-lockfile-missing.md) | Bezpečnost | MED |  |  |
 | [`deps-vulnerable`](docs/checks/deps-vulnerable.md) | Bezpečnost | HIGH |  | síť |
 | [`docker-hygiene`](docs/checks/docker-hygiene.md) | Bezpečnost | MED | ✓ |  |
+| [`email-exposure`](docs/checks/email-exposure.md) | Bezpečnost | MED | ✓ | síť |
 | [`env-committed`](docs/checks/env-committed.md) | Bezpečnost | HIGH | ✓ |  |
+| [`prepush-guard`](docs/checks/prepush-guard.md) | Bezpečnost | LOW | ✓ |  |
 | [`public-sensitive`](docs/checks/public-sensitive.md) | Bezpečnost | HIGH |  | síť |
 | [`secrets-history`](docs/checks/secrets-history.md) | Bezpečnost | HIGH |  |  |
 | [`secrets-tree`](docs/checks/secrets-tree.md) | Bezpečnost | HIGH |  |  |
 | [`ci-missing`](docs/checks/ci-missing.md) | Údržba | LOW | ✓ |  |
 | [`deps-outdated`](docs/checks/deps-outdated.md) | Údržba | LOW |  | síť |
+| [`disk-usage`](docs/checks/disk-usage.md) | Údržba | LOW |  |  |
 | [`gitignore-incomplete`](docs/checks/gitignore-incomplete.md) | Údržba | MED | ✓ |  |
 | [`gitignore-missing`](docs/checks/gitignore-missing.md) | Údržba | MED | ✓ |  |
 | [`large-files`](docs/checks/large-files.md) | Údržba | MED |  |  |
+| [`license-compat`](docs/checks/license-compat.md) | Údržba | LOW |  | síť |
 | [`license-missing`](docs/checks/license-missing.md) | Údržba | LOW | ✓ |  |
 | [`precommit-missing`](docs/checks/precommit-missing.md) | Údržba | LOW | ✓ |  |
 | [`readme-missing`](docs/checks/readme-missing.md) | Údržba | LOW | ✓ |  |
 | [`scan-incomplete`](docs/checks/scan-incomplete.md) | Údržba | LOW |  |  |
 | [`default-branch-behind`](docs/checks/default-branch-behind.md) | Stav gitu | LOW |  |  |
 | [`detached-head`](docs/checks/detached-head.md) | Stav gitu | LOW |  |  |
+| [`duplicate-clone`](docs/checks/duplicate-clone.md) | Stav gitu | LOW |  |  |
 | [`no-remote`](docs/checks/no-remote.md) | Stav gitu | MED |  |  |
 | [`stale-branches`](docs/checks/stale-branches.md) | Stav gitu | LOW |  |  |
 | [`stashes`](docs/checks/stashes.md) | Stav gitu | LOW |  |  |
@@ -312,6 +360,26 @@ ignore_paths = ["vendor/**"]
 ignore_repos = ["*-fork"]
 license = "MIT"           # MIT | ISC | BSD-2-Clause | Unlicense
 templates_dir = "~/.config/repo-doctor/templates"
+[ci]
+trusted_action_owners = ["ja"]   # akce z vlastního účtu nemusí být připnuté na SHA (ci-security)
+
+[cleanup]
+inactive_days = 60        # disk-usage a předvýběr v Úklidu jen u rep bez commitu tak dlouho
+min_mb = 200
+# dirs = ["node_modules", ".venv", "target", …]   # regenerovatelné složky
+
+[notify]                  # upozornění plánovaného skenu (jen na změny)
+desktop = true            # notify-send, když běží grafická relace
+# ntfy_url = "https://ntfy.sh/moje-tema"   # token: token_source = "env"|"cmd"|"keyring"
+# email = "ja@example.com"                 # přes lokální sendmail
+
+[schedule]
+fetch = false             # true = plánovaný sken nejdřív stáhne novinky (git fetch)
+
+[mcp]
+network = false           # true = MCP sken smí i síťové kontroly (OSV, hostingy)
+
+my_emails = ["ja@proton.me"]   # tvoje další adresy pro kontrolu email-exposure
 ssh_batch_mode = true     # false = nepřidávat `-o BatchMode=yes` (vlastní SSH wrapper)
 
 [ui]
@@ -324,17 +392,36 @@ editor = "nvim"
 
 ## Bezpečnostní záruky – co repo-doctor nikdy neudělá
 
-- **Ve výchozím stavu jen čte.** Změny dělá jen po výslovném potvrzení opravy v TUI.
-- **Nikdy nepushuje, nepřepisuje historii, nemaže branche ani stashe a nesahá na necommitnuté
-  změny.** Opravy vznikají jako commity v nové větvi `repo-doctor/fixes-<datum>` postavené
-  v dočasném indexu – pracovní strom, index i aktuální větev zůstanou beze změny. Repo
-  s necommitnutými změnami oprava odmítne.
-- **Na hostingu nic nemění** – API se jen čte. Jedinou výjimkou je klonování na disk po potvrzení.
-- **Tajemství nikdy nevypíše** – v TUI, reportech, logech ani JSON je vidět jen maskovaná podoba
-  `AKIA…(20 znaků)`. Totéž platí pro tokeny hostingů. Odmaskovat nejde; soubor otevřeš klávesou `o`.
-- CLI repozitáře nikdy nemění (jen `--fetch` aktualizuje remote-tracking refy, a to jen na požádání).
+**Nikdy:** nepushuje, nepřepisuje historii, nemaže branche ani stashe, nesahá na necommitnuté
+změny a na hostingu nic nemění (API se jen čte). **Tajemství nikdy nevypíše** – v TUI,
+reportech, logech, JSON, MCP ani upozorněních je vidět jen maskovaná podoba `AKIA…(20 znaků)`;
+totéž platí pro tokeny hostingů a e-maily (`l***@proton.me`). Odmaskovat nejde; soubor otevřeš
+klávesou `o`.
+
+### Jen čte
+
+- Sken (TUI, `repo-doctor scan`, plánovaný sken), karta repa, reporty, `repo-doctor sbom`
+  (zapíše jen soubor SBOM, který si vyžádáš), `repo-doctor guard`, náhledy `clean`/`sync`
+  (`--dry-run`) a **MCP server** (žádný nástroj nic neopravuje, nefetchuje ani neklonuje).
+- `--fetch`, `F` a `f` v Synchronizaci aktualizují jen remote-tracking refy, a jen na požádání.
+
+### Mění až po náhledu a potvrzení (výchozí volba „Zrušit“)
+
+- **Léčba** – commity v nové větvi `repo-doctor/fixes-<datum>` postavené v dočasném indexu;
+  pracovní strom, index i aktuální větev zůstanou beze změny, repo s necommitnutými změnami
+  oprava odmítne. Lokální varianty (`user.email` v `.git/config`, hook `pre-push`) nic
+  necommitují a existující cizí hook nepřepíší.
+- **Úklid** (`9`, `repo-doctor clean --apply`) – jen složky ignorované gitem a celé duplicitní
+  klony bez změn, vždy **přes koš** (freedesktop Trash); trvalé smazání jen s dvojím potvrzením.
+- **Synchronizace** (`0`, `repo-doctor sync --apply`) – jediná funkce, která mění pracovní
+  strom, a **jen fast-forwardem** (`git merge --ff-only`) u čistých rep na sledované větvi;
+  stav se těsně předtím ověří znovu. Nikdy merge commit, rebase ani reset.
+- **Klonování** ze záložky Vzdálená repa a **plánovaný sken** (uživatelský systemd timer).
+
+### Cizí repo nic nespustí
+
 - **Cizí repo přes svou konfiguraci ani obsah `.git/` nespustí program** – při skenu, `--fetch`,
-  `F` ani léčbě. Pro každé volání gitu se neutralizuje:
+  `F`, léčbě, úklidu ani synchronizaci. Pro každé volání gitu se neutralizuje:
   - **hooky** (`core.hooksPath=/dev/null`) – z `.git/hooks`, z lokálního i **globálního**
     `core.hooksPath`; tvoje globální hooky se tedy při běhu repo-doctoru také nespustí (záměr),
   - filtry (`clean`/`smudge`/`process`), `textconv`, externí diff a merge drivery, `fsmonitor`,
@@ -347,6 +434,49 @@ editor = "nvim"
   - submoduly se při fetchi nestahují (mají vlastní konfiguraci).
 - **Síť jen přes `https` a `ssh`** (`GIT_ALLOW_PROTOCOL`): remote s `git://`, `http://`,
   `file://`, lokální cestou nebo `ext::` repo-doctor nefetchuje ani neklonuje a řekne proč.
+  Výjimka: `http://` na hosty, které výslovně povolíš v `allow_http_hosts` (globální
+  konfigurace). Rozhoduje se pro každý příkaz zvlášť – `http` dostane jen fetch/klon, jehož
+  všechny `http` URL (po přepisech `insteadOf`) jsou na seznamu, a přesměrování se přitom
+  nenásledují. Token hostingu po `http` odejde jen na povolené hosty.
+
+## Plánovaný sken a upozornění
+
+`repo-doctor schedule install --interval weekly --time 08:00` (nebo sekce *Plánovaný sken*
+v Nastavení, `7`) vytvoří **uživatelský** systemd timer `~/.config/systemd/user/repo-doctor.timer`,
+který spouští `repo-doctor scan --scheduled`. Nic neinstaluje jako root; bez systemd vypíše
+řádek pro `crontab -e`.
+
+Plánovaný sken upozorní **jen na změny** proti minulému skenu: nové HIGH nálezy, nově veřejné
+repo s citlivým obsahem a nové zranitelné závislosti. Kanály: plocha (`notify-send`), ntfy
+a e-mail přes lokální `sendmail` (`[notify]`). Text obsahuje jen názvy rep a počty – nikdy
+tajemství ani cesty k souborům. Poslední běh je vidět v horním panelu TUI.
+
+```sh
+repo-doctor schedule install [--interval daily|weekly] [--time HH:MM]
+repo-doctor schedule status | remove | test   # test pošle zkušební upozornění
+```
+
+## MCP server pro AI asistenty
+
+`repo-doctor mcp` spustí [MCP](https://modelcontextprotocol.io) server přes stdio, takže se
+Claude (nebo jiný klient) může ptát na stav tvých repozitářů. Server je **jen pro čtení**:
+nic neopravuje, nefetchuje, neklonuje a ve výchozím stavu ani nepoužívá síť (sken je
+offline; síťové kontroly povolí `[mcp] network = true`). Tajemství a e-maily jsou maskované
+stejně jako v reportech.
+
+```sh
+claude mcp add repo-doctor -- repo-doctor mcp          # Claude Code
+```
+
+Claude Desktop (`claude_desktop_config.json`):
+
+```json
+{ "mcpServers": { "repo-doctor": { "command": "repo-doctor", "args": ["mcp"] } } }
+```
+
+Nástroje: `list_repos` (filtr podle složky, stavu a skóre), `repo_status`, `repo_findings`,
+`search_findings`, `last_scan_summary`, `scan` (offline sken všech rep nebo jednoho, s časovým
+limitem) a `explain_check`. Výstupy jsou strukturované a stránkované (`offset`, `limit` ≤ 100).
 
 ## Použití v CI
 
@@ -354,6 +484,12 @@ editor = "nvim"
 repo-doctor scan [PATH…] --report md|json|html [--output FILE] [--offline] [--no-forges] \
     [--only/--skip CHECKS] [--jobs N] [--fail-on high|medium|low] [--fetch]
 repo-doctor explain CHECK_ID
+repo-doctor clean [PATH…] [--apply] [--all] [--include-dirty] [--duplicates]   # úklid do koše
+repo-doctor sync [PATH…] [--fetch] [--apply]   # dohnat remote jen fast-forwardem
+repo-doctor guard                   # pro hook pre-push: zastaví push s tajemstvím
+repo-doctor sbom REPO [--format cyclonedx-json] [-o FILE]   # SBOM z lockfilů, bez sítě
+repo-doctor mcp                     # MCP server jen pro čtení (stdio)
+repo-doctor schedule install|status|remove|test   # plánovaný sken (systemd --user)
 repo-doctor checks
 repo-doctor forges test [NAME]      # token nikdy nevypíše
 repo-doctor config path|validate

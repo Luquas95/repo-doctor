@@ -157,6 +157,7 @@ class DashboardScreen(NavMixin, Screen[Any]):
                 total=app.scan_total,
                 current=app.scan_current,
                 keys=(app.key("scan_all"), app.key("cancel_scan")),
+                scheduled=app.scheduled,
             )
         )
         if light:
@@ -480,8 +481,8 @@ class DashboardScreen(NavMixin, Screen[Any]):
         self.refresh_data()
 
     def action_group_cycle(self) -> None:
-        order = ["triage", "root", "forge"]
-        self.state.group_by = order[(order.index(self.state.group_by) + 1) % 3]  # type: ignore[assignment]
+        order = ["triage", "root", "forge", "remote"]
+        self.state.group_by = order[(order.index(self.state.group_by) + 1) % len(order)]  # type: ignore[assignment]
         self.refresh_data()
 
     def action_toggle_sidebar(self) -> None:

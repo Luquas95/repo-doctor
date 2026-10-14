@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from repo_doctor import netpolicy
 from repo_doctor.gitwrap import _allow_protocols, configure_ssh, reset_ssh_cache
 from repo_doctor.masking import REGISTRY
 
@@ -35,12 +36,14 @@ def _isolated_env(
     configure_ssh(batch_mode=True)
     reset_ssh_cache()
     _allow_protocols()
+    netpolicy.configure([])
     # SSH sonda „testu připojení“ by šla do sítě – testy ji nahrazují explicitně
     monkeypatch.setattr("repo_doctor.sshhelp.run_probe", lambda url: None)
     yield
     REGISTRY.clear()
     configure_ssh(batch_mode=True)
     _allow_protocols()
+    netpolicy.configure([])
 
 
 @pytest.fixture

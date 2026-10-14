@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import tempfile
 from pathlib import Path
 from typing import Any, Literal
@@ -142,8 +143,85 @@ class AllowEntry(_Model):
 class UIConfig(_Model):
     theme: Literal["dark", "light"] = "dark"
     editor: str | None = None
-    group_by: Literal["triage", "root", "forge"] = "triage"
+    group_by: Literal["triage", "root", "forge", "remote"] = "triage"
     show_sidebar: bool = True
+
+
+class CIConfig(_Model):
+    # Vlastníci akcí, které kontrola ci-security nemusí mít připnuté na SHA (např. tvůj účet).
+    trusted_action_owners: list[str] = Field(default_factory=list)
+
+
+class CleanupConfig(_Model):
+    # Regenerovatelné složky (jen ignorované gitem), které nabízí úklid a kontrola disk-usage.
+    dirs: list[str] = Field(
+        default_factory=lambda: [
+            "node_modules", ".venv", "venv", "target", "dist", "build", ".next", "__pycache__",
+            ".pytest_cache", ".mypy_cache", ".ruff_cache", ".gradle", ".terraform",
+        ]
+    )  # fmt: skip
+    inactive_days: int = Field(default=60, ge=1)
+    min_mb: int = Field(default=200, ge=1)
+
+    @field_validator("dirs")
+    @classmethod
+    def _plain_names(cls, value: list[str]) -> list[str]:
+        for name in value:
+            if not name or "/" in name or name in (".", "..", ".git"):
+                raise ValueError(f"{name!r}: jen název složky (bez cesty, ne .git)")
+        return value
+
+
+class NotifyConfig(_Model):
+    """Kanály upozornění plánovaného skenu. Token ntfy jako u hostingů (env, příkaz, klíčenka)."""
+
+    desktop: bool = True  # notify-send, jen když běží grafická relace
+    ntfy_url: str | None = None  # https://ntfy.sh/moje-tema (http jen pro allow_http_hosts)
+    token_source: TokenSource | None = None
+    token_env: str | None = None
+    token_cmd: str | None = None
+    email: str | None = None  # jen přes lokální sendmail
+
+    @property
+    def name(self) -> str:
+        return "notify-ntfy"  # klíč v klíčence
+
+    @field_validator("ntfy_url")
+    @classmethod
+    def _ntfy(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        value = value.strip()
+        if (
+            not value.startswith(("https://", "http://"))
+            or "@" in value.split("//", 1)[1].split("/", 1)[0]
+        ):
+            raise ValueError("ntfy_url musí být https:// URL tématu bez přihlašovacích údajů")
+        return value
+
+    @field_validator("email")
+    @classmethod
+    def _email(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        if not re.fullmatch(r"[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+", value.strip()):
+            raise ValueError("email musí být jedna adresa")
+        return value.strip()
+
+    @model_validator(mode="after")
+    def _source(self) -> NotifyConfig:
+        if self.token_source is None:
+            self.token_source = "env" if self.token_env else "cmd" if self.token_cmd else "none"
+        return self
+
+
+class ScheduleConfig(_Model):
+    fetch: bool = False  # plánovaný sken s `git fetch` (jinak jen lokální stav)
+
+
+class MCPConfig(_Model):
+    # false (výchozí) = MCP server skenuje jen offline; true = i síťové kontroly (OSV, hostingy)
+    network: bool = False
 
 
 class Config(_Model):
@@ -159,10 +237,35 @@ class Config(_Model):
     templates_dir: str | None = None
     # false = nepřipojovat `-o BatchMode=yes` (pro wrapper v core.sshCommand, který argumenty nepředá)
     ssh_batch_mode: bool = True
+    # Hosty, pro které je povolený nešifrovaný http (např. Forgejo za Tailscale). Jen v globální
+    # konfiguraci – `.repo-doctor.toml` cizího repa si http povolit nemůže.
+    allow_http_hosts: list[str] = Field(default_factory=list)
+    # Tvoje e-maily navíc ke `git config --global user.email` (kontrola email-exposure).
+    my_emails: list[str] = Field(default_factory=list)
     ui: UIConfig = Field(default_factory=UIConfig)
+    mcp: MCPConfig = Field(default_factory=MCPConfig)
+    ci: CIConfig = Field(default_factory=CIConfig)
+    cleanup: CleanupConfig = Field(default_factory=CleanupConfig)
+    notify: NotifyConfig = Field(default_factory=NotifyConfig)
+    schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)
+
+    @field_validator("allow_http_hosts")
+    @classmethod
+    def _http_hosts(cls, value: list[str]) -> list[str]:
+        from repo_doctor.netpolicy import validate_entries
+
+        return validate_entries(value)
 
     @model_validator(mode="after")
     def _unique_forges(self) -> Config:
+        url = self.notify.ntfy_url
+        if url and url.startswith("http://"):
+            from repo_doctor.netpolicy import HttpHostPolicy
+
+            if not HttpHostPolicy(self.allow_http_hosts).allows_http_url(url):
+                raise ValueError(
+                    "notify.ntfy_url přes http:// je povolená jen pro host z allow_http_hosts"
+                )
         names = [f.name for f in self.forges]
         dupes = {n for n in names if names.count(n) > 1}
         if dupes:

@@ -21,6 +21,8 @@ CONTEXTS: dict[str, str] = {
     "remote": "Vzdálená repa",
     "settings": "Nastavení",
     "export": "Export",
+    "cleanup": "Úklid",
+    "sync": "Synchronizace",
     "wizard": "Průvodce prvním spuštěním",
     "dialog": "Formulářové dialogy",
 }
@@ -66,6 +68,8 @@ ACTIONS: tuple[KeyAction, ...] = (
     _a("screen_remote", "6", "global", "vzdálená repa", "switch_screen_n(6)", show=False),
     _a("screen_settings", "7", "global", "nastavení", "switch_screen_n(7)", show=False),
     _a("screen_export", "8", "global", "export", "switch_screen_n(8)", show=False),
+    _a("screen_cleanup", "9", "global", "úklid místa", "switch_screen_n(9)", show=False),
+    _a("screen_sync", "0", "global", "synchronizace", "switch_screen_n(0)", show=False),
     _a("search", "slash", "global", "hledat", label="/"),
     _a("scan_all", "R", "global", "sken"),
     _a("scan_repo", "r", "global", "sken repa", show=False),
@@ -94,7 +98,13 @@ ACTIONS: tuple[KeyAction, ...] = (
     _a("filter_medium", "alt+2", "dashboard", "filtr ◆ MED", show=False),
     _a("filter_low", "alt+3", "dashboard", "filtr ● LOW", show=False),
     _a("problems_only", "p", "dashboard", "jen problémová repa", show=False),
-    _a("group_cycle", "alt+g", "dashboard", "seskupit: triáž / složka / hosting", show=False),
+    _a(
+        "group_cycle",
+        "alt+g",
+        "dashboard",
+        "seskupit: triáž / složka / hosting / remote",
+        show=False,
+    ),
     _a("toggle_sidebar", "b", "dashboard", "levý panel", show=False),
     # karta repa
     _a("detail_fix", "f", "detail", "léčba", "open_fix"),
@@ -102,10 +112,20 @@ ACTIONS: tuple[KeyAction, ...] = (
     _a("open_editor", "o", "detail", "editor"),
     _a("open_web", "w", "detail", "web"),
     _a("copy_path", "y", "detail", "kopírovat cestu"),
+    _a("export_sbom", "b", "detail", "export SBOM (CycloneDX)", show=False),
     # léčba
     _a("toggle_fix", "space", "fix", "vybrat", label="space"),
     _a("select_all", "A", "fix", "vše"),
     _a("confirm_fix", "enter", "fix", "potvrdit", label="⏎"),
+    # úklid
+    _a("cleanup_toggle", "space", "cleanup", "vybrat", label="space"),
+    _a("cleanup_all", "A", "cleanup", "vše / nic"),
+    _a("cleanup_apply", "enter", "cleanup", "do koše", label="⏎"),
+    _a("cleanup_permanent", "D", "cleanup", "trvale smazat", show=False),
+    # synchronizace
+    _a("sync_fetch", "f", "sync", "fetch všech"),
+    _a("sync_toggle", "space", "sync", "vybrat", label="space"),
+    _a("sync_apply", "enter", "sync", "rychle dohnat", label="⏎"),
     # složky
     _a("folder_add", "n", "folders", "přidat"),
     _a("folder_edit", "e", "folders", "upravit"),

@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from rich.style import Style
 from rich.text import Text
 from textual.widgets import Static
 
 from repo_doctor.models import ScanResult, Severity
+from repo_doctor.notify import RunState
 from repo_doctor.scanner import aggregate_pulse
 from repo_doctor.scoring import gauge, sparkline
 from repo_doctor.tui.theme import Palette
@@ -23,6 +26,7 @@ def vitals_text(
     total: int,
     current: str,
     keys: tuple[str, str] = ("R", "x"),
+    scheduled: RunState | None = None,
 ) -> Text:
     s = result.summary(no_pulse_days)
     t = Text()
@@ -70,6 +74,17 @@ def vitals_text(
             t.append(" · přerušený", style=Style(color=p.med))
         if result.warnings:
             t.append(f" · ⚠ {len(result.warnings)} upozornění", style=Style(color=p.med))
+        if scheduled is not None:
+            try:
+                at = datetime.fromisoformat(scheduled.ts).astimezone()
+                label = f"{at:%-d. %-m. %H:%M}"
+            except ValueError:
+                label = "?"
+            t.append(f" · plánovaný {label}", style=Style(color=p.muted))
+            t.append(
+                " ⚠ změny" if scheduled.changes else " beze změn",
+                style=Style(color=p.med if scheduled.changes else p.dim),
+            )
     t.truncate(width * 2, overflow="ellipsis")
     lines = t.split("\n")
     for line in lines:

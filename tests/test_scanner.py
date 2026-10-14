@@ -193,6 +193,7 @@ async def test_network_enrichment_with_forge(
     respx.get(f"{api}/repos/nekdo/proj/dependabot/alerts").respond(json=[{"n": 1}])
     respx.get(f"{api}/repos/nekdo/proj/secret-scanning/alerts").respond(404)
     respx.get(f"{api}/repos/nekdo/proj/issues").respond(json=[])
+    respx.get(f"{api}/user").respond(json={"id": 7, "login": "nekdo"})  # noreply adresa
     respx.post("https://api.osv.dev/v1/querybatch").respond(
         json={"results": [{"vulns": [{"id": "GHSA-x"}]}]}
     )
@@ -200,6 +201,9 @@ async def test_network_enrichment_with_forge(
         json={"database_specific": {"severity": "HIGH"}}
     )
     respx.get("https://pypi.org/pypi/requests/json").respond(json={"info": {"version": "2.32.0"}})
+    respx.get("https://pypi.org/pypi/requests/2.19.0/json").respond(
+        json={"info": {"license": "Apache 2.0"}}
+    )
     cfg = Config(
         roots=[RootConfig(path=str(rb.path))],
         forges=[ForgeConfig(name="github", type="github", token_env="GH_TOKEN_TEST")],

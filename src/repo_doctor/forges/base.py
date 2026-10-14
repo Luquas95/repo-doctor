@@ -141,6 +141,18 @@ class Forge(abc.ABC):
     @abc.abstractmethod
     async def test_connection(self) -> ConnectionReport: ...
 
+    async def noreply_email(self) -> str | None:
+        """`noreply` adresa přihlášeného uživatele pro commity (cachovaná), nebo None."""
+        if not hasattr(self, "_noreply"):
+            try:
+                self._noreply: str | None = await self._fetch_noreply()
+            except HttpError:
+                self._noreply = None
+        return self._noreply
+
+    async def _fetch_noreply(self) -> str | None:
+        return None
+
     async def snapshot(self, owner_path: str) -> ForgeSnapshot:
         """Načte vše potřebné pro kontroly hostingu. Chyby jednotlivých částí jen zaznamená."""
         snap = ForgeSnapshot(forge=self.name, kind=self.kind, owner_path=owner_path)

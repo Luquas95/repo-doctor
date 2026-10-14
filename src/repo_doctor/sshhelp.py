@@ -32,6 +32,7 @@ PUBLICKEY_MSG = (
     "Server odmítl SSH klíč. Zkontroluj, že je klíč přidaný v účtu na hostingu, "
     "případně `core.sshCommand` / `~/.ssh/config`."
 )
+HTTP_ADVICE = " Pokud je server v důvěryhodné síti (Tailscale), přidej ho do `allow_http_hosts`."
 UNREACHABLE_MSG = "Server není dostupný (síť, VPN/Tailscale, port)."
 
 
@@ -54,10 +55,13 @@ def _ssh_target(url: str | None) -> str:
 def explain_ssh_error(stderr: str, url: str | None = None) -> str | None:
     """Česká hláška s postupem pro známou SSH chybu (nebo zakázaný protokol), jinak None."""
     if m := _PROTOCOL.search(stderr):
-        return (
+        msg = (
             f"Remote používá nepovolený protokol {m.group(1)}, repo-doctor ho z bezpečnostních "
             "důvodů nefetchuje (povolené jsou https a ssh)."
         )
+        if m.group(1) == "http":
+            msg += HTTP_ADVICE
+        return msg
     if _HOST_KEY.search(stderr):
         return (
             "Server zatím neznáš. Připoj se k němu jednou ručně: "

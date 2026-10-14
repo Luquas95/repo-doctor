@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from pydantic import ValidationError
 from textual import on, work
@@ -19,6 +20,7 @@ from repo_doctor.discovery import suggest_depth
 from repo_doctor.forges.base import ForgeRepo
 from repo_doctor.paths import expand_path
 from repo_doctor.tui.bindings import bindings
+from repo_doctor.tui.screens.dialogs import ConfirmDialog
 from repo_doctor.tui.widgets.forms import (
     ExistingDir,
     IntRange,
@@ -151,6 +153,7 @@ def dialog_hint(screen: ModalScreen[Any]) -> str:
 class ForgeFormResult:
     config: ForgeConfig
     token: str | None  # nový token pro klíčenku (jinak None)
+    allow_http_host: str | None = None  # host, který uživatel potvrdil pro allow_http_hosts
 
 
 TOKEN_SOURCES = [
@@ -173,11 +176,17 @@ class ForgeDialog(ModalScreen[ForgeFormResult | None]):
     BINDINGS = [Binding("escape", "cancel", "zrušit"), *bindings("dialog")]
 
     def __init__(
-        self, forge: ForgeConfig | None = None, existing_names: set[str] | None = None
+        self,
+        forge: ForgeConfig | None = None,
+        existing_names: set[str] | None = None,
+        *,
+        offer_http_allow: bool = False,
     ) -> None:
         super().__init__()
         self.forge = forge
         self.existing = (existing_names or set()) - ({forge.name} if forge else set())
+        # průvodce: u http:// URL mimo allow_http_hosts nabídne přidání hosta (jinak chyba)
+        self.offer_http_allow = offer_http_allow
 
     def compose(self) -> ComposeResult:
         f = self.forge
@@ -325,9 +334,39 @@ class ForgeDialog(ModalScreen[ForgeFormResult | None]):
         return ForgeFormResult(config, token or None)
 
     def action_save(self) -> None:
+        from repo_doctor.forges import insecure_reason
+
         result = self._build()
-        if result is not None:
+        if result is None:
+            return
+        reason = insecure_reason(result.config)
+        if reason is None:
             self.dismiss(result)
+            return
+        if not self.offer_http_allow:
+            self.query_one("#error", Static).update(reason)
+            return
+        host = urlsplit(result.config.base_url).hostname or ""
+
+        def answered(ok: bool | None) -> None:
+            if ok:
+                result.allow_http_host = host
+                self.dismiss(result)
+            else:
+                self.query_one("#error", Static).update(reason)
+
+        self.app.push_screen(
+            ConfirmDialog(
+                "Nešifrované spojení",
+                f"URL instance používá http:// – token i data půjdou po síti bez šifrování.\n"
+                f"To je v pořádku jen v důvěryhodné síti, kde šifrování zajišťuje VPN "
+                f"(např. Tailscale). Na veřejném internetu ho může kdokoli po cestě přečíst.\n\n"
+                f"Přidat {host} do allow_http_hosts?",
+                confirm_label="Povolit http pro tento host",
+                danger=True,
+            ),
+            answered,
+        )
 
     @on(Input.Submitted)
     @on(Button.Pressed, "#ok")

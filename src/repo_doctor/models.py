@@ -111,6 +111,7 @@ class RepoState(BaseModel):
     last_commit: datetime | None = None
     pulse: list[int] = Field(default_factory=list)  # commity za den, nejstarší první
     commit_count: int = 0
+    root_commit: str | None = None  # nejstarší kořenový commit HEAD (duplicitní klony bez remote)
 
 
 Visibility = Literal["public", "private", "unknown"]
@@ -183,7 +184,7 @@ class FileChange(BaseModel):
     """Jedna změna souboru. Operace se vyhodnocují až nad aktuálním obsahem (kvůli řetězení)."""
 
     path: str
-    action: Literal["create", "append", "untrack"]
+    action: Literal["create", "append", "untrack", "replace"]
     content: str = ""
     header: str = ""  # komentář nad doplněným blokem (append)
     old: str | None = None  # obsah v HEAD – pro náhled diffu
@@ -192,6 +193,9 @@ class FileChange(BaseModel):
         """Nový obsah souboru; `None` = odstranit z indexu (soubor na disku zůstává)."""
         if self.action == "untrack":
             return None
+        if self.action == "replace":
+            # celý nový obsah – jen pokud soubor od návrhu nikdo nezměnil
+            return self.content if current == self.old else current
         if self.action == "create":
             return self.content if current is None else current  # existující soubor nepřepisujeme
         existing = {line.strip() for line in (current or "").splitlines()}
@@ -210,14 +214,38 @@ class FileChange(BaseModel):
         return base + separator + "\n".join(block) + "\n"
 
 
+class LocalAction(BaseModel):
+    """Změna jen v `.git/` repa uživatele (nic se necommituje), např. lokální `user.email`.
+
+    `display_old`/`display_new` jsou podoby pro náhled (např. maskovaný e-mail).
+    """
+
+    kind: Literal["git_config", "hook"]
+    key: str  # klíč konfigurace, nebo název hooku (`pre-push`)
+    value: str  # nová hodnota, nebo obsah hooku
+    description: str
+    display_old: str | None = None
+    display_new: str | None = None
+
+
 class Patch(BaseModel):
     """Navržená oprava. Vygenerování patche nic nemění, aplikace je samostatný krok."""
 
     check_id: str
     title: str
     summary: str
-    changes: list[FileChange]
+    changes: list[FileChange] = Field(default_factory=list)
     notes: list[str] = Field(default_factory=list)
+    local: list[LocalAction] = Field(default_factory=list)
+    variant: str = ""  # víc alternativ jedné kontroly (uživatel vybere jednu)
+
+    @property
+    def key(self) -> str:
+        return f"{self.check_id}:{self.variant}" if self.variant else self.check_id
+
+    @property
+    def local_only(self) -> bool:
+        return not self.changes and bool(self.local)
 
     @property
     def commit_message(self) -> str:

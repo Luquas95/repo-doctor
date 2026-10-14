@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 
 from rich.style import Style
 from rich.text import Text
-from textual import on
+from textual import on, work
 from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.events import Resize
@@ -339,6 +339,49 @@ class DetailScreen(BaseScreen):
             return
         if not open_url(repo.web_url):
             self.notify(f"xdg-open není k dispozici: {repo.web_url}", severity="warning")
+
+    def action_export_sbom(self) -> None:
+        repo = self.repo
+        if repo is None:
+            return
+        if repo.untrusted_owner:
+            self.notify("Repo patří jinému uživateli – SBOM nejde vytvořit.", severity="warning")
+            return
+        default = f"~/sbom/{repo.name}.cdx.json"
+
+        def chosen(value: str | None) -> None:
+            if value:
+                self.do_export_sbom(Path(repo.path), value)
+
+        self.app.push_screen(
+            InputDialog(
+                "Export SBOM",
+                "CycloneDX 1.5 (JSON) z lockfilů repa – bez sítě. Kam uložit?",
+                value=default,
+                confirm_label="Exportovat",
+            ),
+            chosen,
+        )
+
+    @work(thread=True, exclusive=True, group="sbom")
+    def do_export_sbom(self, repo_path: Path, target: str) -> None:
+        from repo_doctor.paths import expand_path
+        from repo_doctor.sbom import write_sbom
+
+        out = expand_path(target)
+        try:
+            write_sbom(repo_path, out)
+        except FileExistsError:
+            self.app.call_from_thread(
+                self.notify, f"{out} už existuje – nepřepisuji.", severity="error", timeout=8
+            )
+            return
+        except (OSError, ValueError) as err:
+            self.app.call_from_thread(
+                self.notify, f"SBOM nejde uložit: {err}", severity="error", timeout=8
+            )
+            return
+        self.app.call_from_thread(self.notify, f"SBOM uložen: {out}")
 
     def action_copy_path(self) -> None:
         repo = self.repo

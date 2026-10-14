@@ -61,6 +61,23 @@ def allowed_protocols() -> str:
     return ":".join((*ALLOWED_PROTOCOLS, *_extra_protocols))
 
 
+def network_options(urls: Sequence[str]) -> tuple[list[str], dict[str, str]]:
+    """Volby gitu pro síťovou operaci, která se může připojit na `urls`.
+
+    Pokud všechny `http://` URL mají host z `allow_http_hosts`, povolí se pro tento jediný
+    příkaz i protokol `http` – a zároveň se vypne následování přesměrování, aby povolený host
+    nemohl git poslat na jiný (nepovolený) http host. Jinak zůstává jen https a ssh.
+    """
+    from repo_doctor import netpolicy
+
+    if not netpolicy.http_allowed_for(urls):
+        return [], {}
+    return (
+        ["-c", "http.followRedirects=false"],
+        {"GIT_ALLOW_PROTOCOL": allowed_protocols() + ":http"},
+    )
+
+
 # Výchozí hodnota, kterou fetch/ls-remote/clone předávají explicitně: `remote.*.uploadpack`
 # z lokální konfigurace přes `-c` přebít nejde (git bere první hodnotu, ne poslední).
 UPLOAD_PACK = "--upload-pack=git-upload-pack"
@@ -78,7 +95,7 @@ _HARDEN_REGEX = (
     r"^(filter|diff|merge)\..*\.(clean|smudge|process|textconv|command|driver)$"
     r"|^core\.(sshcommand|editor|pager|askpass|alternaterefscommand)$"
     r"|^remote\..*\.proxy$"
-    r"|^http\.(.*\.)?(proxy|sslverify)$"
+    r"|^http\.(.*\.)?(proxy|sslverify|followredirects)$"
     r"|^credential\.(.*\.)?helper$"
 )
 # Název klíče, který jde bezpečně předat jako `-c klíč=hodnota` (včetně URL v podsekci).
@@ -122,11 +139,36 @@ def configure_ssh(*, batch_mode: bool) -> None:
 
 
 def reset_ssh_cache() -> None:
-    """Vyčistí cache údajů z globální konfigurace (SSH příkaz, credential helpery)."""
-    global _ssh_command, _credential_helpers
+    """Vyčistí cache údajů z globální konfigurace (SSH příkaz, credential helpery, identita)."""
+    global _ssh_command, _credential_helpers, _identity
     with _SSH_LOCK:
         _ssh_command = None
         _credential_helpers = None
+        _identity = None
+
+
+_identity: tuple[frozenset[str], frozenset[str]] | None = None
+
+
+def user_identity() -> tuple[frozenset[str], frozenset[str]]:
+    """(jména, e-maily) uživatele z globální a systémové konfigurace (`user.name`, `user.email`).
+
+    Nikdy z lokální konfigurace repa – ta může patřit komukoli. Cachuje se na běh.
+    """
+    global _identity
+    with _SSH_LOCK:
+        if _identity is None:
+            names: set[str] = set()
+            emails: set[str] = set()
+            for scope in ("--global", "--system"):
+                name = _user_config_query(scope, "--get", "user.name").strip()
+                email = _user_config_query(scope, "--get", "user.email").strip()
+                if name:
+                    names.add(name.casefold())
+                if email:
+                    emails.add(email.casefold())
+            _identity = (frozenset(names), frozenset(emails))
+        return _identity
 
 
 _credential_helpers: list[tuple[str, str]] | None = None
@@ -326,6 +368,7 @@ class Git:
                 "editor": "true",
                 "pager": "cat",
                 "sslverify": "true",
+                "followredirects": "false",
                 # proxy a alternaterefscommand → "" (žádná proxy, žádný příkaz)
             }
             helpers = False
@@ -472,9 +515,42 @@ class Git:
         out = self.run("rev-parse", "--show-toplevel", check=False).strip()
         return Path(out) if out else None
 
+    def worktree_is_path(self) -> bool:
+        """Pracovní strom je opravdu `self.path` (cizí `core.worktree` ho může přesměrovat jinam)."""
+        top = self.toplevel()
+        return top is not None and top.resolve() == self.path.resolve()
+
     def git_dir(self) -> Path:
         out = self.run("rev-parse", "--absolute-git-dir").strip()
         return Path(out)
+
+    def common_dir(self) -> Path:
+        out = self.run("rev-parse", "--path-format=absolute", "--git-common-dir").strip()
+        return Path(out)
+
+    def hooks_dir(self) -> Path:
+        """Výchozí složka hooků repa (`.git/hooks`), bez ohledu na `core.hooksPath`."""
+        return self.common_dir() / "hooks"
+
+    def user_hooks_path(self) -> str | None:
+        """`core.hooksPath`, jak ho uvidí uživatelův vlastní `git push` (globální i lokální).
+
+        Jen čte konfiguraci; repo-doctor sám hooky nikdy nespouští (`core.hooksPath=/dev/null`
+        platí jen pro jeho vlastní volání gitu).
+        """
+        try:
+            proc = subprocess.run(
+                ["git", "-C", str(self.path), "config", "--get", "core.hooksPath"],
+                capture_output=True,
+                timeout=self.timeout,
+                env=git_env(),
+                check=False,
+                stdin=subprocess.DEVNULL,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            return None
+        value = proc.stdout.decode("utf-8", "replace").strip()
+        return value or None
 
     def is_bare(self) -> bool:
         return self.run("rev-parse", "--is-bare-repository", check=False).strip() == "true"
@@ -666,6 +742,10 @@ class Git:
                 result.append(StashInfo(parts[0], int(parts[1] or 0), parts[2]))
         return result
 
+    def root_commit(self) -> str | None:
+        out = self.run("rev-list", "--max-parents=0", "HEAD", "--", check=False).split()
+        return out[-1] if out else None
+
     def last_commit_ts(self) -> int | None:
         out = self.run("log", "-1", "--format=%ct", "--branches", check=False).strip()
         return int(out) if out.isdigit() else None
@@ -756,8 +836,57 @@ class Git:
         return TempIndex(self)
 
     # ------------------------------------------------------------------ síť (jen na výslovný pokyn)
+    def fetch_urls(self) -> list[str]:
+        """Skutečné URL, na které se `git fetch` může připojit (po přepisu `insteadOf`).
+
+        Bere všechny remoty i `branch.*.remote` zadané přímo jako URL – fetch bez argumentu
+        stahuje z remotu aktuální větve, ale v případě nejistoty raději vyhodnotíme vše.
+        """
+        targets = set(self.remotes()) | {"origin"}  # fetch bez remotu jde na origin
+        # staré definice remotů v .git/remotes/<jméno> a .git/branches/<jméno> (git je pořád čte)
+        try:
+            common = self.common_dir()
+            for legacy in ("remotes", "branches"):
+                folder = common / legacy
+                if folder.is_dir() and not folder.is_symlink():
+                    targets.update(f.name for f in folder.iterdir() if f.is_file())
+        except (GitError, OSError):
+            pass
+        out = self.run("config", "--get-regexp", r"^branch\..*\.remote$", check=False)
+        for line in out.splitlines():
+            _, _, value = line.partition(" ")
+            if value.strip():
+                targets.add(value.strip())
+        urls: set[str] = set()
+        for target in sorted(targets):
+            if target.startswith("-"):
+                continue
+            raw = [target]
+            if target in self.remotes():
+                raw = [
+                    u.strip()
+                    for u in self.run(
+                        "config",
+                        "--get-all",
+                        "--end-of-options",
+                        f"remote.{target}.url",
+                        check=False,
+                    ).splitlines()
+                    if u.strip()
+                ]
+            for value in raw:
+                # `ls-remote --get-url` uplatní přepisy url.*.insteadOf (i z lokální konfigurace)
+                # a pro jméno remotu přečte i .git/remotes a .git/branches
+                got = self.run("ls-remote", "--get-url", "--", value, check=False).strip()
+                if target == "origin" and target not in self.remotes() and got == "origin":
+                    continue  # žádný origin neexistuje
+                urls.add(got or value)
+        return sorted(urls)
+
     def fetch(self, timeout: float = 120.0) -> None:
+        opts, env = network_options(self.fetch_urls())
         self.run(
+            *opts,
             "fetch",
             "--quiet",
             "--no-write-fetch-head",
@@ -765,19 +894,25 @@ class Git:
             "--no-recurse-submodules",  # submoduly mají vlastní (neošetřenou) konfiguraci
             UPLOAD_PACK,
             timeout=timeout,
+            env=env or None,
         )
 
     @staticmethod
     def _run_detached(
-        args: list[str], label: list[str], timeout: float, cwd: Path | None = None
+        args: list[str],
+        label: list[str],
+        timeout: float,
+        cwd: Path | None = None,
+        url: str | None = None,
     ) -> None:
         """Příkaz mimo konkrétní repo (clone, ls-remote) se stejným bezpečným prostředím."""
+        opts, extra = network_options([url]) if url else ([], {})
         try:
             proc = subprocess.run(
-                ["git", "--no-pager", *_SAFE_CONFIG, *args],
+                ["git", "--no-pager", *_SAFE_CONFIG, *opts, *args],
                 capture_output=True,
                 timeout=timeout,
-                env=git_env(),
+                env=git_env(extra),
                 check=False,
                 stdin=subprocess.DEVNULL,
                 cwd=cwd,
@@ -798,7 +933,10 @@ class Git:
             raise GitError(["clone"], 1, "neplatná URL")
         dest.parent.mkdir(parents=True, exist_ok=True)
         Git._run_detached(
-            ["clone", "--quiet", UPLOAD_PACK, "--", url, str(dest)], ["clone", url], timeout
+            ["clone", "--quiet", UPLOAD_PACK, "--", url, str(dest)],
+            ["clone", url],
+            timeout,
+            url=url,
         )
 
     @staticmethod
@@ -811,6 +949,7 @@ class Git:
             ["ls-remote", url],
             timeout,
             cwd=Path.home(),
+            url=url,
         )
 
 

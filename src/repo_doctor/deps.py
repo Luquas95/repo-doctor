@@ -59,6 +59,11 @@ class DepsData:
     )  # (manifest, doporučený lock)
     vulns: dict[Dependency, list[Vuln]] = field(default_factory=dict)
     outdated: list[Outdated] = field(default_factory=list)
+    licenses: dict[Dependency, str | None] = field(default_factory=dict)  # přímé závislosti
+    # přímé závislosti jen pro vývoj/build (devDependencies, dev-dependencies, dependency-groups,
+    # requirements-dev.txt) – licence se u nich nekontroluje, do distribuce nejdou
+    dev_only: set[tuple[str, str]] = field(default_factory=set)
+    license_errors: set[Dependency] = field(default_factory=set)  # registr neodpověděl
     errors: list[str] = field(default_factory=list)
     network_done: bool = False
 
@@ -271,6 +276,36 @@ def parse_go_sum(text: str, source: str) -> list[Dependency]:
     return list(deps.values())
 
 
+def dev_names(name: str, text: str) -> set[str]:
+    """Názvy závislostí ze sekcí jen pro vývoj a build (bez normalizace ekosystému)."""
+    out: set[str] = set()
+    try:
+        if name == "package.json":
+            section = json.loads(text).get("devDependencies")
+            out.update(section if isinstance(section, dict) else {})
+        elif name == "Cargo.toml":
+            data = tomllib.loads(text)
+            for key in ("dev-dependencies", "build-dependencies"):
+                table = data.get(key)
+                if isinstance(table, dict):
+                    out.update(
+                        str(v.get("package", k)) if isinstance(v, dict) else str(k)
+                        for k, v in table.items()
+                    )
+        elif name == "pyproject.toml":
+            data = tomllib.loads(text)
+            for group in (data.get("dependency-groups", {}) or {}).values():
+                for spec in group:
+                    if isinstance(spec, str):
+                        try:
+                            out.add(_norm_py(Requirement(spec).name))
+                        except InvalidRequirement:
+                            continue
+    except (ValueError, AttributeError, tomllib.TOMLDecodeError):
+        return set()
+    return out
+
+
 def package_json_direct(text: str) -> tuple[set[str], bool]:
     try:
         data = json.loads(text)
@@ -282,6 +317,32 @@ def package_json_direct(text: str) -> tuple[set[str], bool]:
         if isinstance(section, dict):
             names.update(section)
     return names, bool(names)
+
+
+def cargo_direct(text: str) -> set[str]:
+    """Názvy přímých závislostí z Cargo.toml (i přejmenované přes `package = "…"`)."""
+    try:
+        data = tomllib.loads(text)
+    except tomllib.TOMLDecodeError:
+        return set()
+    tables = [data.get(k) for k in ("dependencies", "dev-dependencies", "build-dependencies")]
+    tables.append((data.get("workspace") or {}).get("dependencies"))
+    names: set[str] = set()
+    for table in tables:
+        if not isinstance(table, dict):
+            continue
+        for key, spec in table.items():
+            names.add(str(spec.get("package", key)) if isinstance(spec, dict) else str(key))
+    return names
+
+
+_GO_REQ = re.compile(
+    r"^\s*(?:require\s+)?([\w.\-/~]+\.[\w.\-/~]+)\s+(v[\w.\-+]+)(\s*//\s*indirect)?", re.M
+)
+
+
+def go_direct(text: str) -> set[str]:
+    return {m.group(1) for m in _GO_REQ.finditer(text) if not m.group(3)}
 
 
 def _dir(path: str) -> str:
@@ -300,6 +361,8 @@ def collect(files: list[str], read_text: ReadText) -> DepsData:
         by_dir.setdefault(_dir(f), set()).add(PurePosixPath(f).name)
     direct_py: set[str] = set()
     direct_npm: set[str] = set()
+    direct_other: set[tuple[str, str]] = set()  # (ekosystém, název) – Cargo a Go
+    dev: set[tuple[str, str]] = set()
     for f in sorted(present):
         name = PurePosixPath(f).name
         if (
@@ -339,7 +402,10 @@ def collect(files: list[str], read_text: ReadText) -> DepsData:
             reqs = parse_requirements(text, f)
             data.dependencies.extend(reqs)
             direct_py.update(d.name for d in reqs)
+            if re.search(r"(dev|test|lint|doc)", name):
+                dev.update(("PyPI", d.name) for d in reqs)
         elif name == "pyproject.toml":
+            dev.update(("PyPI", n) for n in dev_names(name, text))
             names, pinned, has = pyproject_direct(text)
             direct_py.update(names)
             if (
@@ -350,6 +416,7 @@ def collect(files: list[str], read_text: ReadText) -> DepsData:
                 data.missing_locks.append((f, "uv.lock"))
                 data.dependencies.extend(pinned)
         elif name == "package.json":
+            dev.update(("npm", n) for n in dev_names(name, text))
             names_npm, has = package_json_direct(text)
             direct_npm.update(names_npm)
             if has and not ancestors & {
@@ -362,22 +429,71 @@ def collect(files: list[str], read_text: ReadText) -> DepsData:
             }:
                 data.missing_locks.append((f, "package-lock.json"))
         elif name == "Cargo.toml":
+            dev.update(("crates.io", n) for n in dev_names(name, text))
+            direct_other.update(("crates.io", n) for n in cargo_direct(text))
             is_app = f"{_dir(f)}src/main.rs" in present
             if is_app and "[dependencies]" in text and "Cargo.lock" not in ancestors:
                 data.missing_locks.append((f, "Cargo.lock"))
-        elif name == "go.mod" and "require" in text and "go.sum" not in ancestors:
-            data.missing_locks.append((f, "go.sum"))
+        elif name == "go.mod":
+            direct_other.update(("Go", n) for n in go_direct(text))
+            if "require" in text and "go.sum" not in ancestors:
+                data.missing_locks.append((f, "go.sum"))
     unique: dict[tuple[str, str, str], Dependency] = {}
     for d in data.dependencies:
-        direct = (d.ecosystem == "PyPI" and d.name in direct_py) or (
-            d.ecosystem == "npm" and d.name in direct_npm
+        direct = (
+            (d.ecosystem == "PyPI" and d.name in direct_py)
+            or (d.ecosystem == "npm" and d.name in direct_npm)
+            or (d.ecosystem, d.name) in direct_other
         )
         unique.setdefault(
             (d.ecosystem, d.name, d.version),
             Dependency(d.ecosystem, d.name, d.version, d.source, direct or d.direct),
         )
     data.dependencies = list(unique.values())
+    runtime = _runtime_names(files, read_text, present)
+    data.dev_only = dev - runtime
     return data
+
+
+def _runtime_names(
+    files: list[str], read_text: ReadText, present: set[str]
+) -> set[tuple[str, str]]:
+    """Přímé závislosti mimo vývojové sekce (aby `dev_only` nezahrnul i běhové)."""
+    out: set[tuple[str, str]] = set()
+    for f in present:
+        name = PurePosixPath(f).name
+        if name not in ("package.json", "Cargo.toml", "pyproject.toml") and not (
+            name.startswith("requirements") and name.endswith(".txt")
+        ):
+            continue
+        text = read_text(f)
+        if text is None:
+            continue
+        if name == "package.json":
+            try:
+                data = json.loads(text)
+            except ValueError:
+                continue
+            for key in ("dependencies", "optionalDependencies", "peerDependencies"):
+                section = data.get(key) if isinstance(data, dict) else None
+                if isinstance(section, dict):
+                    out.update(("npm", n) for n in section)
+        elif name == "Cargo.toml":
+            try:
+                table = tomllib.loads(text).get("dependencies")
+            except tomllib.TOMLDecodeError:
+                continue
+            if isinstance(table, dict):
+                out.update(
+                    ("crates.io", str(v.get("package", k)) if isinstance(v, dict) else str(k))
+                    for k, v in table.items()
+                )
+        elif name == "pyproject.toml":
+            names, _, _ = pyproject_direct(text)
+            out.update(("PyPI", n) for n in names - dev_names(name, text))
+        elif not re.search(r"(dev|test|lint|doc)", name):
+            out.update(("PyPI", d.name) for d in parse_requirements(text, f))
+    return out
 
 
 # ---------------------------------------------------------------------- síť
@@ -455,6 +571,7 @@ async def enrich(
     ttl: float,
     want_vulns: bool = True,
     want_outdated: bool = True,
+    want_licenses: bool = False,
     max_details: int = 50,
 ) -> None:
     """Doplní zranitelnosti (OSV batch) a zastaralé přímé závislosti. Chyby jen zaznamená."""
@@ -488,4 +605,26 @@ async def enrich(
 
         await asyncio.gather(*(one(d) for d in direct[:200]))
         data.outdated.sort(key=lambda o: (o.dep.ecosystem, o.dep.name))
+    if want_licenses:
+        from repo_doctor.licenses import LicenseUnavailable, fetch_license
+
+        targets = [
+            d
+            for d in data.dependencies
+            if d.direct
+            and d.ecosystem in ("PyPI", "npm", "crates.io")
+            and (d.ecosystem, d.name) not in data.dev_only
+        ][:200]
+
+        async def lic(d: Dependency) -> str | None:
+            try:
+                return await fetch_license(client, d, ttl=ttl)
+            except LicenseUnavailable:
+                data.license_errors.add(d)
+                return None
+
+        licences = await asyncio.gather(*(lic(d) for d in targets))
+        data.licenses = {
+            d: v for d, v in zip(targets, licences, strict=True) if d not in data.license_errors
+        }
     data.network_done = True

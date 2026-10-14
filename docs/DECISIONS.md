@@ -68,6 +68,28 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
     spustila `upload-pack` lokálně a `ext::` libovolný příkaz. Odmítnutí se překládá na
     „Remote používá nepovolený protokol X…“. Testy si `file` povolují interním přepínačem
     `_allow_protocols` (fixture `allow_file`), veřejná volba neexistuje.
+- **`http://` jen pro hosty z `allow_http_hosts` (0.2.0):**
+  - **Per-host, ne globální přepínač:** výchozí stav (prázdný seznam) se chová jako 0.1.4.
+    Uživatel povolí jen konkrétní důvěryhodné hosty (Forgejo v Tailscale). Volba je jen
+    v globálním `config.toml` – `RepoOverrides` ji nezná (`extra="forbid"`), takže cizí repo
+    si `http` nepovolí.
+  - **Per-operace:** `GIT_ALLOW_PROTOCOL` se o `http` rozšíří jen pro jeden příkaz, a jen když
+    všechny `http://` URL, na které se může připojit, mají povolený host. U fetch se berou
+    všechny remoty (i víc URL jednoho remotu a `branch.*.remote` zadané jako URL), vždy po
+    přepisu `insteadOf` (`git ls-remote --get-url`) – jinak by lokální konfigurace cizího repa
+    přesměrovala povolenou URL jinam. URL přes https/ssh seznam nepotřebují (zůstávají
+    šifrované); proto jeden `https` remote na GitHub `http` pro Tailscale remote neblokuje.
+  - **Přesměrování:** s povoleným `http` běží příkaz s `http.followRedirects=false` –
+    `GIT_ALLOW_PROTOCOL` hlídá jen schéma, ne host, takže `initial` by pustil přesměrování
+    z povoleného hosta na libovolný jiný http host. Lokální `http.followRedirects`
+    (i pro konkrétní URL) hardening přebíjí na `false`.
+  - **Porovnání hosta:** malá písmena, bez koncové tečky, IDN → punycode; IP adresy přes
+    `ipaddress`. Nestandardní číselné zápisy (`100.1`, `0x64.1.1.1`) se neuznají ani jako
+    hostname, ani jako IP – curl by je převedl jinak, než vypadají.
+  - **API hostingů:** `HttpClient` odmítne každý `http://` požadavek (i po přesměrování) na host
+    mimo seznam ještě před odesláním (`InsecureHostError`) – token tak nikdy neodejde po http
+    jinam. Hosting s `http://` URL mimo seznam je „nedostupný“ s vysvětlením (načtení
+    konfigurace kvůli tomu neselže, aby šlo seznam doplnit v Nastavení).
 - **`--fetch`** je jediná výjimka z „CLI nic nemění“: aktualizuje jen remote-tracking refy
   a je vypnutý ve výchozím stavu (zadání: „žádný fetch bez `--fetch`“).
 - **Tajemství se v modelu vůbec nevyskytují.** Skener vrací jen maskovanou ukázku
@@ -151,6 +173,80 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   s kalendářním včerejškem) – posledních N skenů (`limits.history_size`, výchozí 30).
 - **Barvy světlého tématu** jsou ztmavené varianty palety, aby text severit měl na pozadí
   `#f5f6f8` kontrast alespoň 4.5:1 (WCAG AA).
+
+## MCP server (0.2.0)
+
+- **SDK `mcp` 2.x** (`MCPServer`, dřív FastMCP). Logika nástrojů je v `RepoDoctorTools` bez
+  závislosti na MCP – MCP vrstva (`build_server`) jen registruje funkce s docstringy.
+- **Jen čtení:** nástroje pracují nad posledním výsledkem skenu (cache repo-doctoru);
+  `scan` spouští běžný sken s `offline = not mcp.network` a `fetch = False`. Jediný zápis je
+  `last-scan.json` v cache repo-doctoru – stejně jako po skenu v TUI. Všechny nástroje mají
+  anotaci `readOnlyHint`.
+- **Maskování:** nálezy už nesou jen maskované ukázky; výstupy navíc procházejí redakčním
+  registrem a texty se zkracují (500 znaků). Stránkování `offset`/`limit` (max 100).
+- **Podpříkazy CLI** se zjišťují z registru typeru (`subcommands()`), ne z ručního seznamu –
+  nový příkaz (`mcp`) by jinak skončil v TUI větvi a stdio server by vypsal nápovědu.
+
+## Pre-push hlídač (0.2.0)
+
+- **Dva směry hooků:** repo-doctor při *svých* voláních gitu hooky nikdy nespouští
+  (`core.hooksPath=/dev/null`, 0.1.4). Hook `pre-push`, který léčba nainstaluje, spouští
+  uživatelův *vlastní* `git push` – a ten volá `repo-doctor guard`. Tyto dvě věci se
+  nepotkají: guard sám spouští git zase s vypnutými hooky.
+- **Lokální hook** je jediný zápis do `.git/hooks`: jen hook `pre-push`, jen v repu uživatele
+  (`apply` odmítne repo cizího vlastníka), existující cizí hook nepřepíše (pozná svůj podle
+  značky) a při `core.hooksPath` se nenabízí, protože by se nespustil. Když `repo-doctor`
+  chybí v PATH, hook push nezablokuje (jen vypíše varování).
+- **Pre-commit varianta** používá `repo: local` s `entry: repo-doctor guard` – oficiální
+  gitleaks hook pro pre-commit skenuje staged změny, což při pushi nedává smysl. Soubor se
+  upraví jen tehdy, když jde blok bezpečně připojit (`repos:` je poslední klíč nejvyšší
+  úrovně); jinak se nabídne jen lokální varianta.
+- **Rozsah:** `lsha --not --remotes` pro novou větev, jinak `rsha..lsha`; z pre-commitu
+  `PRE_COMMIT_FROM_REF..PRE_COMMIT_TO_REF`. Vestavěný skener (rychlý, bez závislostí);
+  allowlist platí stejně jako v kartě repa.
+
+## Pre-push hlídač: selhání = zastavení
+
+- Když `git log` pro rozsah pushe selže (timeout, chybějící objekt), push se zastaví – hlídač,
+  který při chybě pouští, nic nehlídá. Remote sha, který lokálně není (force push, nefetchnuto),
+  se nahradí rozsahem „vše, co není na žádném remotu“.
+- Hook se zapisuje s `O_NOFOLLOW`, nikdy přes symlink a jen do `.git/hooks` vlastněného
+  uživatelem.
+
+## Synchronizace (0.2.0)
+
+- **Jediná funkce, která mění pracovní strom** – a jen `git merge --ff-only @{u}` (git sám
+  odmítne cokoli jiného než fast-forward). Repo musí být na sledované větvi, pozadu a ne
+  rozdělené, bez změn ve sledovaných souborech a bez nesledovaných souborů, které by
+  fast-forward přepsal. Stav se těsně před provedením zjistí znovu.
+- **Hooky zůstávají vypnuté** (`post-merge`, `post-checkout`…) – stejná pravidla jako všude.
+- **Repo s vlastními filtry/drivery v `.git/config` se nedohání:** hardening by filtry
+  (např. git-crypt, smudge) při checkoutu vypnul a do pracovního stromu by se zapsal
+  nefiltrovaný obsah. Takové repo je potřeba dohnat ručně (`git pull --ff-only`).
+- **Fetch je samostatný krok** (`f` v TUI, `--fetch` v CLI, výchozí nikde) a řídí se pravidly sítě z 0.1.4
+  a `allow_http_hosts`.
+- **Pracovní strom musí být samotné repo:** cizí `core.worktree` by fast-forward přesměroval
+  jinam (třeba do `$HOME`), proto se repo, jehož `--show-toplevel` není jeho cesta, nedohání.
+  Totéž platí pro úklid.
+- **Ignorované soubory se počítají jako kolize:** git je při fast-forwardu považuje za
+  postradatelné a přepsal by třeba lokální `.env`.
+- Zbytkové riziko: globální git-lfs uživatele při checkoutu stahuje objekty podle `.lfsconfig`
+  repa (mimo `allow_http_hosts`). Je to uživatelova důvěryhodná konfigurace a obsah repa
+  si uživatel synchronizuje sám; repo-doctor tu nic nespouští navíc.
+
+## Plánovaný sken a upozornění (0.2.0)
+
+- **Uživatelský systemd timer**, ne cron ani root: `systemctl --user` je na Arch/Fedora
+  standard, `Persistent=true` dožene zmeškaný běh po uspání, `Nice`/`IOSchedulingClass=idle`
+  šetří stroj. Bez systemd se jen vypíše řádek pro cron – nic se nezapisuje do crontabu.
+- **Upozorňuje se jen na změny** proti minulému skenu (otisky nálezů), jinak by se upozornění
+  rychle ignorovala. První běh jen uloží výchozí stav.
+- **Text upozornění nese jen názvy rep a počty** – ntfy i e-mail jsou cizí služby, cesty
+  k souborům a maskovaná tajemství tam nemají co dělat.
+- ntfy `http://` jen pro `allow_http_hosts` (ověří se při načtení konfigurace i při odeslání),
+  přesměrování se nenásledují; token přes stejné zdroje jako u hostingů. E-mail jen přes
+  lokální `sendmail` – žádné SMTP heslo v konfiguraci.
+- Plánovaný sken ve výchozím stavu nefetchuje (`[schedule] fetch`).
 
 ## Výkon
 

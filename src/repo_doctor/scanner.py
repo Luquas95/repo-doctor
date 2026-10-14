@@ -26,6 +26,7 @@ from repo_doctor.checks.base import (
     SkipCheck,
     select_checks,
 )
+from repo_doctor.checks.duplicates import DUPLICATE_ID, add_duplicate_findings
 from repo_doctor.checks.meta import UnsafeOwnership
 from repo_doctor.config import (
     Config,
@@ -164,6 +165,7 @@ class Scanner:
             offline=self.options.offline,
             roots=[r.path for r in roots if r.enabled],
         )
+        full = repos is None  # duplicitní klony jen při skenu všech sledovaných složek
         if repos is None:
             found = await asyncio.to_thread(discover, roots, self.config.ignore_repos)
             repos = found.repos
@@ -215,8 +217,26 @@ class Scanner:
         result.cancelled = self._cancelled
         result.finished_at = datetime.now(UTC) if self.options.now is None else now
         result.repos.sort(key=lambda r: (r.root, r.name))
+        if full and not self._cancelled and DUPLICATE_ID in {c.id for c in self.checks}:
+            self._duplicates(result)
         self.on_event(ScanEvent("finished", total=total, done=done))
         return result
+
+    def _duplicates(self, result: ScanResult) -> None:
+        touched = add_duplicate_findings(result)
+        allowed = {a.hash for a in self.config.allowlist}
+        for repo in result.repos:
+            if repo.path not in touched:
+                continue
+            kept = [
+                f
+                for f in repo.findings
+                if f.check_id != DUPLICATE_ID or f.fingerprint(repo.name) not in allowed
+            ]
+            repo.allowlisted += len(repo.findings) - len(kept)
+            repo.findings = kept
+            if repo.score is not None:
+                repo.score = score(kept)
 
     # ------------------------------------------------------------------ jedno repo
     def _untrusted(self, repo: DiscoveredRepo) -> bool:
@@ -328,6 +348,7 @@ class Scanner:
             last_commit=datetime.fromtimestamp(last, UTC) if last else None,
             pulse=pulse,
             commit_count=git.commit_count(),
+            root_commit=git.root_commit() if head else None,
         )
 
     async def _network(self, ctx: RepoContext, res: RepoResult) -> None:
@@ -363,6 +384,8 @@ class Scanner:
                         )
                     for e in snap.errors:
                         res.errors.setdefault("forge", e)
+                    if "email-exposure" in ids and ctx.visibility == "public":
+                        ctx.noreply_email = await forge.noreply_email()
                 except HttpError as err:
                     ctx.forge_status = f"hosting {ctx.forge_name} nedostupný: {err}"
         elif not self.options.use_forges:
@@ -378,20 +401,45 @@ class Scanner:
             if vis != "unknown":
                 ctx.visibility = vis  # type: ignore[assignment]
                 res.visibility = vis  # type: ignore[assignment]
-        if ids & {"deps-vulnerable", "deps-outdated", "deps-lockfile-missing"}:
+        if "ci-security" in ids:
+            await self._resolve_actions(ctx, net)
+        if ids & {"deps-vulnerable", "deps-outdated", "deps-lockfile-missing", "license-compat"}:
             data: DepsData = await asyncio.to_thread(collect, ctx.tracked_files, ctx.read_text)
             ctx.deps = data
-            if ids & {"deps-vulnerable", "deps-outdated"}:
+            if ids & {"deps-vulnerable", "deps-outdated", "license-compat"}:
                 await enrich(
                     net.public,
                     data,
                     ttl=self.config.limits.registry_cache_hours * 3600,
                     want_vulns="deps-vulnerable" in ids,
                     want_outdated="deps-outdated" in ids,
+                    want_licenses="license-compat" in ids,
                 )
                 if data.errors and not data.vulns and any(e.startswith("OSV") for e in data.errors):
                     ctx.deps_status = "OSV.dev nedostupné"
                     data.network_done = False
+
+    async def _resolve_actions(self, ctx: RepoContext, net: NetServices) -> None:
+        """SHA tagů nepřipnutých akcí z GitHubu (pro léčbu ci-security). Max. 30 na repo."""
+        from repo_doctor.checks.ci_security import load_workflows, trusted_owners, unpinned_refs
+
+        workflows = await asyncio.to_thread(load_workflows, ctx)
+        refs = [r for r in unpinned_refs(workflows, trusted_owners(ctx)) if "://" not in r.uses]
+        github = next(
+            (
+                f
+                for f in net.forges.forges.values()
+                if isinstance(f, GitHubForge) and not f.config.url
+            ),
+            net.github_public,
+        )
+        if not refs or github is None:
+            return
+        for key in sorted({r.key for r in refs})[:30]:
+            repo_name, _, ref = key.rpartition("@")
+            sha = await github.resolve_ref(repo_name, ref)
+            if sha:
+                ctx.action_shas[key] = sha
 
     async def _scan_repo(
         self, repo: DiscoveredRepo, now: datetime, total: int, done: Callable[[], int]

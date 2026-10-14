@@ -1,6 +1,6 @@
 [project]
 name = "repo-doctor"
-version = "0.1.4"
+version = "0.2.0"
 description = "TUI pro audit a údržbu lokálních git repozitářů (bezpečnost, hygiena, stav gitu, git hostingy)."
 readme = "README.md"
 license = "MIT"
@@ -24,6 +24,8 @@ dependencies = [
     "keyring>=24",
     "packaging>=23",
     "rich>=13.7",
+    "mcp>=2.3",
+    "pyyaml>=6",
 ]
 
 [project.scripts]
@@ -38,6 +40,7 @@ dev = [
     "respx>=0.21",
     "ruff>=0.6",
     "mypy>=1.10",
+    "types-pyyaml>=6.0.12.20260906",
 ]
 
 [build-system]

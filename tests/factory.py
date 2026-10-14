@@ -78,12 +78,12 @@ def fake_db_url(seed: int = 10) -> str:
     )
 
 
-def git(cwd: Path, *args: str, env: dict[str, str] | None = None) -> str:
+def git(cwd: Path, *args: str, env: dict[str, str] | None = None, check: bool = True) -> str:
     full_env = dict(os.environ) | GIT_ENV | (env or {})
     proc = subprocess.run(
         ["git", *args], cwd=cwd, capture_output=True, text=True, env=full_env, check=False
     )
-    if proc.returncode != 0:
+    if proc.returncode != 0 and check:
         raise RuntimeError(f"git {' '.join(args)}: {proc.stderr}")
     return proc.stdout
 

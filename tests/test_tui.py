@@ -94,6 +94,8 @@ async def test_dashboard_sort_filter_group(tmp_path: Path) -> None:
         await pilot.press("alt+g")
         assert d.state.group_by == "forge"
         await pilot.press("alt+g")
+        assert d.state.group_by == "remote"
+        await pilot.press("alt+g")
         assert d.state.group_by == "triage"
         await pilot.press("b")
         assert not d.query_one("#sidebar").display

@@ -26,6 +26,14 @@ def mask(secret: str, *, prefix: int = VISIBLE_PREFIX) -> str:
     return f"{shown}{ELLIPSIS}({length} znaků)"
 
 
+def mask_email(email: str) -> str:
+    """`lukas@proton.me` → `l***@proton.me` (doména zůstává, jméno nikdy celé)."""
+    local, sep, domain = email.strip().partition("@")
+    if not sep:
+        return mask(email)
+    return f"{local[:1]}***@{domain.lower()}"
+
+
 class _Registry:
     """Globální registr hodnot, které se nesmí nikde objevit (tokeny, nalezená tajemství)."""
 

@@ -12,7 +12,7 @@ from textual.app import App
 from textual.binding import Binding
 from textual.worker import Worker
 
-from repo_doctor import history, paths
+from repo_doctor import history, netpolicy, paths
 from repo_doctor.config import Config, ConfigError, ConfigStore, RootConfig
 from repo_doctor.gitwrap import configure_ssh
 from repo_doctor.keymap import BY_ID, KeymapError, build_keymap, key_label
@@ -60,8 +60,13 @@ class RepoDoctorApp(App[int]):
         scanner_factory: ScannerFactory | None = None,
         history_delta: dict[str, int] | None = None,
         forge_transport: Any = None,
+        schedule_backend: Any = None,
     ) -> None:
         super().__init__()
+        from repo_doctor import schedule
+
+        # install/remove/status plánovaného skenu (testy podstrčí náhradu bez systemd)
+        self.schedule_backend: Any = schedule_backend or schedule
         install_log_redaction()
         self.store = store or ConfigStore()
         self.config_error: str | None = None
@@ -71,6 +76,7 @@ class RepoDoctorApp(App[int]):
             self.config_error = str(err)
             self.config = Config()
         configure_ssh(batch_mode=self.config.ssh_batch_mode)
+        netpolicy.configure(self.config.allow_http_hosts)
         self.roots_override = roots_override
         self.offline = offline
         self.auto_scan = auto_scan
@@ -82,6 +88,10 @@ class RepoDoctorApp(App[int]):
             cached = history.load_last_scan()
             if cached is not None:
                 self.result = cached
+        from repo_doctor import notify
+
+        # poslední plánovaný běh (pro přehled); v testech se nečte
+        self.scheduled: notify.RunState | None = notify.load_state() if load_cache else None
         self.history_delta = (
             history_delta if history_delta is not None else history.previous_delta()
         )
@@ -168,6 +178,7 @@ class RepoDoctorApp(App[int]):
     def config_changed(self, config: Config) -> None:
         self.config = config
         configure_ssh(batch_mode=config.ssh_batch_mode)
+        netpolicy.configure(config.allow_http_hosts)
         for screen in self.screen_stack:
             refresh = getattr(screen, "on_config_changed", None)
             if callable(refresh):
@@ -362,6 +373,7 @@ class RepoDoctorApp(App[int]):
         if self._in_wizard():
             return
         from repo_doctor.tui.screens import (
+            cleanup,
             detail,
             export,
             fix,
@@ -369,6 +381,7 @@ class RepoDoctorApp(App[int]):
             forges,
             remote,
             settings,
+            sync,
         )
 
         if n in (2, 3) and self.selected_repo is None:
@@ -386,6 +399,8 @@ class RepoDoctorApp(App[int]):
             6: remote.RemoteScreen,
             7: settings.SettingsScreen,
             8: export.ExportScreen,
+            9: cleanup.CleanupScreen,
+            0: sync.SyncScreen,
         }
         self.push_screen(factories[n]())
 
