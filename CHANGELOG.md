@@ -19,6 +19,9 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
   licence projektu – silný copyleft a chybějící licence; informativní, ne právní rada.
 - `repo-doctor sbom REPO` a export z karty repa (`b`): SBOM CycloneDX 1.5 z lockfilů, bez sítě
   (licence z cache registrů).
+- Úklid místa: kontrola `disk-usage`, obrazovka **Úklid** (`9`) a `repo-doctor clean`
+  (náhled / `--apply`) – jen složky ignorované gitem, přes koš (freedesktop Trash), trvalé
+  smazání jen s dvojím potvrzením; nabízí i celé duplicitní klony bez změn.
 - Léčba umí i lokální akce bez commitu (`.git/config`, hook) a varianty oprav.
 
 ### Bezpečnost

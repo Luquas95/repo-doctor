@@ -151,6 +151,26 @@ class CIConfig(_Model):
     trusted_action_owners: list[str] = Field(default_factory=list)
 
 
+class CleanupConfig(_Model):
+    # Regenerovatelné složky (jen ignorované gitem), které nabízí úklid a kontrola disk-usage.
+    dirs: list[str] = Field(
+        default_factory=lambda: [
+            "node_modules", ".venv", "venv", "target", "dist", "build", ".next", "__pycache__",
+            ".pytest_cache", ".mypy_cache", ".ruff_cache", ".gradle", ".terraform",
+        ]
+    )  # fmt: skip
+    inactive_days: int = Field(default=60, ge=1)
+    min_mb: int = Field(default=200, ge=1)
+
+    @field_validator("dirs")
+    @classmethod
+    def _plain_names(cls, value: list[str]) -> list[str]:
+        for name in value:
+            if not name or "/" in name or name in (".", "..", ".git"):
+                raise ValueError(f"{name!r}: jen název složky (bez cesty, ne .git)")
+        return value
+
+
 class MCPConfig(_Model):
     # false (výchozí) = MCP server skenuje jen offline; true = i síťové kontroly (OSV, hostingy)
     network: bool = False
@@ -177,6 +197,7 @@ class Config(_Model):
     ui: UIConfig = Field(default_factory=UIConfig)
     mcp: MCPConfig = Field(default_factory=MCPConfig)
     ci: CIConfig = Field(default_factory=CIConfig)
+    cleanup: CleanupConfig = Field(default_factory=CleanupConfig)
 
     @field_validator("allow_http_hosts")
     @classmethod

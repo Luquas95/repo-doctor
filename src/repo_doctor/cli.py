@@ -183,6 +183,81 @@ def explain(
     typer.echo(doc.text, nl=False)
 
 
+@app.command("clean")
+def clean_cmd(
+    path: Annotated[
+        list[Path] | None, typer.Argument(help="Složky s repy (bez nich složky z konfigurace).")
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option("--dry-run/--apply", help="Náhled (výchozí), nebo opravdu přesunout do koše."),
+    ] = True,
+    all_repos: Annotated[
+        bool, typer.Option("--all", help="I aktivní repa (jinak jen neaktivní podle konfigurace).")
+    ] = False,
+    include_dirty: Annotated[
+        bool, typer.Option("--include-dirty", help="I repa s necommitnutými změnami.")
+    ] = False,
+    duplicates: Annotated[
+        bool,
+        typer.Option("--duplicates", help="I celé duplicitní klony bez změn (z posledního skenu)."),
+    ] = False,
+    depth: Annotated[int, typer.Option("--depth", min=0, max=12)] = 3,
+) -> None:
+    """Úklid místa: regenerovatelné složky ignorované gitem (node_modules, .venv, target…).
+
+    Výchozí je náhled. S --apply se složky přesunou do koše (freedesktop Trash) – nikdy
+    trvale, nikdy nic sledovaného gitem ani mimo repo, nikdy repo cizího vlastníka.
+    """
+    from repo_doctor import history
+    from repo_doctor.cleanup import (
+        apply_cleanup,
+        duplicate_candidates,
+        human,
+        inspect_repo,
+        is_inactive,
+        mark_busy,
+    )
+    from repo_doctor.discovery import discover
+
+    config = _load_config()
+    roots = [RootConfig(path=str(p), depth=depth) for p in path] if path else config.roots
+    if not roots:
+        _err("Nejsou nastavené žádné složky. Zadej cestu.")
+        raise typer.Exit(2)
+    chosen = []
+    for repo in discover(roots, config.ignore_repos).repos:
+        info = inspect_repo(repo.path, config.cleanup.dirs)
+        if info.error or not info.candidates:
+            continue
+        if not all_repos and not is_inactive(info, config.cleanup.inactive_days):
+            continue
+        mark_busy(info.candidates)
+        note = (
+            f"  (necommitnuté {info.dirty} – přeskočeno, viz --include-dirty)"
+            if info.dirty and not include_dirty
+            else ""
+        )
+        typer.echo(f"{repo.display}  {human(info.size)}{note}")
+        for c in info.candidates:
+            flag = "  [běží proces – přeskočeno]" if c.busy else ""
+            typer.echo(f"    {c.rel:<30} {human(c.size):>10}{flag}")
+        if not info.dirty or include_dirty:
+            chosen += [c for c in info.candidates if not c.busy]
+    if duplicates:
+        for c in duplicate_candidates(history.load_last_scan()):
+            typer.echo(f"{c.path}  {human(c.size)}  (celý duplicitní klon)")
+            chosen.append(c)
+    total = sum(c.size for c in chosen)
+    if dry_run:
+        typer.echo(f"\nCelkem k uvolnění: {human(total)}. Nic se nesmazalo – použij --apply.")
+        return
+    result = apply_cleanup(chosen)
+    for p, reason in result.skipped:
+        typer.echo(f"  ! přeskočeno {p}: {reason}")
+    typer.echo(f"Přesunuto do koše: {len(result.removed)} položek, uvolněno {human(result.freed)}.")
+
+
 @app.command("sbom")
 def sbom_cmd(
     repo: Annotated[Path, typer.Argument(help="Cesta k repozitáři.")],

@@ -364,6 +364,7 @@ class RepoDoctorApp(App[int]):
         if self._in_wizard():
             return
         from repo_doctor.tui.screens import (
+            cleanup,
             detail,
             export,
             fix,
@@ -388,6 +389,7 @@ class RepoDoctorApp(App[int]):
             6: remote.RemoteScreen,
             7: settings.SettingsScreen,
             8: export.ExportScreen,
+            9: cleanup.CleanupScreen,
         }
         self.push_screen(factories[n]())
 

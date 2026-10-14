@@ -267,6 +267,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | [`secrets-tree`](docs/checks/secrets-tree.md) | Bezpečnost | HIGH |  |  |
 | [`ci-missing`](docs/checks/ci-missing.md) | Údržba | LOW | ✓ |  |
 | [`deps-outdated`](docs/checks/deps-outdated.md) | Údržba | LOW |  | síť |
+| [`disk-usage`](docs/checks/disk-usage.md) | Údržba | LOW |  |  |
 | [`gitignore-incomplete`](docs/checks/gitignore-incomplete.md) | Údržba | MED | ✓ |  |
 | [`gitignore-missing`](docs/checks/gitignore-missing.md) | Údržba | MED | ✓ |  |
 | [`large-files`](docs/checks/large-files.md) | Údržba | MED |  |  |
@@ -337,6 +338,11 @@ license = "MIT"           # MIT | ISC | BSD-2-Clause | Unlicense
 templates_dir = "~/.config/repo-doctor/templates"
 [ci]
 trusted_action_owners = ["ja"]   # akce z vlastního účtu nemusí být připnuté na SHA (ci-security)
+
+[cleanup]
+inactive_days = 60        # disk-usage a předvýběr v Úklidu jen u rep bez commitu tak dlouho
+min_mb = 200
+# dirs = ["node_modules", ".venv", "target", …]   # regenerovatelné složky
 
 [mcp]
 network = false           # true = MCP sken smí i síťové kontroly (OSV, hostingy)
@@ -410,6 +416,7 @@ limitem) a `explain_check`. Výstupy jsou strukturované a stránkované (`offse
 repo-doctor scan [PATH…] --report md|json|html [--output FILE] [--offline] [--no-forges] \
     [--only/--skip CHECKS] [--jobs N] [--fail-on high|medium|low] [--fetch]
 repo-doctor explain CHECK_ID
+repo-doctor clean [PATH…] [--apply] [--all] [--include-dirty] [--duplicates]   # úklid do koše
 repo-doctor sbom REPO [--format cyclonedx-json] [-o FILE]   # SBOM z lockfilů, bez sítě
 repo-doctor mcp                     # MCP server jen pro čtení (stdio)
 repo-doctor checks
