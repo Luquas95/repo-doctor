@@ -20,13 +20,13 @@ Kind = Literal["permissive", "weak", "strong", "unknown"]
 PERMISSIVE = {
     "MIT", "MIT-0", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "BSD-3-Clause-Clear",
     "0BSD", "ISC", "Unlicense", "Zlib", "PSF-2.0", "Python-2.0", "BSL-1.0", "CC0-1.0",
-    "WTFPL", "X11", "Artistic-2.0", "Unicode-3.0", "Unicode-DFS-2016", "BlueOak-1.0.0",
+    "WTFPL", "X11", "Artistic-2.0", "BSD-4-Clause", "Unicode-3.0", "Unicode-DFS-2016", "BlueOak-1.0.0",
     "CC-BY-4.0", "PostgreSQL", "NCSA", "HPND", "curl",
 }  # fmt: skip
 WEAK = {
     "LGPL-2.0-only", "LGPL-2.0-or-later", "LGPL-2.1-only", "LGPL-2.1-or-later",
     "LGPL-3.0-only", "LGPL-3.0-or-later", "MPL-1.1", "MPL-2.0", "EPL-1.0", "EPL-2.0",
-    "CDDL-1.0", "CDDL-1.1", "CPL-1.0",
+    "CDDL-1.0", "CDDL-1.1", "CPL-1.0", "OFL-1.1", "CC-BY-SA-4.0",
 }  # fmt: skip
 STRONG = {
     "GPL-2.0-only", "GPL-2.0-or-later", "GPL-3.0-only", "GPL-3.0-or-later",
@@ -61,7 +61,12 @@ _ALIASES: dict[str, str] = {
     "gnu lesser general public license v2 or later (lgplv2+)": "LGPL-2.1-or-later",
     "gnu lesser general public license v3 (lgplv3)": "LGPL-3.0-only",
     "gnu library or lesser general public license (lgpl)": "LGPL-2.1-or-later",
-    "eclipse public license 2.0 (epl-2.0)": "EPL-2.0",
+    "eclipse public license 2.0 (epl-2.0)": "EPL-2.0", "lgplv3+": "LGPL-3.0-or-later",
+    "lgplv2": "LGPL-2.0-only", "lgplv2.1": "LGPL-2.1-only", "bsl": "BSL-1.0",
+    "boost software license 1.0 (bsl-1.0)": "BSL-1.0", "mit-0": "MIT-0",
+    "mit no attribution license (mit-0)": "MIT-0", "hpnd": "HPND",
+    "historical permission notice and disclaimer (hpnd)": "HPND", "iscl": "ISC",
+    "mpl 1.1": "MPL-1.1", "agplv3+": "AGPL-3.0-or-later",
 }  # fmt: skip
 # Staré krátké SPDX tvary
 _LEGACY = {
@@ -74,21 +79,46 @@ _KNOWN = {s.lower(): s for s in PERMISSIVE | WEAK | STRONG}
 _RANK: dict[Kind, int] = {"permissive": 0, "weak": 1, "unknown": 2, "strong": 3}
 
 
+class LicenseUnavailable(Exception):
+    """Registr neodpověděl (síť, 404 soukromého balíčku, limit) – licence není zjištěná."""
+
+
+def _lookup(text: str) -> str | None:
+    if text in _LEGACY:
+        return _LEGACY[text]
+    low = text.lower()
+    if low in _KNOWN:
+        return _KNOWN[low]
+    return _ALIASES.get(low) or _ALIASES.get(low.removesuffix(" license"))
+
+
 def normalize(name: str | None) -> str | None:
     """Volný název licence → SPDX identifikátor (nebo None, když ho neznáme)."""
     if not name:
         return None
-    text = name.strip().strip("()").strip()
+    text = name.strip()
+    while text.startswith("(") and text.endswith(")") and _balanced(text[1:-1]):
+        text = text[1:-1].strip()  # závorky jen kolem celého textu
     text = text.removeprefix("License :: ").removeprefix("OSI Approved :: ").strip()
     if not text or len(text) > 120 or "\n" in text:
         return None
-    if text in _LEGACY:
-        return _LEGACY[text]
-    if text.lower() in _KNOWN:
-        return _KNOWN[text.lower()]
-    return _ALIASES.get(text.lower().removesuffix(" license") or text.lower()) or _ALIASES.get(
-        text.lower()
-    )
+    found = _lookup(text)
+    if found:
+        return found
+    # klasifikátor „Dlouhý název (ZKRATKA)“ → zkus zkratku
+    m = re.match(r"^(.*?)\s*\(([^()]+)\)$", text)
+    if m:
+        return _lookup(m.group(2).strip()) or _lookup(m.group(1).strip())
+    return None
+
+
+def _balanced(text: str) -> bool:
+    depth = 0
+    for ch in text:
+        depth += {"(": 1, ")": -1}.get(ch, 0)
+        if depth < 0:
+            return False
+    return depth == 0
 
 
 def kind_of(spdx: str | None) -> Kind:
@@ -109,23 +139,65 @@ def classify(expression: str | None) -> tuple[Kind, str | None]:
     if not expression or not expression.strip():
         return "unknown", None
     expr = expression.strip()
-    if re.search(r"\s(OR|AND|WITH)\s|/", expr):
-        expr = expr.replace("/", " OR ")
-        ors = re.split(r"\s+OR\s+", expr.strip("() "))
-        best: Kind = "strong"
-        names: list[str] = []
-        for alt in ors:
-            parts = re.split(r"\s+AND\s+", alt.strip("() "))
-            worst: Kind = "permissive"
-            for part in parts:
-                spdx = normalize(part.split(" WITH ", 1)[0])
-                names.append(spdx or part.strip())
-                k = kind_of(spdx)
-                worst = k if _RANK[k] > _RANK[worst] else worst
-            best = worst if _RANK[worst] < _RANK[best] else best
-        return best, " OR ".join(dict.fromkeys(names)) if " OR " in expr else " AND ".join(names)
     spdx = normalize(expr)
-    return kind_of(spdx), spdx or expr
+    if spdx or not re.search(r"\s(OR|AND|WITH)\s|/", expr):
+        return kind_of(spdx), spdx or expr
+    tokens = _tokens(expr.replace("/", " OR "))
+    try:
+        kind, shown, rest = _parse_or(tokens)
+    except IndexError:
+        return "unknown", expr
+    return (kind, shown) if not rest else ("unknown", expr)
+
+
+def _tokens(expr: str) -> list[str]:
+    """Závorky, OR/AND/WITH a názvy licencí (víceslovný volný název zůstane pohromadě)."""
+    out: list[str] = []
+    for word in re.findall(r"\(|\)|[^\s()]+", expr):
+        if word in ("(", ")", "OR", "AND", "WITH") or not out or out[-1] in (
+            "(", ")", "OR", "AND", "WITH",
+        ):  # fmt: skip
+            out.append(word)
+        else:
+            out[-1] += f" {word}"
+    return out
+
+
+# SPDX výraz: OR váže slaběji než AND; `A OR B` → nejvolnější, `A AND B` → nejpřísnější.
+_Parsed = tuple[Kind, str, list[str]]
+
+
+def _parse_or(tokens: list[str]) -> _Parsed:
+    kind, shown, rest = _parse_and(tokens)
+    parts = [shown]
+    while rest and rest[0] == "OR":
+        k, sh, rest = _parse_and(rest[1:])
+        parts.append(sh)
+        kind = k if _RANK[k] < _RANK[kind] else kind
+    return kind, " OR ".join(dict.fromkeys(parts)), rest
+
+
+def _parse_and(tokens: list[str]) -> _Parsed:
+    kind, shown, rest = _parse_atom(tokens)
+    parts = [shown]
+    while rest and rest[0] == "AND":
+        k, sh, rest = _parse_atom(rest[1:])
+        parts.append(sh)
+        kind = k if _RANK[k] > _RANK[kind] else kind
+    return kind, " AND ".join(parts), rest
+
+
+def _parse_atom(tokens: list[str]) -> _Parsed:
+    if tokens[0] == "(":
+        kind, shown, rest = _parse_or(tokens[1:])
+        if not rest or rest[0] != ")":
+            raise IndexError("chybí )")
+        return kind, f"({shown})" if " " in shown else shown, rest[1:]
+    rest = tokens[1:]
+    if rest and rest[0] == "WITH":
+        rest = rest[2:]  # výjimka (např. Classpath-exception) kategorii nezhoršuje
+    spdx = normalize(tokens[0])
+    return kind_of(spdx), spdx or tokens[0], rest
 
 
 # ---------------------------------------------------------------------- registry
@@ -185,8 +257,8 @@ async def fetch_license(client: HttpClient, dep: Dependency, *, ttl: float) -> s
         return None
     try:
         body = await client.get_json(url, ttl=ttl)
-    except HttpError:
-        return None
+    except HttpError as err:
+        raise LicenseUnavailable(str(err)) from err
     return license_from_body(dep, body)
 
 
@@ -241,9 +313,13 @@ def project_license(files: list[str], read_text: Callable[[str], str | None]) ->
             lic = None
         if isinstance(lic, str) and lic:
             return lic
-    for name in ("license", "license.md", "license.txt", "licence", "copying", "unlicense"):
+    for name in (
+        "license", "license.md", "license.txt", "license.rst", "licence", "licence.md",
+        "copying", "copying.md", "copying.txt", "unlicense", "license-mit",
+    ):  # fmt: skip
         if name in lower and (text := read_text(lower[name])):
+            head = text[:600]  # jen nadpis – text GPL odkazuje i na AGPL/LGPL
             for pattern, spdx in _FILE_HINTS:
-                if re.search(pattern, text, re.IGNORECASE):
+                if re.search(pattern, head, re.IGNORECASE):
                     return spdx
     return None

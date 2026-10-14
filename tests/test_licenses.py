@@ -33,6 +33,10 @@ from tests.helpers import ctx
         ("GPLv3+", "GPL-3.0-or-later"),
         ("GNU Affero General Public License v3", "AGPL-3.0-only"),
         ("License :: OSI Approved :: BSD License", "BSD-3-Clause"),
+        ("ISC License (ISCL)", "ISC"),
+        ("GNU General Public License v2 (GPLv2)", "GPL-2.0-only"),
+        ("Mozilla Public License 2.0 (MPL 2.0)", "MPL-2.0"),
+        ("(MIT)", "MIT"),
         ("Proprietary", None),
         ("", None),
     ],
@@ -52,6 +56,10 @@ def test_normalize(raw: str, spdx: str | None) -> None:
         ("MIT/Apache-2.0", "permissive"),
         ("Apache-2.0 WITH LLVM-exception", "permissive"),
         ("AGPL-3.0", "strong"),
+        ("(MIT OR Apache-2.0) AND GPL-3.0-only", "strong"),  # AND váže silněji než OR
+        ("GPL-3.0-only AND (MIT OR Apache-2.0)", "strong"),
+        ("MIT OR (Apache-2.0 AND GPL-3.0-only)", "permissive"),
+        ("MIT AND", "unknown"),
         (None, "unknown"),
         ("Neznámá licence", "unknown"),
     ],
@@ -132,6 +140,34 @@ def test_check_quiet_for_copyleft_project_and_skips_offline(tmp_path: Path) -> N
     rb = RepoBuilder.create(tmp_path / "offline")
     with pytest.raises(SkipCheck):
         check.run(ctx(rb.path))
+
+
+def test_project_license_file_header_only() -> None:
+    gpl3 = (
+        "GNU GENERAL PUBLIC LICENSE\nVersion 3\n"
+        + "x\n" * 300
+        + "GNU Affero General Public License"
+    )
+    assert project_license(["COPYING.md"], lambda f: gpl3) == "GPL-3.0-only"
+
+
+@respx.mock
+async def test_dev_deps_and_registry_errors_not_reported(tmp_path: Path) -> None:
+    rb = RepoBuilder.create(tmp_path / "projekt")
+    rb.write("pyproject.toml", '[project]\nname = "p"\nlicense = "MIT"\n')
+    rb.write("requirements.txt", "soukroma==1.0\n")
+    rb.write("requirements-dev.txt", "gpllinter==1.0\n")
+    rb.commit("deps")
+    respx.get("https://pypi.org/pypi/soukroma/1.0/json").respond(404)
+    linter = respx.get("https://pypi.org/pypi/gpllinter/1.0/json").respond(
+        json={"info": {"license_expression": "GPL-3.0-only"}}
+    )
+    cfg = Config(roots=[RootConfig(path=str(rb.path))])
+    result = await Scanner(
+        cfg, ScanOptions(only=["license-compat"], use_forges=False), ssh_config=SshConfig()
+    ).run()
+    assert result.repos[0].findings == []  # 404 není „licence chybí“, linter je jen pro vývoj
+    assert linter.call_count == 0
 
 
 def _python_repo(tmp_path: Path) -> RepoBuilder:
