@@ -258,6 +258,58 @@ def clean_cmd(
     typer.echo(f"Přesunuto do koše: {len(result.removed)} položek, uvolněno {human(result.freed)}.")
 
 
+@app.command("sync")
+def sync_cmd(
+    path: Annotated[
+        list[Path] | None, typer.Argument(help="Složky s repy (bez nich složky z konfigurace).")
+    ] = None,
+    dry_run: Annotated[
+        bool,
+        typer.Option(
+            "--dry-run/--apply", help="Náhled (výchozí), nebo opravdu dohnat fast-forwardem."
+        ),
+    ] = True,
+    fetch: Annotated[
+        bool, typer.Option("--fetch/--no-fetch", help="Před porovnáním git fetch (výchozí ano).")
+    ] = True,
+    depth: Annotated[int, typer.Option("--depth", min=0, max=12)] = 3,
+) -> None:
+    """Stav rep vůči remotu a „rychle dohnat“ – jen `git merge --ff-only`.
+
+    Jen čistá repa na sledované větvi, která jsou pozadu (ne rozdělená). Nikdy merge commit,
+    rebase, reset ani push. Výchozí je náhled; --apply dožene.
+    """
+    from repo_doctor.discovery import discover
+    from repo_doctor.sync import STATE_LABELS, fast_forward, status
+
+    config = _load_config()
+    roots = [RootConfig(path=str(p), depth=depth) for p in path] if path else config.roots
+    if not roots:
+        _err("Nejsou nastavené žádné složky. Zadej cestu.")
+        raise typer.Exit(2)
+    ready = []
+    for repo in discover(roots, config.ignore_repos).repos:
+        st = status(repo.path, fetch=fetch)
+        line = f"{repo.display}  {STATE_LABELS[st.state]}"
+        if st.behind or st.ahead:
+            line += f" (↓{st.behind} ↑{st.ahead})"
+        if st.can_fast_forward:
+            line += f" → dožene {st.behind} commitů, změní {len(st.files)} souborů"
+            ready.append(repo.path)
+        elif st.reason and st.state not in ("clean",):
+            line += f" · {st.reason}"
+        if st.fetch_error:
+            line += f" · fetch: {st.fetch_error}"
+        typer.echo(line)
+    if dry_run:
+        typer.echo(f"\nRychle dohnat jde {len(ready)} rep. Nic se nezměnilo – použij --apply.")
+        return
+    result = fast_forward(ready)
+    for p, reason in result.skipped:
+        typer.echo(f"  ! {p}: {reason}")
+    typer.echo(f"Dohnáno fast-forwardem: {len(result.updated)} rep. Nic se nepushnulo.")
+
+
 @app.command("guard")
 def guard_cmd(
     remote: Annotated[str | None, typer.Argument(help="Název remotu (předává git).")] = None,

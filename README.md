@@ -418,6 +418,7 @@ repo-doctor scan [PATH…] --report md|json|html [--output FILE] [--offline] [--
     [--only/--skip CHECKS] [--jobs N] [--fail-on high|medium|low] [--fetch]
 repo-doctor explain CHECK_ID
 repo-doctor clean [PATH…] [--apply] [--all] [--include-dirty] [--duplicates]   # úklid do koše
+repo-doctor sync [PATH…] [--apply] [--no-fetch]   # dohnat remote jen fast-forwardem
 repo-doctor guard                   # pro hook pre-push: zastaví push s tajemstvím
 repo-doctor sbom REPO [--format cyclonedx-json] [-o FILE]   # SBOM z lockfilů, bez sítě
 repo-doctor mcp                     # MCP server jen pro čtení (stdio)

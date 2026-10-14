@@ -24,6 +24,9 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
   smazání jen s dvojím potvrzením; nabízí i celé duplicitní klony bez změn.
 - Kontrola `prepush-guard` a `repo-doctor guard`: hlídač tajemství při pushi – léčba přidá hook
   do pre-commitu (stage pre-push), nebo jen lokálně `.git/hooks/pre-push`.
+- Synchronizace: obrazovka **Synchronizace** (`0`) a `repo-doctor sync` – stav rep vůči remotu
+  (pozadu / napřed / rozdělené) a „Rychle dohnat“ jen `git merge --ff-only` u čistých rep,
+  s náhledem a potvrzením; nikdy merge commit, rebase, reset ani push.
 - Léčba umí i lokální akce bez commitu (`.git/config`, hook) a varianty oprav.
 
 ### Bezpečnost

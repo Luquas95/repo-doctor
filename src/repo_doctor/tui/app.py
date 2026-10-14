@@ -372,6 +372,7 @@ class RepoDoctorApp(App[int]):
             forges,
             remote,
             settings,
+            sync,
         )
 
         if n in (2, 3) and self.selected_repo is None:
@@ -390,6 +391,7 @@ class RepoDoctorApp(App[int]):
             7: settings.SettingsScreen,
             8: export.ExportScreen,
             9: cleanup.CleanupScreen,
+            0: sync.SyncScreen,
         }
         self.push_screen(factories[n]())
 

@@ -205,6 +205,19 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   `PRE_COMMIT_FROM_REF..PRE_COMMIT_TO_REF`. Vestavěný skener (rychlý, bez závislostí);
   allowlist platí stejně jako v kartě repa.
 
+## Synchronizace (0.2.0)
+
+- **Jediná funkce, která mění pracovní strom** – a jen `git merge --ff-only @{u}` (git sám
+  odmítne cokoli jiného než fast-forward). Repo musí být na sledované větvi, pozadu a ne
+  rozdělené, bez změn ve sledovaných souborech a bez nesledovaných souborů, které by
+  fast-forward přepsal. Stav se těsně před provedením zjistí znovu.
+- **Hooky zůstávají vypnuté** (`post-merge`, `post-checkout`…) – stejná pravidla jako všude.
+- **Repo s vlastními filtry/drivery v `.git/config` se nedohání:** hardening by filtry
+  (např. git-crypt, smudge) při checkoutu vypnul a do pracovního stromu by se zapsal
+  nefiltrovaný obsah. Takové repo je potřeba dohnat ručně (`git pull --ff-only`).
+- **Fetch je samostatný krok** (`f` v TUI, výchozí v CLI) a řídí se pravidly sítě z 0.1.4
+  a `allow_http_hosts`.
+
 ## Výkon
 
 - Repozitáře běží paralelně (`--jobs`, výchozí počet CPU) jako asyncio úlohy; git příkazy
