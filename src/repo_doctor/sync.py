@@ -59,15 +59,22 @@ def _plan_reason(git: Git, st: SyncStatus) -> str | None:
         }.get(st.state, "stav repa nejde zjistit")
     if st.dirty:
         return f"necommitnuté změny ve sledovaných souborech ({st.dirty})"
+    if not git.worktree_is_path():
+        return "pracovní strom repa je jinde než repo (core.worktree) – nic se nemění"
     if any(k.startswith(("filter.", "merge.")) for k, _ in git.hardening_pairs()):
         return "repo má vlastní filtry/drivery v .git/config – dohnat ručně (git pull --ff-only)"
     s = git.status()
     changed = set(s.paths)  # status vrací i nesledované (soubory i „dir/“)
+    # ignorované soubory (např. lokální .env) by fast-forward přepsal bez varování
+    ignored = git.run(
+        "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory", check=False
+    )
+    changed.update(p for p in ignored.split("\0") if p)
     clash = sorted(
         f for f in st.files for u in changed if f == u or (u.endswith("/") and f.startswith(u))
     )
     if clash:
-        return f"nesledované soubory by se přepsaly: {', '.join(clash[:3])}"
+        return f"nesledované nebo ignorované soubory by se přepsaly: {', '.join(clash[:3])}"
     return None
 
 

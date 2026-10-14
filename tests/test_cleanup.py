@@ -58,6 +58,27 @@ def test_trash_follows_freedesktop_spec(tmp_path: Path) -> None:
     assert move_to_trash(rb.path / "node_modules").name == "node_modules.2"
 
 
+def test_trash_symlink_or_open_permissions_refused(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import repo_doctor.cleanup as cl
+
+    rb = _repo(tmp_path)
+    planted = tmp_path / ".Trash-x"
+    elsewhere = tmp_path / "cizi"
+    elsewhere.mkdir()
+    planted.symlink_to(elsewhere)
+    monkeypatch.setattr(cl, "trash_dir_for", lambda p: planted)
+    with pytest.raises(OSError, match="obyčejná složka"):
+        move_to_trash(rb.path / "node_modules")
+    planted.unlink()
+    planted.mkdir(mode=0o777)
+    planted.chmod(0o777)
+    with pytest.raises(OSError, match="ostatním"):
+        move_to_trash(rb.path / "node_modules")
+    assert (rb.path / "node_modules").is_dir() and not any(elsewhere.iterdir())
+
+
 def test_apply_reverifies_and_skips_busy_and_outside(tmp_path: Path) -> None:
     rb = _repo(tmp_path)
     before = rb.snapshot()
@@ -156,9 +177,14 @@ def test_duplicate_clone_reverified_before_trash(tmp_path: Path) -> None:
     linked = Candidate(wt.resolve(), wt.resolve(), 1, "clone")
     assert "worktree" in apply_cleanup([linked], remover=lambda p: None).skipped[0][1]
     rb.git("worktree", "remove", str(wt))
+    rb.write(".gitignore", "node_modules/\n.env\n").commit("ignore")
+    rb.git("push", "-q")
+    rb.write(".env", "TOKEN=x")
+    assert ".env" in apply_cleanup([clone], remover=lambda p: None).skipped[0][1]
+    (rb.path / ".env").unlink()
     removed: list[Path] = []
     result = apply_cleanup([clone], remover=removed.append)
-    assert removed == [rb.path.resolve()] and result.skipped == []
+    assert result.skipped == [] and removed == [rb.path.resolve()]
 
 
 @pytest.mark.parametrize("size", [(80, 24), (160, 48)], ids=["80x24", "160x48"])

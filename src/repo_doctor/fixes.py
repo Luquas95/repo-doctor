@@ -8,6 +8,7 @@ a nakonec se vytvoří nová branch `repo-doctor/fixes-<datum>`. Nic se nepushuj
 from __future__ import annotations
 
 import difflib
+import os
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import date
@@ -139,14 +140,22 @@ def _apply_local(git: Git, action: LocalAction) -> None:
         return
     if action.key not in LOCAL_HOOKS:
         raise FixRefused(f"Hook {action.key} léčba neinstaluje.")
-    target = git.hooks_dir() / action.key
+    hooks = git.hooks_dir()
+    target = hooks / action.key
+    # cizí .git může hooks/ nebo hook podstrčit jako symlink (např. do ~/.local/bin)
+    if hooks.is_symlink() or target.is_symlink():
+        raise FixRefused(f"{target} je symlink – repo-doctor do něj nezapisuje.")
+    if hasattr(os, "getuid") and hooks.parent.stat().st_uid != os.getuid():
+        raise FixRefused(f"{hooks.parent} patří jinému uživateli – hook se neinstaluje.")
     if target.exists() and HOOK_MARKER not in target.read_text("utf-8", "replace"):
         raise FixRefused(
             f"{target} už existuje (vlastní hook) – repo-doctor ho nepřepíše. "
             "Doplň do něj ručně: repo-doctor guard"
         )
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(action.value, "utf-8")
+    hooks.mkdir(exist_ok=True)
+    fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o755)
+    with os.fdopen(fd, "w", encoding="utf-8") as fh:
+        fh.write(action.value)
     target.chmod(0o755)
 
 

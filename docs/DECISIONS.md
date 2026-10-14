@@ -205,6 +205,14 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   `PRE_COMMIT_FROM_REF..PRE_COMMIT_TO_REF`. Vestavěný skener (rychlý, bez závislostí);
   allowlist platí stejně jako v kartě repa.
 
+## Pre-push hlídač: selhání = zastavení
+
+- Když `git log` pro rozsah pushe selže (timeout, chybějící objekt), push se zastaví – hlídač,
+  který při chybě pouští, nic nehlídá. Remote sha, který lokálně není (force push, nefetchnuto),
+  se nahradí rozsahem „vše, co není na žádném remotu“.
+- Hook se zapisuje s `O_NOFOLLOW`, nikdy přes symlink a jen do `.git/hooks` vlastněného
+  uživatelem.
+
 ## Synchronizace (0.2.0)
 
 - **Jediná funkce, která mění pracovní strom** – a jen `git merge --ff-only @{u}` (git sám
@@ -217,6 +225,14 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   nefiltrovaný obsah. Takové repo je potřeba dohnat ručně (`git pull --ff-only`).
 - **Fetch je samostatný krok** (`f` v TUI, výchozí v CLI) a řídí se pravidly sítě z 0.1.4
   a `allow_http_hosts`.
+- **Pracovní strom musí být samotné repo:** cizí `core.worktree` by fast-forward přesměroval
+  jinam (třeba do `$HOME`), proto se repo, jehož `--show-toplevel` není jeho cesta, nedohání.
+  Totéž platí pro úklid.
+- **Ignorované soubory se počítají jako kolize:** git je při fast-forwardu považuje za
+  postradatelné a přepsal by třeba lokální `.env`.
+- Zbytkové riziko: globální git-lfs uživatele při checkoutu stahuje objekty podle `.lfsconfig`
+  repa (mimo `allow_http_hosts`). Je to uživatelova důvěryhodná konfigurace a obsah repa
+  si uživatel synchronizuje sám; repo-doctor tu nic nespouští navíc.
 
 ## Plánovaný sken a upozornění (0.2.0)
 

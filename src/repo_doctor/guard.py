@@ -37,10 +37,11 @@ class GuardResult:
     matches: list[SecretMatch] = field(default_factory=list)
     ranges: list[str] = field(default_factory=list)
     allowlisted: int = 0
+    errors: list[str] = field(default_factory=list)  # rozsah nešel projít → push se zastaví
 
     @property
     def blocked(self) -> bool:
-        return bool(self.matches)
+        return bool(self.matches or self.errors)
 
 
 def push_ranges(lines: Iterable[str], env: dict[str, str] | None = None) -> list[list[str]]:
@@ -81,6 +82,11 @@ def run_guard(
     result = GuardResult()
     seen: set[tuple[str, str]] = set()
     for rng in push_ranges(lines, env):
+        if len(rng) == 1 and ".." in rng[0]:
+            base, _, tip = rng[0].partition("..")
+            if base and not git.ok("cat-file", "-e", f"{base}^{{commit}}"):
+                # remote má commit, který lokálně není (force push, nefetchnuto) → vše nové
+                rng = [tip, "--not", "--remotes"]
         result.ranges.append(" ".join(rng))
         try:
             out = git.run(
@@ -88,7 +94,8 @@ def run_guard(
                 "--no-renames", "--format=%x00commit %H %ct", *rng, "--",
                 timeout=120,
             )  # fmt: skip
-        except GitError:
+        except GitError as err:
+            result.errors.append(f"{' '.join(rng)}: {err.stderr.strip()[:200] or err}")
             continue
         for m in parse_log_patch(out.splitlines()):
             if (m.fingerprint, m.path) in seen:
@@ -112,6 +119,15 @@ def run_guard(
 
 
 def render(result: GuardResult) -> str:
+    if result.errors and not result.matches:
+        return "\n".join(
+            [
+                "repo-doctor guard: push zastaven – nové commity nešlo zkontrolovat:",
+                *(f"  ! {e}" for e in result.errors[:5]),
+                "",
+                "Zkus git fetch a push znovu. Výjimečně jde kontrolu obejít: git push --no-verify",
+            ]
+        )
     lines = ["repo-doctor guard: push zastaven – v nových commitech jsou tajemství:"]
     for m in result.matches[:20]:
         commit = (m.commit or "")[:8]

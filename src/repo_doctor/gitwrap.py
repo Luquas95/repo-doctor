@@ -515,6 +515,11 @@ class Git:
         out = self.run("rev-parse", "--show-toplevel", check=False).strip()
         return Path(out) if out else None
 
+    def worktree_is_path(self) -> bool:
+        """Pracovní strom je opravdu `self.path` (cizí `core.worktree` ho může přesměrovat jinam)."""
+        top = self.toplevel()
+        return top is not None and top.resolve() == self.path.resolve()
+
     def git_dir(self) -> Path:
         out = self.run("rev-parse", "--absolute-git-dir").strip()
         return Path(out)
@@ -837,7 +842,16 @@ class Git:
         Bere všechny remoty i `branch.*.remote` zadané přímo jako URL – fetch bez argumentu
         stahuje z remotu aktuální větve, ale v případě nejistoty raději vyhodnotíme vše.
         """
-        targets = set(self.remotes())
+        targets = set(self.remotes()) | {"origin"}  # fetch bez remotu jde na origin
+        # staré definice remotů v .git/remotes/<jméno> a .git/branches/<jméno> (git je pořád čte)
+        try:
+            common = self.common_dir()
+            for legacy in ("remotes", "branches"):
+                folder = common / legacy
+                if folder.is_dir() and not folder.is_symlink():
+                    targets.update(f.name for f in folder.iterdir() if f.is_file())
+        except (GitError, OSError):
+            pass
         out = self.run("config", "--get-regexp", r"^branch\..*\.remote$", check=False)
         for line in out.splitlines():
             _, _, value = line.partition(" ")
@@ -862,7 +876,10 @@ class Git:
                 ]
             for value in raw:
                 # `ls-remote --get-url` uplatní přepisy url.*.insteadOf (i z lokální konfigurace)
+                # a pro jméno remotu přečte i .git/remotes a .git/branches
                 got = self.run("ls-remote", "--get-url", "--", value, check=False).strip()
+                if target == "origin" and target not in self.remotes() and got == "origin":
+                    continue  # žádný origin neexistuje
                 urls.add(got or value)
         return sorted(urls)
 

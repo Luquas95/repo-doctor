@@ -178,6 +178,22 @@ def test_second_remote_on_other_host_disables_http(
     assert server.requests == []
 
 
+def test_legacy_remotes_file_is_evaluated(
+    served: tuple[GitHttpServer, RepoBuilder],
+) -> None:
+    server, victim = served
+    netpolicy.configure(["127.0.0.1"])
+    victim.git("remote", "rename", "origin", "tail")
+    # fetch bez argumentu jde na „origin“ – tady definovaný jen starým souborem .git/remotes
+    legacy = victim.path / ".git" / "remotes"
+    legacy.mkdir()
+    (legacy / "origin").write_text(f"URL: http://localhost:{server.port}/up.git\n")
+    assert f"http://localhost:{server.port}/up.git" in Git(victim.path).fetch_urls()
+    with pytest.raises(GitError):
+        Git(victim.path).fetch(timeout=30)
+    assert server.requests == []
+
+
 def test_insteadof_rewrite_to_other_host_is_evaluated(
     served: tuple[GitHttpServer, RepoBuilder],
 ) -> None:

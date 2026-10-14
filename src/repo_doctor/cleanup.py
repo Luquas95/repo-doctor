@@ -17,7 +17,7 @@ import stat
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
 from repo_doctor.gitwrap import Git, GitError
@@ -204,14 +204,30 @@ def trash_dir_for(path: Path) -> Path:
     return top / f".Trash-{uid}"
 
 
+def _check_own_dir(d: Path) -> None:
+    """Koš na sdíleném svazku si mohl připravit někdo jiný (symlink, cizí vlastník)."""
+    st = d.lstat()
+    if stat.S_ISLNK(st.st_mode) or not stat.S_ISDIR(st.st_mode):
+        raise OSError(f"koš {d} není obyčejná složka – nepoužiju ho")
+    if st.st_uid != os.getuid():
+        raise OSError(f"koš {d} patří jinému uživateli – nepoužiju ho")
+    if d.name.startswith(".Trash-") and st.st_mode & 0o077:
+        raise OSError(f"koš {d} je přístupný ostatním – nepoužiju ho")
+
+
 def move_to_trash(path: Path) -> Path:
     """Přesune složku do koše (rename na stejném svazku) a zapíše `.trashinfo`."""
     if path.is_symlink():
         raise OSError(f"{path} je symlink – nemažu")
     trash = trash_dir_for(path)
     files, info = trash / "files", trash / "info"
+    if not trash.is_symlink():
+        trash.parent.mkdir(parents=True, exist_ok=True)
+        trash.mkdir(exist_ok=True, mode=0o700)
+    _check_own_dir(trash)  # dřív, než se v něm cokoli vytvoří
     for d in (files, info):
-        d.mkdir(parents=True, exist_ok=True, mode=0o700)
+        d.mkdir(exist_ok=True, mode=0o700)
+        _check_own_dir(d)
     base = path.name
     for n in range(1, 10_000):
         name = base if n == 1 else f"{base}.{n}"
@@ -296,6 +312,8 @@ def _verify(c: Candidate) -> str | None:
         git = Git(repo)
         if git.dubious_ownership():
             return "repo patří jinému uživateli"
+        if not git.worktree_is_path():
+            return "pracovní strom repa je jinde (core.worktree)"
         if not git.remotes():
             return "klon nemá remote – nepushnuté commity nejde ověřit"
         if git.run("worktree", "list", "--porcelain", check=False).count("worktree ") > 1:
@@ -310,12 +328,26 @@ def _verify(c: Candidate) -> str | None:
                 return "klon má nepushnuté commity"
         if git.run("stash", "list", check=False).strip():
             return "klon má uložené stashe"
+        skip = [f":(exclude,glob)**/{d}/**" for d in DEFAULT_DIRS]
+        ignored = git.run(
+            "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--", ".", *skip,
+            check=False,
+        ).split("\0")  # fmt: skip
+        regenerable = set(DEFAULT_DIRS)
+        own = [
+            p for p in ignored
+            if p and not regenerable & set(PurePosixPath(p).parts)
+        ]  # fmt: skip
+        if own:
+            return f"klon má ignorované soubory, které jinde nejsou: {', '.join(own[:3])}"
         return None
     if real == repo or repo not in real.parents:
         return "mimo repozitář"
     git = Git(repo)
     if git.dubious_ownership():
         return "repo patří jinému uživateli"
+    if not git.worktree_is_path():
+        return "pracovní strom repa je jinde (core.worktree)"
     rel = str(real.relative_to(repo))
     if not git.ok("check-ignore", "-q", "--", rel + "/") or git.run(
         "ls-files", "-z", "--", rel, check=False

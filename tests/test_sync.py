@@ -58,7 +58,9 @@ def test_hooks_never_run_during_fast_forward(tmp_path: Path) -> None:
     assert not marker.exists()
 
 
-@pytest.mark.parametrize("case", ["dirty", "untracked-clash", "diverged", "filters"])
+@pytest.mark.parametrize(
+    "case", ["dirty", "untracked-clash", "ignored-clash", "diverged", "filters", "worktree"]
+)
 def test_refused_cases_leave_repo_untouched(tmp_path: Path, case: str) -> None:
     local, _ = _setup(tmp_path)
     status(local.path, fetch=True)
@@ -66,16 +68,27 @@ def test_refused_cases_leave_repo_untouched(tmp_path: Path, case: str) -> None:
         local.write("a.txt", "rozdělané\n")
     elif case == "untracked-clash":
         local.write("b.txt", "můj nesledovaný\n")
+    elif case == "ignored-clash":
+        (local.path / ".git" / "info").mkdir(exist_ok=True)
+        (local.path / ".git" / "info" / "exclude").write_text("b.txt\n")
+        local.write("b.txt", "MYSECRET\n")  # ignorovaný lokální soubor (třeba .env)
     elif case == "diverged":
         local.write("c.txt", "c").commit("lokální")
-    else:
+    elif case == "filters":
         local.git("config", "filter.tajne.smudge", "cat")
+    else:  # cizí .git/config přesměruje pracovní strom (např. do $HOME)
+        victim = tmp_path / "obet-home"
+        victim.mkdir()
+        (victim / "a.txt").write_text("a\n")
+        local.git("config", "core.worktree", str(victim))
     before = local.snapshot()
     st = status(local.path)
     assert not st.can_fast_forward and st.reason
     result = fast_forward([local.path])
     assert result.updated == [] and result.skipped
     assert local.snapshot() == before
+    if case == "worktree":
+        assert sorted(p.name for p in (tmp_path / "obet-home").iterdir()) == ["a.txt"]
 
 
 def test_other_states(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -14,7 +14,7 @@ from repo_doctor import cli
 from repo_doctor.checks import get_check
 from repo_doctor.config import AllowEntry, Config
 from repo_doctor.fixes import FixRefused, apply, plan
-from repo_doctor.gitwrap import Git
+from repo_doctor.gitwrap import Git, GitError
 from repo_doctor.guard import push_ranges, render, run_guard
 from tests import factory as fx
 from tests.factory import RepoBuilder, git
@@ -128,6 +128,18 @@ def test_foreign_hook_is_never_overwritten(tmp_path: Path) -> None:
     assert hook.read_text() == "#!/bin/sh\necho moje\n"
 
 
+def test_symlinked_hook_is_refused(tmp_path: Path) -> None:
+    check = get_check("prepush-guard")
+    assert check is not None
+    rb = _with_upstream(tmp_path)
+    local = [p for p in plan(ctx(rb.path), check.run(ctx(rb.path))) if p.variant == "local"]
+    elsewhere = tmp_path / "bin" / "git"
+    (rb.path / ".git" / "hooks" / "pre-push").symlink_to(elsewhere)  # visící symlink
+    with pytest.raises(FixRefused, match="symlink"):
+        apply(Git(rb.path), local)
+    assert not elsewhere.exists()
+
+
 def test_untrusted_owner_never_gets_hook(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     check = get_check("prepush-guard")
     assert check is not None
@@ -211,3 +223,24 @@ def test_guard_cli(
     assert cli.main(["guard", "origin", "url"]) == 1
     err = capsys.readouterr().err
     assert "push zastaven" in err and secret not in err
+
+
+def test_guard_unknown_remote_sha_and_errors_fail_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rb = _with_upstream(tmp_path)
+    secret = fx.fake_aws_key(7)
+    rb.write("nove.env", f"AWS={secret}\n").commit("nové")
+    # force push / nefetchnutý remote: remote sha lokálně neexistuje
+    line = f"refs/heads/main {rb.head()} refs/heads/main {'f' * 40}"
+    result = run_guard(rb.path, [line], Config())
+    assert result.blocked and len(result.matches) == 1
+
+    def boom(self: Git, *args: str, **kw: object) -> str:
+        raise GitError(["git", *args], 128, "fatal: timeout")
+
+    monkeypatch.setattr(Git, "run", boom)
+    failed = run_guard(
+        rb.path, [f"refs/heads/main {rb.head()} refs/heads/main {'0' * 40}"], Config()
+    )
+    assert failed.blocked and failed.errors and "nešlo zkontrolovat" in render(failed)
