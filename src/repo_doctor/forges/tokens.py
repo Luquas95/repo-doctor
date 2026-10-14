@@ -12,8 +12,8 @@ import shlex
 import signal
 import subprocess
 from collections.abc import Callable
+from typing import Protocol
 
-from repo_doctor.config import ForgeConfig
 from repo_doctor.masking import Token
 
 KEYRING_SERVICE = "repo-doctor"
@@ -95,8 +95,21 @@ def delete_from_keyring(name: str) -> None:
         keyring.delete_password(KEYRING_SERVICE, name)
 
 
+class TokenConfig(Protocol):
+    """Cokoli s nastavením tokenu (hosting, ntfy)."""
+
+    @property
+    def name(self) -> str: ...
+    @property
+    def token_source(self) -> str | None: ...
+    @property
+    def token_env(self) -> str | None: ...
+    @property
+    def token_cmd(self) -> str | None: ...
+
+
 def resolve_token(
-    forge: ForgeConfig,
+    forge: TokenConfig,
     *,
     cmd_runner: Callable[[str, float], str] = _run_cmd,
     keyring_get: Callable[[str], str | None] = _keyring_get,

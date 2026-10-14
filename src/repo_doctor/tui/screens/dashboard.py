@@ -157,6 +157,7 @@ class DashboardScreen(NavMixin, Screen[Any]):
                 total=app.scan_total,
                 current=app.scan_current,
                 keys=(app.key("scan_all"), app.key("cancel_scan")),
+                scheduled=app.scheduled,
             )
         )
         if light:

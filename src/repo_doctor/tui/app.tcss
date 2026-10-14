@@ -106,3 +106,4 @@ HelpScreen VerticalScroll { width: 90; max-width: 95%; height: 90%; border: roun
 .dialog Input { width: 100%; }
 Checkbox { border: none; padding: 0; background: $background 0%; margin-top: 1; }
 Checkbox:focus { border: none; background: $rd-selection; }
+.form Input.short { width: 8; }

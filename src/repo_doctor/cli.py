@@ -35,6 +35,8 @@ forges_app = typer.Typer(help="Připojené git hostingy.", no_args_is_help=True)
 config_app = typer.Typer(help="Konfigurace.", no_args_is_help=True)
 app.add_typer(forges_app, name="forges")
 app.add_typer(config_app, name="config")
+schedule_app = typer.Typer(help="Plánovaný sken (uživatelský systemd timer).", no_args_is_help=True)
+app.add_typer(schedule_app, name="schedule")
 
 
 def _err(message: str) -> None:
@@ -115,6 +117,13 @@ def scan(
         bool,
         typer.Option("--fetch", help="Před skenem `git fetch` (mění jen remote-tracking refy)."),
     ] = False,
+    scheduled: Annotated[
+        bool,
+        typer.Option(
+            "--scheduled",
+            help="Plánovaný běh: uloží výsledek, porovná s minulým a upozorní jen na změny.",
+        ),
+    ] = False,
 ) -> None:
     """Naskenuje repozitáře a vypíše report. Exit: 0 bez nálezů nad prahem, 1 nálezy, 2 chyba."""
     from repo_doctor.scanner import ScanEvent, Scanner, ScanOptions
@@ -135,7 +144,11 @@ def scan(
         )
         raise typer.Exit(2)
     options = ScanOptions(
-        offline=offline, use_forges=not no_forges, only=_split(only), skip=_split(skip), fetch=fetch
+        offline=offline,
+        use_forges=not no_forges,
+        only=_split(only),
+        skip=_split(skip),
+        fetch=fetch or (scheduled and config.schedule.fetch),
     )
     if jobs:
         options.jobs = jobs
@@ -154,6 +167,9 @@ def scan(
         raise typer.Exit(2) from None
     if interactive:
         typer.echo("", err=True)
+    if scheduled:
+        _scheduled_finish(result, config)
+        return
     for r in result.repos:
         if "fetch" in r.errors:
             _err(f"fetch {r.name}: {r.errors['fetch']}")
@@ -169,6 +185,28 @@ def scan(
     else:
         typer.echo(text, nl=False)
     raise typer.Exit(exit_code(result, threshold))
+
+
+def _scheduled_finish(result: ScanResult, config: Config) -> None:
+    """Uloží výsledek do historie, porovná s minulým a upozorní jen na změny."""
+    from repo_doctor import history, notify
+
+    previous = history.load_last_scan()
+    if result.cancelled:
+        return
+    history.save_last_scan(result)
+    history.record(
+        result, keep=config.limits.history_size, no_pulse_days=config.limits.no_pulse_days
+    )
+    changes = notify.diff(previous, result)
+    deliveries = notify.deliver(config.notify, changes.text()) if changes else []
+    notify.save_state(result, changes, deliveries)
+    if changes:
+        typer.echo(f"Změny: {changes.text()}")
+        for d in deliveries:
+            typer.echo(f"  {'✓' if d.ok else '✗'} {d.channel} {d.detail}".rstrip())
+    else:
+        typer.echo("Beze změn – žádné upozornění.")
 
 
 @app.command()
@@ -447,6 +485,67 @@ def forges_test(
 
     failures = asyncio.run(run_all())
     raise typer.Exit(1 if failures else 0)
+
+
+@schedule_app.command("install")
+def schedule_install(
+    interval: Annotated[str, typer.Option("--interval", help="daily | weekly")] = "weekly",
+    time: Annotated[str, typer.Option("--time", help="Čas spuštění HH:MM.")] = "08:00",
+) -> None:
+    """Vytvoří ~/.config/systemd/user/repo-doctor.{service,timer} a zapne timer (nic jako root)."""
+    from repo_doctor.schedule import ScheduleError, install
+
+    _load_config()
+    if interval not in ("daily", "weekly"):
+        _err("--interval musí být daily nebo weekly.")
+        raise typer.Exit(2)
+    try:
+        files = install(interval, time)  # type: ignore[arg-type]
+    except ScheduleError as err:
+        _err(str(err))
+        raise typer.Exit(2) from None
+    typer.echo("Plánovaný sken zapnutý:\n" + "\n".join(f"  {f}" for f in files))
+
+
+@schedule_app.command("status")
+def schedule_status() -> None:
+    """Stav plánovaného skenu a poslední běh."""
+    from repo_doctor import notify
+    from repo_doctor.schedule import status
+
+    st = status()
+    if not st.installed:
+        typer.echo("Plánovaný sken není nainstalovaný (repo-doctor schedule install).")
+    else:
+        typer.echo(
+            f"Plánovaný sken: {'aktivní' if st.active else 'neaktivní'} · {st.schedule or '?'}"
+            + (f" · další běh {st.next_run}" if st.next_run else "")
+        )
+    last = notify.load_state()
+    if last:
+        typer.echo(f"Poslední běh: {last.ts} · {last.repos} rep · {last.changes or 'beze změn'}")
+
+
+@schedule_app.command("remove")
+def schedule_remove() -> None:
+    """Vypne timer a smaže jeho soubory."""
+    from repo_doctor.schedule import remove
+
+    typer.echo("Plánovaný sken odebrán." if remove() else "Plánovaný sken nebyl nainstalovaný.")
+
+
+@schedule_app.command("test")
+def schedule_test() -> None:
+    """Pošle zkušební upozornění všemi nastavenými kanály ([notify])."""
+    from repo_doctor import notify
+
+    config = _load_config()
+    results = notify.deliver(config.notify, "Zkušební upozornění – plánovaný sken funguje.")
+    if not results:
+        typer.echo("Není nastavený žádný kanál ([notify] desktop, ntfy_url, email).")
+    for d in results:
+        typer.echo(f"{'✓' if d.ok else '✗'} {d.channel} {d.detail}".rstrip())
+    raise typer.Exit(0 if results and all(d.ok for d in results) else 1)
 
 
 @config_app.command("path")

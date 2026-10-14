@@ -218,6 +218,20 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - **Fetch je samostatný krok** (`f` v TUI, výchozí v CLI) a řídí se pravidly sítě z 0.1.4
   a `allow_http_hosts`.
 
+## Plánovaný sken a upozornění (0.2.0)
+
+- **Uživatelský systemd timer**, ne cron ani root: `systemctl --user` je na Arch/Fedora
+  standard, `Persistent=true` dožene zmeškaný běh po uspání, `Nice`/`IOSchedulingClass=idle`
+  šetří stroj. Bez systemd se jen vypíše řádek pro cron – nic se nezapisuje do crontabu.
+- **Upozorňuje se jen na změny** proti minulému skenu (otisky nálezů), jinak by se upozornění
+  rychle ignorovala. První běh jen uloží výchozí stav.
+- **Text upozornění nese jen názvy rep a počty** – ntfy i e-mail jsou cizí služby, cesty
+  k souborům a maskovaná tajemství tam nemají co dělat.
+- ntfy `http://` jen pro `allow_http_hosts` (ověří se při načtení konfigurace i při odeslání),
+  přesměrování se nenásledují; token přes stejné zdroje jako u hostingů. E-mail jen přes
+  lokální `sendmail` – žádné SMTP heslo v konfiguraci.
+- Plánovaný sken ve výchozím stavu nefetchuje (`[schedule] fetch`).
+
 ## Výkon
 
 - Repozitáře běží paralelně (`--jobs`, výchozí počet CPU) jako asyncio úlohy; git příkazy

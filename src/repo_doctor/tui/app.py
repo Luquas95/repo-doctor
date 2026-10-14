@@ -60,8 +60,13 @@ class RepoDoctorApp(App[int]):
         scanner_factory: ScannerFactory | None = None,
         history_delta: dict[str, int] | None = None,
         forge_transport: Any = None,
+        schedule_backend: Any = None,
     ) -> None:
         super().__init__()
+        from repo_doctor import schedule
+
+        # install/remove/status plánovaného skenu (testy podstrčí náhradu bez systemd)
+        self.schedule_backend: Any = schedule_backend or schedule
         install_log_redaction()
         self.store = store or ConfigStore()
         self.config_error: str | None = None
@@ -83,6 +88,10 @@ class RepoDoctorApp(App[int]):
             cached = history.load_last_scan()
             if cached is not None:
                 self.result = cached
+        from repo_doctor import notify
+
+        # poslední plánovaný běh (pro přehled); v testech se nečte
+        self.scheduled: notify.RunState | None = notify.load_state() if load_cache else None
         self.history_delta = (
             history_delta if history_delta is not None else history.previous_delta()
         )

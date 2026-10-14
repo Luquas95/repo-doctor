@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import re
 import tempfile
 from pathlib import Path
 from typing import Any, Literal
@@ -171,6 +172,53 @@ class CleanupConfig(_Model):
         return value
 
 
+class NotifyConfig(_Model):
+    """Kanály upozornění plánovaného skenu. Token ntfy jako u hostingů (env, příkaz, klíčenka)."""
+
+    desktop: bool = True  # notify-send, jen když běží grafická relace
+    ntfy_url: str | None = None  # https://ntfy.sh/moje-tema (http jen pro allow_http_hosts)
+    token_source: TokenSource | None = None
+    token_env: str | None = None
+    token_cmd: str | None = None
+    email: str | None = None  # jen přes lokální sendmail
+
+    @property
+    def name(self) -> str:
+        return "notify-ntfy"  # klíč v klíčence
+
+    @field_validator("ntfy_url")
+    @classmethod
+    def _ntfy(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        value = value.strip()
+        if (
+            not value.startswith(("https://", "http://"))
+            or "@" in value.split("//", 1)[1].split("/", 1)[0]
+        ):
+            raise ValueError("ntfy_url musí být https:// URL tématu bez přihlašovacích údajů")
+        return value
+
+    @field_validator("email")
+    @classmethod
+    def _email(cls, value: str | None) -> str | None:
+        if value is None or not value.strip():
+            return None
+        if not re.fullmatch(r"[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+", value.strip()):
+            raise ValueError("email musí být jedna adresa")
+        return value.strip()
+
+    @model_validator(mode="after")
+    def _source(self) -> NotifyConfig:
+        if self.token_source is None:
+            self.token_source = "env" if self.token_env else "cmd" if self.token_cmd else "none"
+        return self
+
+
+class ScheduleConfig(_Model):
+    fetch: bool = False  # plánovaný sken s `git fetch` (jinak jen lokální stav)
+
+
 class MCPConfig(_Model):
     # false (výchozí) = MCP server skenuje jen offline; true = i síťové kontroly (OSV, hostingy)
     network: bool = False
@@ -198,6 +246,8 @@ class Config(_Model):
     mcp: MCPConfig = Field(default_factory=MCPConfig)
     ci: CIConfig = Field(default_factory=CIConfig)
     cleanup: CleanupConfig = Field(default_factory=CleanupConfig)
+    notify: NotifyConfig = Field(default_factory=NotifyConfig)
+    schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)
 
     @field_validator("allow_http_hosts")
     @classmethod
@@ -208,6 +258,14 @@ class Config(_Model):
 
     @model_validator(mode="after")
     def _unique_forges(self) -> Config:
+        url = self.notify.ntfy_url
+        if url and url.startswith("http://"):
+            from repo_doctor.netpolicy import HttpHostPolicy
+
+            if not HttpHostPolicy(self.allow_http_hosts).allows_http_url(url):
+                raise ValueError(
+                    "notify.ntfy_url přes http:// je povolená jen pro host z allow_http_hosts"
+                )
         names = [f.name for f in self.forges]
         dupes = {n for n in names if names.count(n) > 1}
         if dupes:

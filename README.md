@@ -345,6 +345,14 @@ inactive_days = 60        # disk-usage a předvýběr v Úklidu jen u rep bez co
 min_mb = 200
 # dirs = ["node_modules", ".venv", "target", …]   # regenerovatelné složky
 
+[notify]                  # upozornění plánovaného skenu (jen na změny)
+desktop = true            # notify-send, když běží grafická relace
+# ntfy_url = "https://ntfy.sh/moje-tema"   # token: token_source = "env"|"cmd"|"keyring"
+# email = "ja@example.com"                 # přes lokální sendmail
+
+[schedule]
+fetch = false             # true = plánovaný sken nejdřív stáhne novinky (git fetch)
+
 [mcp]
 network = false           # true = MCP sken smí i síťové kontroly (OSV, hostingy)
 
@@ -389,6 +397,23 @@ editor = "nvim"
   všechny `http` URL (po přepisech `insteadOf`) jsou na seznamu, a přesměrování se přitom
   nenásledují. Token hostingu po `http` odejde jen na povolené hosty.
 
+## Plánovaný sken a upozornění
+
+`repo-doctor schedule install --interval weekly --time 08:00` (nebo sekce *Plánovaný sken*
+v Nastavení, `7`) vytvoří **uživatelský** systemd timer `~/.config/systemd/user/repo-doctor.timer`,
+který spouští `repo-doctor scan --scheduled`. Nic neinstaluje jako root; bez systemd vypíše
+řádek pro `crontab -e`.
+
+Plánovaný sken upozorní **jen na změny** proti minulému skenu: nové HIGH nálezy, nově veřejné
+repo s citlivým obsahem a nové zranitelné závislosti. Kanály: plocha (`notify-send`), ntfy
+a e-mail přes lokální `sendmail` (`[notify]`). Text obsahuje jen názvy rep a počty – nikdy
+tajemství ani cesty k souborům. Poslední běh je vidět v horním panelu TUI.
+
+```sh
+repo-doctor schedule install [--interval daily|weekly] [--time HH:MM]
+repo-doctor schedule status | remove | test   # test pošle zkušební upozornění
+```
+
 ## MCP server pro AI asistenty
 
 `repo-doctor mcp` spustí [MCP](https://modelcontextprotocol.io) server přes stdio, takže se
@@ -422,6 +447,7 @@ repo-doctor sync [PATH…] [--apply] [--no-fetch]   # dohnat remote jen fast-for
 repo-doctor guard                   # pro hook pre-push: zastaví push s tajemstvím
 repo-doctor sbom REPO [--format cyclonedx-json] [-o FILE]   # SBOM z lockfilů, bez sítě
 repo-doctor mcp                     # MCP server jen pro čtení (stdio)
+repo-doctor schedule install|status|remove|test   # plánovaný sken (systemd --user)
 repo-doctor checks
 repo-doctor forges test [NAME]      # token nikdy nevypíše
 repo-doctor config path|validate

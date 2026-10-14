@@ -6,10 +6,10 @@ from typing import TYPE_CHECKING, Any
 
 from rich.style import Style
 from rich.text import Text
-from textual import on
+from textual import on, work
 from textual.app import ComposeResult
-from textual.containers import VerticalScroll
-from textual.widgets import DataTable, Input, Label, Select, SelectionList, Static
+from textual.containers import Horizontal, VerticalScroll
+from textual.widgets import Button, DataTable, Input, Label, Select, SelectionList, Static
 from textual.widgets.selection_list import Selection
 
 from repo_doctor.checks import all_checks
@@ -58,6 +58,20 @@ class SettingsScreen(BaseScreen):
                     style=Style(color=self.rd.palette.muted),
                 )
             )
+            yield Label("Plánovaný sken")
+            yield Static("zjišťuji stav…", id="schedule-status", classes="hint")
+            with Horizontal(classes="row"):
+                yield Select(
+                    compact=True,
+                    options=[("týdně (pondělí)", "weekly"), ("denně", "daily")],
+                    value="weekly",
+                    allow_blank=False,
+                    id="schedule-interval",
+                )
+                yield Input(compact=True, value="08:00", id="schedule-time", classes="short")
+                yield Button("Zapnout", id="schedule-install", compact=True)
+                yield Button("Vypnout", id="schedule-remove", compact=True)
+                yield Button("Test upozornění", id="schedule-test", compact=True)
             yield Label("Vzhled")
             yield Select(
                 compact=True,
@@ -147,10 +161,83 @@ class SettingsScreen(BaseScreen):
             ]
         )
 
+    @work(thread=True, exclusive=True, group="schedule-status")
+    def refresh_schedule(self) -> None:
+        from repo_doctor import notify
+
+        backend = self.rd.schedule_backend
+        try:
+            st = backend.status()
+        except Exception as err:
+            text = f"stav nejde zjistit: {type(err).__name__}"
+        else:
+            if st.installed:
+                text = f"{'zapnutý' if st.active else 'nainstalovaný, ale neaktivní'} · {st.schedule or '?'}"
+                if st.next_run:
+                    text += f" · další běh {st.next_run}"
+            elif not st.systemd:
+                text = "vypnutý · uživatelský systemd tu není (repo-doctor schedule install vypíše řádek pro cron)"
+            else:
+                text = "vypnutý"
+        last = self.rd.scheduled or notify.load_state()
+        if last is not None:
+            text += (
+                f"\nposlední běh {last.ts[:16].replace('T', ' ')} · {last.changes or 'beze změn'}"
+            )
+        self.app.call_from_thread(self.query_one("#schedule-status", Static).update, text)
+
+    @on(Button.Pressed, "#schedule-install")
+    def _schedule_install(self) -> None:
+        interval = str(self.query_one("#schedule-interval", Select).value)
+        time = self.query_one("#schedule-time", Input).value.strip()
+        self.do_schedule("install", interval, time)
+
+    @on(Button.Pressed, "#schedule-remove")
+    def _schedule_remove(self) -> None:
+        self.do_schedule("remove", "", "")
+
+    @on(Button.Pressed, "#schedule-test")
+    def _schedule_test(self) -> None:
+        self.do_schedule("test", "", "")
+
+    @work(thread=True, exclusive=True, group="schedule-action")
+    def do_schedule(self, action: str, interval: str, time: str) -> None:
+        from repo_doctor import notify
+
+        backend = self.rd.schedule_backend
+        severity = "information"
+        try:
+            if action == "install":
+                backend.install(interval, time)
+                message = "Plánovaný sken zapnutý (uživatelský systemd timer)."
+            elif action == "remove":
+                message = (
+                    "Plánovaný sken vypnutý."
+                    if backend.remove()
+                    else "Plánovaný sken nebyl zapnutý."
+                )
+            else:
+                results = notify.deliver(self.rd.config.notify, "Zkušební upozornění – funguje.")
+                if not results:
+                    message, severity = (
+                        "Není nastavený žádný kanál ([notify] v config.toml).",
+                        "warning",
+                    )
+                else:
+                    message = " · ".join(
+                        f"{'✓' if d.ok else '✗'} {d.channel} {d.detail}".strip() for d in results
+                    )
+                    severity = "information" if all(d.ok for d in results) else "warning"
+        except backend.ScheduleError as err:
+            message, severity = str(err), "error"
+        self.app.call_from_thread(self.notify, message, severity=severity, timeout=12)
+        self.refresh_schedule()
+
     def on_mount(self) -> None:
         table = self.query_one("#allowlist", DataTable)
         table.add_columns("hash", "kontrola", "repo", "důvod")
         self._fill_allowlist()
+        self.refresh_schedule()
         self.query_one("#theme", Select).focus()
 
     def _fill_allowlist(self) -> None:

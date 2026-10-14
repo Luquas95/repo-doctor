@@ -27,6 +27,10 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 - Synchronizace: obrazovka **Synchronizace** (`0`) a `repo-doctor sync` – stav rep vůči remotu
   (pozadu / napřed / rozdělené) a „Rychle dohnat“ jen `git merge --ff-only` u čistých rep,
   s náhledem a potvrzením; nikdy merge commit, rebase, reset ani push.
+- Plánovaný sken: `repo-doctor schedule install|status|remove|test` a sekce v Nastavení –
+  uživatelský systemd timer spouští `scan --scheduled`, který upozorní jen na změny (nové HIGH,
+  nově veřejné repo s citlivým obsahem, nové zranitelné závislosti) přes `notify-send`, ntfy
+  nebo `sendmail`; text bez tajemství a cest. Poslední běh ukazuje horní panel TUI.
 - Léčba umí i lokální akce bez commitu (`.git/config`, hook) a varianty oprav.
 
 ### Bezpečnost
