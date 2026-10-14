@@ -10,11 +10,14 @@ from __future__ import annotations
 
 from collections import defaultdict
 from datetime import UTC, datetime
+from pathlib import Path
 
 from repo_doctor.checks.base import Check, RepoContext, register
 from repo_doctor.models import Category, Finding, RepoResult, ScanResult, Severity
 
 DUPLICATE_ID = "duplicate-clone"
+# SSH přes port 443 má u hostingů vlastní hostname, repo je ale stejné
+HOST_ALIASES = {"ssh.github.com": "github.com", "altssh.gitlab.com": "gitlab.com"}
 
 
 def remote_key(repo: RepoResult) -> str | None:
@@ -27,7 +30,8 @@ def remote_key(repo: RepoResult) -> str | None:
     for remote in remotes:
         if remote.host and remote.owner_path:
             path = remote.owner_path.strip("/").removesuffix(".git")
-            return f"{remote.host.lower().rstrip('.')}/{path.lower()}"
+            host = remote.host.lower().rstrip(".")
+            return f"{HOST_ALIASES.get(host, host)}/{path.lower()}"
     return None
 
 
@@ -54,13 +58,24 @@ def describe(repo: RepoResult) -> str:
 
 
 def is_safe_to_remove(repo: RepoResult) -> bool:
-    return repo.state.uncommitted == 0 and repo.state.unpushed == 0 and not repo.untrusted_owner
+    # Bez remotu nejde nepushnuté commity spočítat → kopie bez remotu se ke smazání nenabízí.
+    return (
+        bool(repo.remotes)
+        and repo.state.uncommitted == 0
+        and repo.state.unpushed == 0
+        and not repo.untrusted_owner
+    )
+
+
+def is_linked_worktree(repo: RepoResult) -> bool:
+    """Pracovní strom z `git worktree add` (`.git` je soubor) – není to samostatný klon."""
+    return (Path(repo.path).expanduser() / ".git").is_file()
 
 
 def duplicate_groups(result: ScanResult) -> list[list[RepoResult]]:
     groups: dict[str, list[RepoResult]] = defaultdict(list)
     for repo in result.repos:
-        if repo.untrusted_owner:
+        if repo.untrusted_owner or is_linked_worktree(repo):
             continue
         key = group_key(repo)
         if key:
@@ -83,6 +98,8 @@ def add_duplicate_findings(result: ScanResult) -> set[str]:
                 advice = "hlavní klon (nejnovější aktivita)"
             elif is_safe_to_remove(repo):
                 advice = f"po kontrole ho lze smazat (hlavní je {main.path})"
+            elif not repo.remotes:
+                advice = f"bez remote – porovnej historii s {main.path}, než ho smažeš ručně"
             else:
                 advice = f"má necommitnuté nebo nepushnuté změny – nejdřív je přenes do {main.path}"
             repo.findings.append(

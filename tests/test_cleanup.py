@@ -136,7 +136,7 @@ def test_duplicate_clone_reverified_before_trash(tmp_path: Path) -> None:
     rb = _repo(tmp_path)
     clone = Candidate(rb.path.resolve(), rb.path.resolve(), 1, "clone")
     result = apply_cleanup([clone], remover=lambda p: None)
-    assert "nepushnuté" in result.skipped[0][1]  # bez remote je vše „nepushnuté“
+    assert "nemá remote" in result.skipped[0][1]  # bez remote nejde nepushnuté ověřit
     upstream = tmp_path / "upstream.git"
     git(tmp_path, "init", "-q", "--bare", str(upstream))
     rb.remote("origin", str(upstream))
@@ -149,6 +149,13 @@ def test_duplicate_clone_reverified_before_trash(tmp_path: Path) -> None:
     result = apply_cleanup([clone], remover=lambda p: None)
     assert "stashe" in result.skipped[0][1]
     rb.git("stash", "drop", "-q")
+    wt = tmp_path / "wt"
+    rb.git("worktree", "add", "-q", str(wt), "-b", "feature")
+    result = apply_cleanup([clone], remover=lambda p: None)
+    assert "pracovní stromy" in result.skipped[0][1]
+    linked = Candidate(wt.resolve(), wt.resolve(), 1, "clone")
+    assert "worktree" in apply_cleanup([linked], remover=lambda p: None).skipped[0][1]
+    rb.git("worktree", "remove", str(wt))
     removed: list[Path] = []
     result = apply_cleanup([clone], remover=removed.append)
     assert removed == [rb.path.resolve()] and result.skipped == []

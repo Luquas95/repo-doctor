@@ -160,7 +160,7 @@ def test_pin_actions_keeps_format() -> None:
     )
     new = pin_actions(text, {"actions/checkout@v4": SHA, "tj-actions/changed-files@v45": "a" * 40})
     assert f"      - uses: actions/checkout@{SHA} # v4\n" in new
-    assert f"      - uses: 'tj-actions/changed-files@{'a' * 40}' # v45\n" in new
+    assert f"      - uses: 'tj-actions/changed-files@{'a' * 40}' # v45 – komentář\n" in new
     assert "      - uses: actions/checkout@v4.1.0\n" in new  # jiný tag se nemění
 
 
@@ -202,3 +202,56 @@ async def test_scan_resolves_sha_and_fix_pins_in_fix_branch(tmp_path: Path) -> N
     assert (
         rb.path / ".github/workflows/risky.yml"
     ).read_text() == RISKY  # pracovní strom beze změny
+
+
+PIPED = f"""\
+on: push
+permissions:
+  contents: read
+jobs:
+  b:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@{SHA} # v4
+      - run: echo "${{{{ secrets.DOCKER_PASSWORD }}}}" | docker login -u x --password-stdin
+      - run: echo "${{{{ secrets.GITHUB_TOKEN }}}}" | gh auth login --with-token
+      - run: echo "${{{{ secrets.KEY }}}}" > key.pem
+"""
+
+PR_VARIANTS = f"""\
+on: [pull_request_target, workflow_run]
+permissions:
+  contents: read
+jobs:
+  a:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@{SHA} # v4
+        with:
+          ref: refs/pull/${{{{ github.event.pull_request.number }}}}/merge
+  b:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh pr checkout 1
+  c:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@{SHA} # v7
+        with:
+          script: console.log("${{{{ github.event['issue']['title'] }}}}")
+      - run: echo "${{{{ format('{{0}}', github.event.issue.body) }}}}"
+"""
+
+
+def test_piped_secret_is_not_logged(tmp_path: Path) -> None:
+    rb = _repo(tmp_path, {".github/workflows/ci.yml": PIPED})
+    assert _run(rb.path, visibility="public") == []
+
+
+def test_pr_checkout_variants_and_script_injection(tmp_path: Path) -> None:
+    rb = _repo(tmp_path, {".github/workflows/ci.yml": PR_VARIANTS})
+    findings = _run(rb.path, visibility="public")
+    prt = [f for f in findings if f.kind == "pull_request_target"]
+    assert {f.key.rsplit(":", 1)[-1] for f in prt} == {"a", "b"}
+    inj = [f for f in findings if f.kind == "injection"]
+    assert len(inj) == 2 and any("github-script" in f.message for f in inj)

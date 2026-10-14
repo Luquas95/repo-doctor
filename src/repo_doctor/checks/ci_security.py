@@ -35,11 +35,28 @@ UNTRUSTED_EXPR = re.compile(
     r"workflow_run\.(?:head_branch|head_commit\.message|display_title)"
     r"))[^}]*\}\}"
 )
-PR_HEAD_REF = re.compile(r"github\.(?:event\.pull_request\.head\.(?:sha|ref)|head_ref)")
+# Ref, který vede na kód z cizího PR (checkout `with.ref`).
+PR_HEAD_REF = re.compile(
+    r"github\.(?:event\.pull_request\.(?:head\.(?:sha|ref)|number|merge_commit_sha)|head_ref|"
+    r"event\.workflow_run\.head_(?:sha|branch))|refs/pull/"
+)
+# Checkout kódu z PR přímo v shellu.
+PR_CHECKOUT_RUN = re.compile(r"\bgh\s+pr\s+checkout\b|\bgit\s+fetch\b[^\n]*\bpull/")
 SECRET_EXPR = re.compile(r"\$\{\{\s*secrets\.(?!GITHUB_TOKEN\b)[A-Za-z0-9_]+")
-ECHO_SECRET = re.compile(r"(?:echo|printf|cat)\b[^\n]*\$\{\{\s*secrets\.", re.IGNORECASE)
+ECHO_SECRET = re.compile(
+    r"\b(?:echo|printf)\b[^\n|>]*\$\{\{\s*secrets\.(?!GITHUB_TOKEN\b)[^\n|>]*$",
+    re.IGNORECASE | re.MULTILINE,
+)  # výpis do logu; `echo … | docker login --password-stdin` ani `> soubor` se nepočítá
 XTRACE = re.compile(r"(?m)^\s*set\s+-[a-zA-Z]*x|set\s+-o\s+xtrace|\bbash\s+-[a-zA-Z]*x")
-FOREIGN_PR_EVENTS = frozenset({"pull_request_target", "workflow_run", "issue_comment"})
+FOREIGN_PR_EVENTS = frozenset(
+    {"pull_request_target", "workflow_run", "issue_comment", "issues", "discussion"}
+)
+
+
+def normalize_expr(text: str) -> str:
+    """`github.event['issue']['title']` → `github.event.issue.title`, `format('{0}', …)` bez `{0}`."""
+    text = re.sub(r"\[\s*['\"]([A-Za-z0-9_-]+)['\"]\s*\]", r".\1", text)
+    return re.sub(r"\{\d+\}", "", text)
 
 
 @dataclass(frozen=True)
@@ -214,17 +231,23 @@ class CISecurity(Check):
                     sha=sha,
                 )
             )
-        # 2) pull_request_target + checkout kódu z PR
-        if "pull_request_target" in wf.events:
+        # 2) pull_request_target / workflow_run + checkout kódu z PR
+        privileged = wf.events & {"pull_request_target", "workflow_run"}
+        if privileged:
+            event = sorted(privileged)[0]
             for job, step in wf.steps():
                 with_ = step.get("with") if isinstance(step.get("with"), dict) else {}
                 ref_value = str((with_ or {}).get("ref", ""))
                 uses = str(step.get("uses", ""))
-                if "checkout" in uses and PR_HEAD_REF.search(ref_value):
+                run_text = str(step.get("run", ""))
+                pr_code = (
+                    "checkout" in uses and PR_HEAD_REF.search(normalize_expr(ref_value))
+                ) or PR_CHECKOUT_RUN.search(run_text)
+                if pr_code:
+                    what = ref_value.strip() or PR_CHECKOUT_RUN.search(run_text).group(0)  # type: ignore[union-attr]
                     out.append(
                         self.finding(
-                            f"pull_request_target spouští kód z PR (checkout {ref_value.strip()}) "
-                            f"s právy repa · job {job}",
+                            f"{event} spouští kód z PR (checkout {what}) s právy repa · job {job}",
                             title="pull_request_target s kódem z PR",
                             severity=Severity.HIGH,
                             path=wf.path,
@@ -235,18 +258,26 @@ class CISecurity(Check):
                             fixable=False,
                         )
                     )
-        # 3) injekce výrazů do run:, 5) tajemství v logu
+        # 3) injekce výrazů do run: / skriptu github-script, 5) tajemství v logu
         for job, step in wf.steps():
             run = step.get("run")
-            if not isinstance(run, str):
+            with_ = step.get("with") if isinstance(step.get("with"), dict) else {}
+            script = (
+                (with_ or {}).get("script") if "github-script" in str(step.get("uses")) else None
+            )
+            if isinstance(script, str) and not isinstance(run, str):
+                where, run = "script: (github-script) vkládá", script
+            elif isinstance(run, str):
+                where = "run: vkládá"
+            else:
                 continue
             first = run.strip().splitlines()[0] if run.strip() else ""
             line = wf.line_of(first) if first else 0
-            m = UNTRUSTED_EXPR.search(run)
+            m = UNTRUSTED_EXPR.search(normalize_expr(run))
             if m:
                 out.append(
                     self.finding(
-                        f"run: vkládá nedůvěryhodný vstup {m.group(0)} přímo do shellu · job {job}",
+                        f"{where} nedůvěryhodný vstup {m.group(0)} přímo do kódu · job {job}",
                         title="Injekce výrazu do run:",
                         severity=Severity.HIGH,
                         path=wf.path,
@@ -260,7 +291,9 @@ class CISecurity(Check):
             step_secrets = bool(SECRET_EXPR.search(run)) or any(
                 SECRET_EXPR.search(str(v)) for v in (env or {}).values()
             )
-            if ECHO_SECRET.search(run) or (step_secrets and XTRACE.search(run)):
+            if where.startswith("run") and (
+                ECHO_SECRET.search(run) or (step_secrets and XTRACE.search(run))
+            ):
                 out.append(
                     self.finding(
                         f"krok vypisuje tajemství do logu (echo nebo set -x) · job {job}",
@@ -374,5 +407,9 @@ def pin_actions(text: str, pins: dict[str, str]) -> str:
             continue
         target, _, ref = m.group(3).rpartition("@")
         nl = m.group(7) or ""
-        lines[i] = f"{m.group(1)}{m.group(2)}{target}@{pins[m.group(3)]}{m.group(4)} # {ref}{nl}"
+        note = (m.group(6) or "").lstrip("#").strip()
+        comment = f"{ref} – {note}" if note and note != ref else ref
+        lines[i] = (
+            f"{m.group(1)}{m.group(2)}{target}@{pins[m.group(3)]}{m.group(4)} # {comment}{nl}"
+        )
     return "".join(lines)

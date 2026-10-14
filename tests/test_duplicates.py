@@ -31,6 +31,7 @@ def _clone_pair(tmp_path: Path) -> tuple[Path, list[RepoBuilder]]:
     d.write("r", "r").commit("root")
     e = RepoBuilder.create(root / "lokalni-2")
     git(e.path, "pull", "-q", str(d.path), "main")
+    git(a.path, "worktree", "add", "-q", str(root / "proj-feature"), "-b", "feature")
     return root, [a, b, c, d, e]
 
 
@@ -46,6 +47,9 @@ async def test_scanner_reports_duplicates(tmp_path: Path) -> None:
     assert len(dup["prace/proj"]) == 1 and len(dup["stare/proj"]) == 1
     assert dup["jine"] == []
     assert len(dup["lokalni-1"]) == 1 and len(dup["lokalni-2"]) == 1
+    # kopie bez remote se ke smazání nenabízí (nepushnuté commity nejde spočítat)
+    assert {dup[k][0].data["removable"] for k in ("lokalni-1", "lokalni-2")} == {"no"}
+    assert dup["proj-feature"] == []  # git worktree není duplicitní klon
     stare = dup["stare/proj"][0]
     assert "github.com/ja/proj" in stare.message
     assert stare.data["removable"] == "no"  # má necommitnuté změny
@@ -86,6 +90,7 @@ def test_remote_key_normalization() -> None:
 
     assert remote_key(repo("GitHub.com.", "Ja/Proj.git")) == "github.com/ja/proj"
     assert remote_key(repo("github.com", "ja/proj")) == "github.com/ja/proj"
+    assert remote_key(repo("ssh.github.com", "ja/proj")) == "github.com/ja/proj"
     assert remote_key(RepoResult(path="/y", name="y", root="~")) is None
 
 

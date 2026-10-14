@@ -291,9 +291,15 @@ def _verify(c: Candidate) -> str | None:
     if c.kind == "clone":
         if real != repo:
             return "neplatná cesta klonu"
+        if (repo / ".git").is_file():
+            return "je to pracovní strom (git worktree), ne samostatný klon"
         git = Git(repo)
         if git.dubious_ownership():
             return "repo patří jinému uživateli"
+        if not git.remotes():
+            return "klon nemá remote – nepushnuté commity nejde ověřit"
+        if git.run("worktree", "list", "--porcelain", check=False).count("worktree ") > 1:
+            return "klon má další pracovní stromy (git worktree)"
         if git.status().dirty:
             return "klon má necommitnuté změny"
         for b in git.branches():
