@@ -258,6 +258,31 @@ def clean_cmd(
     typer.echo(f"Přesunuto do koše: {len(result.removed)} položek, uvolněno {human(result.freed)}.")
 
 
+@app.command("guard")
+def guard_cmd(
+    remote: Annotated[str | None, typer.Argument(help="Název remotu (předává git).")] = None,
+    url: Annotated[str | None, typer.Argument(help="URL remotu (předává git).")] = None,
+) -> None:
+    """Kontrola tajemství v commitech k pushi – pro hook pre-push (rozsah čte ze stdin).
+
+    Exit 0 = v pořádku, 1 = nalezená tajemství (push se zastaví). Výpis je maskovaný.
+    """
+    from repo_doctor.guard import render, run_guard
+
+    repo = Path.cwd()
+    lines = [] if sys.stdin.isatty() else sys.stdin.read().splitlines()
+    try:
+        config = _load_config()
+    except typer.Exit:
+        from repo_doctor.config import Config
+
+        config = Config()
+    result = run_guard(repo, lines, config)
+    if result.blocked:
+        typer.echo(render(result), err=True)
+        raise typer.Exit(1)
+
+
 @app.command("sbom")
 def sbom_cmd(
     repo: Annotated[Path, typer.Argument(help="Cesta k repozitáři.")],

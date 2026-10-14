@@ -187,6 +187,24 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - **Podpříkazy CLI** se zjišťují z registru typeru (`subcommands()`), ne z ručního seznamu –
   nový příkaz (`mcp`) by jinak skončil v TUI větvi a stdio server by vypsal nápovědu.
 
+## Pre-push hlídač (0.2.0)
+
+- **Dva směry hooků:** repo-doctor při *svých* voláních gitu hooky nikdy nespouští
+  (`core.hooksPath=/dev/null`, 0.1.4). Hook `pre-push`, který léčba nainstaluje, spouští
+  uživatelův *vlastní* `git push` – a ten volá `repo-doctor guard`. Tyto dvě věci se
+  nepotkají: guard sám spouští git zase s vypnutými hooky.
+- **Lokální hook** je jediný zápis do `.git/hooks`: jen hook `pre-push`, jen v repu uživatele
+  (`apply` odmítne repo cizího vlastníka), existující cizí hook nepřepíše (pozná svůj podle
+  značky) a při `core.hooksPath` se nenabízí, protože by se nespustil. Když `repo-doctor`
+  chybí v PATH, hook push nezablokuje (jen vypíše varování).
+- **Pre-commit varianta** používá `repo: local` s `entry: repo-doctor guard` – oficiální
+  gitleaks hook pro pre-commit skenuje staged změny, což při pushi nedává smysl. Soubor se
+  upraví jen tehdy, když jde blok bezpečně připojit (`repos:` je poslední klíč nejvyšší
+  úrovně); jinak se nabídne jen lokální varianta.
+- **Rozsah:** `lsha --not --remotes` pro novou větev, jinak `rsha..lsha`; z pre-commitu
+  `PRE_COMMIT_FROM_REF..PRE_COMMIT_TO_REF`. Vestavěný skener (rychlý, bez závislostí);
+  allowlist platí stejně jako v kartě repa.
+
 ## Výkon
 
 - Repozitáře běží paralelně (`--jobs`, výchozí počet CPU) jako asyncio úlohy; git příkazy

@@ -22,6 +22,8 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 - Úklid místa: kontrola `disk-usage`, obrazovka **Úklid** (`9`) a `repo-doctor clean`
   (náhled / `--apply`) – jen složky ignorované gitem, přes koš (freedesktop Trash), trvalé
   smazání jen s dvojím potvrzením; nabízí i celé duplicitní klony bez změn.
+- Kontrola `prepush-guard` a `repo-doctor guard`: hlídač tajemství při pushi – léčba přidá hook
+  do pre-commitu (stage pre-push), nebo jen lokálně `.git/hooks/pre-push`.
 - Léčba umí i lokální akce bez commitu (`.git/config`, hook) a varianty oprav.
 
 ### Bezpečnost

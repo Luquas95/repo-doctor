@@ -262,6 +262,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | [`docker-hygiene`](docs/checks/docker-hygiene.md) | Bezpečnost | MED | ✓ |  |
 | [`email-exposure`](docs/checks/email-exposure.md) | Bezpečnost | MED | ✓ | síť |
 | [`env-committed`](docs/checks/env-committed.md) | Bezpečnost | HIGH | ✓ |  |
+| [`prepush-guard`](docs/checks/prepush-guard.md) | Bezpečnost | LOW | ✓ |  |
 | [`public-sensitive`](docs/checks/public-sensitive.md) | Bezpečnost | HIGH |  | síť |
 | [`secrets-history`](docs/checks/secrets-history.md) | Bezpečnost | HIGH |  |  |
 | [`secrets-tree`](docs/checks/secrets-tree.md) | Bezpečnost | HIGH |  |  |
@@ -417,6 +418,7 @@ repo-doctor scan [PATH…] --report md|json|html [--output FILE] [--offline] [--
     [--only/--skip CHECKS] [--jobs N] [--fail-on high|medium|low] [--fetch]
 repo-doctor explain CHECK_ID
 repo-doctor clean [PATH…] [--apply] [--all] [--include-dirty] [--duplicates]   # úklid do koše
+repo-doctor guard                   # pro hook pre-push: zastaví push s tajemstvím
 repo-doctor sbom REPO [--format cyclonedx-json] [-o FILE]   # SBOM z lockfilů, bez sítě
 repo-doctor mcp                     # MCP server jen pro čtení (stdio)
 repo-doctor checks
