@@ -2,7 +2,7 @@
 
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze podle SemVer.
 
-## [0.2.0] – nevydáno
+## [0.2.0] – 2026-10-14
 
 ### Přidáno
 - `repo-doctor mcp`: MCP server (stdio) jen pro čtení – nástroje `list_repos`, `repo_status`,
@@ -37,6 +37,19 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 - `http://` jen pro hosty výslovně povolené v `allow_http_hosts` (hostname, `*.domena`, IP,
   CIDR) – rozhoduje se pro každý příkaz gitu zvlášť, přesměrování se nenásledují, token
   hostingu po `http` odejde jen na povolené hosty. Výchozí chování se nemění.
+- Nové funkce, které mění soubory nebo repa (úklid, synchronizace, lokální léčba, plánování),
+  mají vždy náhled a potvrzení s výchozí volbou „Zrušit“ a nikdy nepushují; úklid maže jen
+  přes koš, synchronizace jen fast-forwardem a odmítne repo cizího vlastníka nebo s vlastními
+  filtry. Všechna volání gitu dál běží s hardeningem z 0.1.4 (hooky vypnuté).
+- MCP server je jen pro čtení a ve výchozím stavu offline; upozornění plánovaného skenu
+  neobsahují tajemství ani cesty k souborům; ntfy po `http` jen na `allow_http_hosts`.
+
+### Změněno
+- Nové závislosti `mcp` a `pyyaml` (MCP server, čtení workflow GitHub Actions).
+- Přehled jde seskupit i podle remotu (`alt+g`: triáž / složka / hosting / remote).
+- Nastavení (`7`) má novou sekci *Plánovaný sken*; horní panel ukazuje poslední plánovaný běh.
+- Vlastní CI workflow má akce připnuté na SHA (dogfooding `ci-security`).
+- Tabulky klávesových zkratek v README se kontrolují testem proti `keymap.py`.
 
 ## [0.1.4] – 2026-10-03
 

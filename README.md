@@ -13,6 +13,10 @@ opravy – vždy jako commity v nové větvi, kterou si zkontroluješ sám.
 - **Léčba:** barevný diff navrhovaných oprav, výběr zaškrtávátky a potvrzení dialogem.
 - **Funguje úplně offline** a bez hostingů; síťové kontroly (OSV.dev, PyPI, npm, API hostingů) jsou nadstavba.
 - **Minimální CLI** pro CI (`repo-doctor scan --report md|json|html`).
+- **Novinky 0.2:** kontroly `ci-security` (GitHub Actions), `email-exposure`, `duplicate-clone`,
+  `license-compat`, `disk-usage` a `prepush-guard`; SBOM (CycloneDX), **Úklid** místa přes koš,
+  **Synchronizace** jen fast-forwardem, plánovaný sken s upozorněním a MCP server pro AI
+  asistenty (jen čtení).
 
 ## Instalace
 
@@ -143,6 +147,8 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | `6` | vzdálená repa |
 | `7` | nastavení |
 | `8` | export |
+| `9` | úklid místa |
+| `0` | synchronizace |
 | `/` | hledat |
 | `R` | sken |
 | `r` | sken repa |
@@ -238,6 +244,23 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | Klávesa | Akce |
 |---|---|
 | `e` | exportovat |
+
+**Úklid**
+
+| Klávesa | Akce |
+|---|---|
+| `space` | vybrat |
+| `A` | vše / nic |
+| `⏎` | do koše |
+| `D` | trvale smazat |
+
+**Synchronizace**
+
+| Klávesa | Akce |
+|---|---|
+| `f` | fetch všech |
+| `space` | vybrat |
+| `⏎` | rychle dohnat |
 
 **Průvodce prvním spuštěním**
 
@@ -369,17 +392,36 @@ editor = "nvim"
 
 ## Bezpečnostní záruky – co repo-doctor nikdy neudělá
 
-- **Ve výchozím stavu jen čte.** Změny dělá jen po výslovném potvrzení opravy v TUI.
-- **Nikdy nepushuje, nepřepisuje historii, nemaže branche ani stashe a nesahá na necommitnuté
-  změny.** Opravy vznikají jako commity v nové větvi `repo-doctor/fixes-<datum>` postavené
-  v dočasném indexu – pracovní strom, index i aktuální větev zůstanou beze změny. Repo
-  s necommitnutými změnami oprava odmítne.
-- **Na hostingu nic nemění** – API se jen čte. Jedinou výjimkou je klonování na disk po potvrzení.
-- **Tajemství nikdy nevypíše** – v TUI, reportech, logech ani JSON je vidět jen maskovaná podoba
-  `AKIA…(20 znaků)`. Totéž platí pro tokeny hostingů. Odmaskovat nejde; soubor otevřeš klávesou `o`.
-- CLI repozitáře nikdy nemění (jen `--fetch` aktualizuje remote-tracking refy, a to jen na požádání).
+**Nikdy:** nepushuje, nepřepisuje historii, nemaže branche ani stashe, nesahá na necommitnuté
+změny a na hostingu nic nemění (API se jen čte). **Tajemství nikdy nevypíše** – v TUI,
+reportech, logech, JSON, MCP ani upozorněních je vidět jen maskovaná podoba `AKIA…(20 znaků)`;
+totéž platí pro tokeny hostingů a e-maily (`l***@proton.me`). Odmaskovat nejde; soubor otevřeš
+klávesou `o`.
+
+### Jen čte
+
+- Sken (TUI, `repo-doctor scan`, plánovaný sken), karta repa, reporty, `repo-doctor sbom`
+  (zapíše jen soubor SBOM, který si vyžádáš), `repo-doctor guard`, náhledy `clean`/`sync`
+  (`--dry-run`) a **MCP server** (žádný nástroj nic neopravuje, nefetchuje ani neklonuje).
+- `--fetch`, `F` a `f` v Synchronizaci aktualizují jen remote-tracking refy, a jen na požádání.
+
+### Mění až po náhledu a potvrzení (výchozí volba „Zrušit“)
+
+- **Léčba** – commity v nové větvi `repo-doctor/fixes-<datum>` postavené v dočasném indexu;
+  pracovní strom, index i aktuální větev zůstanou beze změny, repo s necommitnutými změnami
+  oprava odmítne. Lokální varianty (`user.email` v `.git/config`, hook `pre-push`) nic
+  necommitují a existující cizí hook nepřepíší.
+- **Úklid** (`9`, `repo-doctor clean --apply`) – jen složky ignorované gitem a celé duplicitní
+  klony bez změn, vždy **přes koš** (freedesktop Trash); trvalé smazání jen s dvojím potvrzením.
+- **Synchronizace** (`0`, `repo-doctor sync --apply`) – jediná funkce, která mění pracovní
+  strom, a **jen fast-forwardem** (`git merge --ff-only`) u čistých rep na sledované větvi;
+  stav se těsně předtím ověří znovu. Nikdy merge commit, rebase ani reset.
+- **Klonování** ze záložky Vzdálená repa a **plánovaný sken** (uživatelský systemd timer).
+
+### Cizí repo nic nespustí
+
 - **Cizí repo přes svou konfiguraci ani obsah `.git/` nespustí program** – při skenu, `--fetch`,
-  `F` ani léčbě. Pro každé volání gitu se neutralizuje:
+  `F`, léčbě, úklidu ani synchronizaci. Pro každé volání gitu se neutralizuje:
   - **hooky** (`core.hooksPath=/dev/null`) – z `.git/hooks`, z lokálního i **globálního**
     `core.hooksPath`; tvoje globální hooky se tedy při běhu repo-doctoru také nespustí (záměr),
   - filtry (`clean`/`smudge`/`process`), `textconv`, externí diff a merge drivery, `fsmonitor`,
