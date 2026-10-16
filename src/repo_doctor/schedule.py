@@ -36,6 +36,8 @@ def executable() -> str:
     found = shutil.which("repo-doctor")
     if found:
         return found
+    if getattr(sys, "frozen", False):  # sestavená aplikace: sys.executable je přímo binárka
+        return sys.executable
     return f"{sys.executable} -m repo_doctor"
 
 

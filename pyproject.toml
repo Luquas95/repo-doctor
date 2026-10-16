@@ -1,6 +1,6 @@
 [project]
 name = "repo-doctor"
-version = "0.2.0"
+version = "0.3.0"
 description = "TUI pro audit a údržbu lokálních git repozitářů (bezpečnost, hygiena, stav gitu, git hostingy)."
 readme = "README.md"
 license = "MIT"
@@ -42,6 +42,8 @@ dev = [
     "mypy>=1.10",
     "types-pyyaml>=6.0.12.20260906",
 ]
+# Sestavení samostatné aplikace pro balíčky (packaging/build.sh), jen v CI a lokálně.
+build = ["pyinstaller>=6.21,<7"]
 
 [build-system]
 requires = ["hatchling>=1.26"]

@@ -13,6 +13,8 @@ opravy – vždy jako commity v nové větvi, kterou si zkontroluješ sám.
 - **Léčba:** barevný diff navrhovaných oprav, výběr zaškrtávátky a potvrzení dialogem.
 - **Funguje úplně offline** a bez hostingů; síťové kontroly (OSV.dev, PyPI, npm, API hostingů) jsou nadstavba.
 - **Minimální CLI** pro CI (`repo-doctor scan --report md|json|html`).
+- **Novinky 0.3:** samostatná aplikace bez Pythonu a dalších prostředí – balíčky `.deb`, `.rpm`,
+  AUR a tarball; aktualizace s aktualizací systému a upozornění na novou verzi v TUI.
 - **Novinky 0.2:** kontroly `ci-security` (GitHub Actions), `email-exposure`, `duplicate-clone`,
   `license-compat`, `disk-usage` a `prepush-guard`; SBOM (CycloneDX), **Úklid** místa přes koš,
   **Synchronizace** jen fast-forwardem, plánovaný sken s upozorněním a MCP server pro AI
@@ -20,25 +22,51 @@ opravy – vždy jako commity v nové větvi, kterou si zkontroluješ sám.
 
 ## Instalace
 
-repo-doctor je určený pro Linux. Balíček na PyPI zatím není, instaluje se přímo z GitHubu.
+repo-doctor je samostatná aplikace pro Linux (x86_64). Má v sobě všechno, co potřebuje, takže
+nemusíš řešit Python ani žádné další prostředí. Stačí mít **git**.
 
-### 1. Předpoklady
+### Debian, Ubuntu, Linux Mint, Pop!_OS…
 
-- **Python 3.12+** – ověř `python3 --version`,
-- **git** – ověř `git --version`,
-- **uv** (doporučeno) nebo **pipx** – nástroje, které aplikaci nainstalují do vlastního
-  izolovaného prostředí, takže nic nerozbije systémový Python.
+```sh
+wget https://github.com/Luquas95/repo-doctor/releases/latest/download/repo-doctor_amd64.deb
+sudo apt install ./repo-doctor_amd64.deb
+```
 
-| distribuce | příkaz |
-|---|---|
-| Debian / Ubuntu | `sudo apt install python3 git pipx` |
-| Fedora | `sudo dnf install python3 git pipx` |
-| Arch Linux | `sudo pacman -S python git uv` |
+### Fedora, RHEL, Rocky, Alma…
 
-`uv` jde nainstalovat i bez správce balíčků: `curl -LsSf https://astral.sh/uv/install.sh | sh`
-(viz [dokumentace uv](https://docs.astral.sh/uv/getting-started/installation/)).
+```sh
+sudo dnf install https://github.com/Luquas95/repo-doctor/releases/latest/download/repo-doctor.x86_64.rpm
+```
 
-Volitelné nástroje (bez nich vše funguje, jen se příslušná funkce vypne):
+### Arch Linux
+
+Balíček `repo-doctor-bin` z AUR (např. `yay -S repo-doctor-bin`). Bez AUR helperu stáhni
+`PKGBUILD` z [posledního vydání](https://github.com/Luquas95/repo-doctor/releases/latest)
+a v jeho složce spusť `makepkg -si`.
+
+### Ostatní distribuce
+
+```sh
+wget https://github.com/Luquas95/repo-doctor/releases/latest/download/repo-doctor-linux-x86_64.tar.gz
+tar xzf repo-doctor-linux-x86_64.tar.gz && ./repo-doctor/install.sh
+```
+
+Aplikace se nainstaluje do `~/.local/lib/repo-doctor` a příkaz `repo-doctor` do `~/.local/bin`
+(bez roota). Pokud ho shell nenajde, přidej `~/.local/bin` do `PATH`.
+
+### Ověření
+
+```sh
+repo-doctor --version
+repo-doctor checks          # seznam dostupných kontrol
+```
+
+Pak pokračuj [Rychlým startem](#rychlý-start).
+
+### Volitelné nástroje
+
+Bez nich vše funguje, jen se příslušná funkce vypne. Balíčky `.deb`/`.rpm` doporučené
+nástroje nainstalují samy, pokud je distribuce má ve svých repozitářích.
 
 | nástroj | k čemu |
 |---|---|
@@ -48,40 +76,25 @@ Volitelné nástroje (bez nich vše funguje, jen se příslušná funkce vypne):
 | `libnotify` (`notify-send`) | upozornění plánovaného skenu na ploše |
 | klíčenka Secret Service (GNOME Keyring, KWallet) | ukládání tokenů hostingů |
 
-### 2. Instalace
+### Aktualizace
+
+- **.deb / .rpm:** balíček při instalaci přidá podepsaný repozitář repo-doctoru, takže nové
+  verze přijdou **s běžnou aktualizací systému** (`sudo apt update && sudo apt upgrade`,
+  `sudo dnf upgrade` nebo grafické Aktualizace softwaru).
+- **AUR:** s aktualizací přes AUR helper (`yay -Syu`).
+- **Tarball:** `repo-doctor update` stáhne nové vydání, ověří jeho podpis a kontrolní
+  součet (klíčem zabudovaným v aplikaci) a teprve potom starou verzi vymění. Potřebuje `gpg`.
+
+TUI jednou denně zjistí, jestli vyšla nová verze, a upozorní tě. Vypneš to přes `[updates] check = false`;
+v offline režimu se nekontroluje. Ručně: `repo-doctor update --check`.
+
+### Odinstalace
 
 ```sh
-uv tool install git+https://github.com/Luquas95/repo-doctor
-# nebo
-pipx install git+https://github.com/Luquas95/repo-doctor
-```
-
-Příkaz `repo-doctor` se nainstaluje do `~/.local/bin`. Pokud ho shell nenajde, přidej
-tuto složku do `PATH` (`uv tool update-shell`, resp. `pipx ensurepath`) a otevři nový terminál.
-
-Jen vyzkoušet bez instalace:
-
-```sh
-uvx --from git+https://github.com/Luquas95/repo-doctor repo-doctor
-```
-
-**Arch Linux:** PKGBUILD je v [`packaging/aur/`](packaging/aur/PKGBUILD) – v jeho složce
-spusť `makepkg -si`.
-
-### 3. Ověření
-
-```sh
-repo-doctor --version
-repo-doctor checks          # seznam dostupných kontrol
-```
-
-Pak pokračuj [Rychlým startem](#rychlý-start).
-
-### Aktualizace a odinstalace
-
-```sh
-uv tool upgrade repo-doctor          # nebo: pipx upgrade repo-doctor
-uv tool uninstall repo-doctor        # nebo: pipx uninstall repo-doctor
+sudo apt remove repo-doctor          # Debian/Ubuntu (odebere i repozitář repo-doctoru)
+sudo dnf remove repo-doctor          # Fedora
+sudo pacman -R repo-doctor-bin       # Arch
+rm -rf ~/.local/lib/repo-doctor ~/.local/bin/repo-doctor   # tarball
 ```
 
 Před odinstalací vypni případný plánovaný sken (`repo-doctor schedule remove`). Konfigurace,
@@ -437,6 +450,9 @@ fetch = false             # true = plánovaný sken nejdřív stáhne novinky (g
 [mcp]
 network = false           # true = MCP sken smí i síťové kontroly (OSV, hostingy)
 
+[updates]
+check = true              # TUI jednou denně zjistí na GitHub Releases, zda vyšla nová verze
+
 my_emails = ["ja@proton.me"]   # tvoje další adresy pro kontrolu email-exposure
 ssh_batch_mode = true     # false = nepřidávat `-o BatchMode=yes` (vlastní SSH wrapper)
 
@@ -462,6 +478,8 @@ klávesou `o`.
   (zapíše jen soubor SBOM, který si vyžádáš), `repo-doctor guard`, náhledy `clean`/`sync`
   (`--dry-run`) a **MCP server** (žádný nástroj nic neopravuje, nefetchuje ani neklonuje).
 - `--fetch`, `F` a `f` v Synchronizaci aktualizují jen remote-tracking refy, a jen na požádání.
+- Kontrola nové verze se ptá jen GitHub Releases repo-doctoru a nic o tvých repech neposílá.
+  `repo-doctor update` mění jen vlastní instalaci z tarballu, a to až po ověření podpisu.
 
 ### Mění až po náhledu a potvrzení (výchozí volba „Zrušit“)
 
@@ -551,6 +569,7 @@ repo-doctor schedule install|status|remove|test   # plánovaný sken (systemd --
 repo-doctor checks
 repo-doctor forges test [NAME]      # token nikdy nevypíše
 repo-doctor config path|validate
+repo-doctor update [--check]        # nová verze; instalaci z tarballu i aktualizuje
 ```
 
 Exit kódy: `0` = bez nálezů nad prahem, `1` = nálezy nad prahem, `2` = chyba. Bez TTY
@@ -558,7 +577,10 @@ Exit kódy: `0` = bez nálezů nad prahem, `1` = nálezy nad prahem, `2` = chyba
 schéma (`schema_version`, [`docs/report-schema.json`](docs/report-schema.json)).
 
 ```yaml
-- run: uvx --from git+https://github.com/Luquas95/repo-doctor repo-doctor scan . --offline --fail-on high
+- name: repo-doctor
+  run: |
+    curl -fsSL https://github.com/Luquas95/repo-doctor/releases/latest/download/repo-doctor-linux-x86_64.tar.gz | tar xz
+    ./repo-doctor/repo-doctor scan . --offline --fail-on high
 ```
 
 ## Vývoj

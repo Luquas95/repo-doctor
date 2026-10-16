@@ -1,0 +1,75 @@
+# Balíčky .deb a .rpm ze sestavené aplikace (dist/repo-doctor) – volá packaging/package.sh.
+# Balíček kromě aplikace přidá i repozitář repo-doctoru a jeho podpisový klíč, takže
+# další verze už přicházejí běžnou aktualizací systému (apt upgrade / dnf upgrade).
+name: repo-doctor
+arch: amd64
+platform: linux
+version: ${VERSION}
+release: 1
+section: devel
+priority: optional
+maintainer: repo-doctor contributors <https://github.com/Luquas95/repo-doctor>
+description: |-
+  TUI pro audit a údržbu lokálních git repozitářů.
+  Najde bezpečnostní a hygienické problémy (tajemství, zranitelné závislosti, stav gitu,
+  git hostingy), vyrobí přehledný report a bezpečně připraví opravy.
+vendor: repo-doctor
+homepage: https://github.com/Luquas95/repo-doctor
+license: MIT
+
+depends:
+  - git
+
+overrides:
+  deb:
+    recommends: [xdg-utils, libnotify-bin]
+    suggests: [gitleaks, wl-clipboard]
+  rpm:
+    recommends: [xdg-utils, libnotify]
+    suggests: [gitleaks, wl-clipboard]
+
+contents:
+  - src: dist/repo-doctor/
+    dst: /usr/lib/repo-doctor
+    type: tree
+  - src: /usr/lib/repo-doctor/repo-doctor
+    dst: /usr/bin/repo-doctor
+    type: symlink
+
+  # způsob instalace (repo-doctor podle něj radí, jak aktualizovat)
+  - src: packaging/files/install-kind.deb
+    dst: /usr/lib/repo-doctor/install-kind
+    packager: deb
+  - src: packaging/files/install-kind.rpm
+    dst: /usr/lib/repo-doctor/install-kind
+    packager: rpm
+
+  # APT repozitář + klíč
+  - src: src/repo_doctor/data/signing-key.asc
+    dst: /usr/share/keyrings/repo-doctor.asc
+    packager: deb
+  - src: packaging/files/repo-doctor.list
+    dst: /etc/apt/sources.list.d/repo-doctor.list
+    type: config|noreplace
+    packager: deb
+
+  # DNF repozitář + klíč
+  - src: src/repo_doctor/data/signing-key.asc
+    dst: /etc/pki/rpm-gpg/RPM-GPG-KEY-repo-doctor
+    packager: rpm
+  - src: packaging/files/repo-doctor.repo
+    dst: /etc/yum.repos.d/repo-doctor.repo
+    type: config|noreplace
+    packager: rpm
+
+  - src: LICENSE
+    dst: /usr/share/doc/repo-doctor/copyright
+    packager: deb
+  - src: LICENSE
+    dst: /usr/share/licenses/repo-doctor/LICENSE
+    packager: rpm
+
+rpm:
+  summary: TUI pro audit a údržbu lokálních git repozitářů
+  signature:
+    key_file: ${NFPM_RPM_KEY_FILE}

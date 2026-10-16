@@ -224,6 +224,11 @@ class MCPConfig(_Model):
     network: bool = False
 
 
+class UpdatesConfig(_Model):
+    # true = TUI jednou denně zjistí na GitHub Releases, zda vyšla nová verze (ne v offline režimu)
+    check: bool = True
+
+
 class Config(_Model):
     roots: list[RootConfig] = Field(default_factory=list)
     forges: list[ForgeConfig] = Field(default_factory=list)
@@ -248,6 +253,7 @@ class Config(_Model):
     cleanup: CleanupConfig = Field(default_factory=CleanupConfig)
     notify: NotifyConfig = Field(default_factory=NotifyConfig)
     schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)
+    updates: UpdatesConfig = Field(default_factory=UpdatesConfig)
 
     @field_validator("allow_http_hosts")
     @classmethod

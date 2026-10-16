@@ -2,6 +2,29 @@
 
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze podle SemVer.
 
+## [0.3.0] – 2026-10-16
+
+### Změněno
+- **Instalace bez Pythonu a dalších prostředí (#21):** repo-doctor se vydává jako samostatná
+  aplikace (PyInstaller, vlastní Python i knihovny) v balíčcích `.deb` (Debian/Ubuntu),
+  `.rpm` (Fedora/RHEL), AUR `repo-doctor-bin` a jako tarball s `install.sh` pro ostatní
+  distribuce; jen x86_64. Instalace přes uv/pipx už není podporovaný způsob a z dokumentace zmizela.
+- PKGBUILD v `packaging/aur/` je teď šablona balíčku `repo-doctor-bin` (sestavená aplikace),
+  hotový PKGBUILD je přiložený ke každému vydání.
+
+### Přidáno
+- Aktualizace: balíčky `.deb`/`.rpm` přidají podepsaný APT/DNF repozitář na GitHub Pages,
+  takže nové verze přicházejí s aktualizací systému.
+- `repo-doctor update [--check]`: zjistí novou verzi; instalaci z tarballu aktualizuje sám
+  po ověření podpisu `SHA256SUMS` klíčem zabudovaným v aplikaci a kontrolního součtu.
+- TUI jednou denně upozorní na novou verzi s návodem podle způsobu instalace
+  (`[updates] check`, v offline režimu se nekontroluje).
+- Workflow `release.yml`: tag `vX.Y.Z` sestaví aplikaci, otestuje instalaci na Debianu 12,
+  Ubuntu 22.04/24.04, Fedoře a Archu, vytvoří GitHub Release a nasadí repozitáře na Pages.
+
+### Opraveno
+- Plánovaný sken v sestavené aplikaci spouští přímo její binárku (ne `python -m`).
+
 ## [0.2.0] – 2026-10-14
 
 ### Přidáno
