@@ -1,0 +1,29 @@
+# Maintainer: repo-doctor contributors
+# Šablona – skutečný PKGBUILD (s verzí a kontrolním součtem) vyrábí packaging/package.sh
+# a je přiložený ke každému vydání na GitHubu.
+pkgname=repo-doctor-bin
+pkgver=@VERSION@
+pkgrel=1
+pkgdesc="TUI pro audit a údržbu lokálních git repozitářů (bezpečnost, hygiena, git hostingy)"
+arch=('x86_64')
+url="https://github.com/Luquas95/repo-doctor"
+license=('MIT')
+depends=('git')
+optdepends=('gitleaks: rychlejší a přesnější sken tajemství'
+            'wl-clipboard: kopírování cesty do schránky (Wayland)'
+            'xdg-utils: otevření repa na webu'
+            'libnotify: upozornění plánovaného skenu na ploše (notify-send)')
+provides=('repo-doctor')
+conflicts=('repo-doctor')
+options=('!strip' '!debug')
+source=("repo-doctor-linux-x86_64-$pkgver.tar.gz::$url/releases/download/v$pkgver/repo-doctor-linux-x86_64.tar.gz")
+sha256sums=('@SHA256@')
+
+package() {
+  install -d "$pkgdir/usr/lib" "$pkgdir/usr/bin"
+  cp -a repo-doctor "$pkgdir/usr/lib/repo-doctor"
+  rm -f "$pkgdir/usr/lib/repo-doctor/install.sh"
+  echo pacman > "$pkgdir/usr/lib/repo-doctor/install-kind"
+  ln -s /usr/lib/repo-doctor/repo-doctor "$pkgdir/usr/bin/repo-doctor"
+  install -Dm644 repo-doctor/LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}
