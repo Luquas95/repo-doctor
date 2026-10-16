@@ -200,13 +200,21 @@ def test_verify_without_gpg(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> 
 
 
 # ---------------------------------------------------------------------- samoaktualizace
-def _tarball(content: str, *, kind: str = "tarball", extra: tarfile.TarInfo | None = None) -> bytes:
+def _tarball(
+    content: str,
+    *,
+    kind: str = "tarball",
+    version: str = f"{NEWER}.0.0",
+    extra: tarfile.TarInfo | None = None,
+) -> bytes:
     buf = io.BytesIO()
+    files = (
+        ("repo-doctor/repo-doctor", content),
+        ("repo-doctor/install-kind", kind),
+        ("repo-doctor/VERSION", version),
+    )
     with tarfile.open(fileobj=buf, mode="w:gz") as tar:
-        for name, data in (
-            ("repo-doctor/repo-doctor", content),
-            ("repo-doctor/install-kind", kind),
-        ):
+        for name, data in files:
             raw = data.encode()
             info = tarfile.TarInfo(name)
             info.size = len(raw)
@@ -311,6 +319,23 @@ def test_self_update_sums_without_tarball(tmp_path: Path) -> None:
     respx.get(f"{base}/SHA256SUMS.asc").respond(text="podpis")
     with pytest.raises(UpdateError, match="chybí"):
         update.self_update(release(), target=target, verify=_ok)
+
+
+@respx.mock
+def test_self_update_rejects_version_mismatch(tmp_path: Path) -> None:
+    """Podvržené API ukáže na novou verzi, ale podepsaný balík obsahuje starší – odmítnout."""
+    target = _installed(tmp_path)
+    _mock_release(_tarball("stará-zranitelná", version="0.0.1"))
+    with pytest.raises(UpdateError, match=r"verzi 0\.0\.1"):
+        update.self_update(release(), target=target, verify=_ok)
+    assert (target / "repo-doctor").read_text() == "stará"
+
+
+def test_self_update_refuses_downgrade(tmp_path: Path) -> None:
+    target = _installed(tmp_path)
+    for version in ("0.0.1", __version__):
+        with pytest.raises(UpdateError, match="není novější"):
+            update.self_update(release(version), target=target, verify=_ok)
 
 
 def test_self_update_only_for_tarball(tmp_path: Path) -> None:

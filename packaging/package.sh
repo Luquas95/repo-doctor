@@ -33,6 +33,7 @@ nfpm package --config "$config" --packager rpm --target "$out/repo-doctor.x86_64
 stage=$(mktemp -d)
 cp -a "$app" "$stage/repo-doctor"
 echo tarball > "$stage/repo-doctor/install-kind"
+echo "$VERSION" > "$stage/repo-doctor/VERSION"   # samoaktualizace podle ní odmítne starší vydání
 cp packaging/files/install.sh LICENSE "$stage/repo-doctor/"
 tar -C "$stage" --owner=0 --group=0 --numeric-owner -czf "$out/repo-doctor-linux-x86_64.tar.gz" repo-doctor
 rm -rf "$stage"

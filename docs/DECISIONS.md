@@ -279,6 +279,10 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   (otisk `update.FINGERPRINT`), tarball se rozbaluje s `filter="data"`, výměna složek je dvojí
   přejmenování; stará verze zůstane v `.repo-doctor-old` do další aktualizace (běžící
   proces z ní může ještě načítat moduly).
+- **Ochrana proti downgradu:** odpověď GitHub API (tag vydání) není podepsaná, proto tarball
+  nese soubor `VERSION`, který kryje podepsaný kontrolní součet. Samoaktualizace odmítne
+  vydání, které není striktně novější než běžící verze, i balík, jehož `VERSION` se liší
+  od očekávané verze – podvržené API tak nevrátí starší, byť platně podepsané vydání.
 - **Kontrola verze** jen v TUI, nejvýš jednou za 24 h (cache `update-check.json`),
   ne v offline režimu, vypnutelná `[updates] check`. Na GitHub jde jen anonymní dotaz na
   poslední vydání.

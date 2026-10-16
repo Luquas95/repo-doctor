@@ -260,6 +260,8 @@ def self_update(
     a smaže se při další aktualizaci. Nová verze platí od dalšího spuštění.
     """
     target = target or app_dir()
+    if release.version <= current_version():
+        raise UpdateError(f"Verze {release.version} není novější než {__version__}.")
     if install_kind(target) is not InstallKind.TARBALL:
         raise UpdateError("Samoaktualizace je jen pro instalaci z tarballu.")
     parent = target.parent
@@ -286,6 +288,11 @@ def self_update(
                 raise UpdateError("Kontrolní součet staženého balíku nesedí.")
             progress("Rozbaluji…")
             fresh = _extract(work / TARBALL, work / "new")
+            # Verzi kryje podepsaný součet tarballu – podvržená odpověď API tak nemůže
+            # vrátit starší (i když platně podepsané) vydání.
+            packaged = _packaged_version(fresh)
+            if packaged != release.version:
+                raise UpdateError(f"Balík obsahuje verzi {packaged}, ne {release.version}.")
             _swap(target, fresh, old)
     except httpx.HTTPError as err:
         raise UpdateError(f"Stahování selhalo: {type(err).__name__}") from None
@@ -307,6 +314,13 @@ def _extract(archive: Path, dest: Path) -> Path:
         raise UpdateError("Balík nemá očekávaný obsah.")
     binary.chmod(0o755)
     return fresh
+
+
+def _packaged_version(fresh: Path) -> Version | None:
+    try:
+        return Version((fresh / "VERSION").read_text("utf-8").strip())
+    except (OSError, InvalidVersion):
+        return None
 
 
 def _swap(target: Path, fresh: Path, old: Path) -> None:
