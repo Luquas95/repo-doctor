@@ -508,6 +508,54 @@ def update_cmd(
     typer.echo(f"✓ Aktualizováno na {release.version} – platí od dalšího spuštění.")
 
 
+@app.command("tools")
+def tools_cmd(
+    install: Annotated[
+        bool, typer.Option("--install", help="Doinstaluje chybějící nástroje (po potvrzení).")
+    ] = False,
+    yes: Annotated[bool, typer.Option("--yes", "-y", help="Bez dotazu na potvrzení.")] = False,
+) -> None:
+    """Volitelné nástroje (gitleaks, wl-clipboard, xdg-utils, libnotify) a klíčenka."""
+    from repo_doctor import tools
+
+    for st in tools.status():
+        mark = "✓" if st.installed else "✗"
+        where = f"  ({st.path})" if st.path else ""
+        typer.echo(f"{mark} {st.tool.id:<13} {st.tool.purpose}{where}")
+    ok, detail = tools.keyring_status()
+    typer.echo(f"{'✓' if ok else '✗'} {'klíčenka':<13} {detail}")
+    missing = tools.missing()
+    if not missing:
+        return
+    if not install:
+        typer.echo("\nChybějící nástroje doinstaluješ: repo-doctor tools --install")
+        return
+    p = tools.plan(missing, tools.detect_manager())
+    p.assume_yes = yes
+    typer.echo("")
+    for line in tools.describe(p):
+        typer.echo(line)
+    if not p.command and not p.downloads:
+        return
+    if not yes:
+        if not sys.stdin.isatty():
+            _err("Bez terminálu potvrď instalaci přepínačem --yes.")
+            raise typer.Exit(2)
+        if not typer.confirm("Pokračovat?", default=False):
+            raise typer.Exit(1)
+    try:
+        for d in p.downloads:
+            path = tools.install_download(d)
+            typer.echo(f"✓ {d.name} {d.version} → {path}")
+        code = tools.run_command(p)
+    except tools.ToolsError as err:
+        _err(str(err))
+        raise typer.Exit(1) from None
+    if code != 0:
+        _err(f"Správce balíčků skončil s kódem {code}.")
+        raise typer.Exit(1)
+
+
 @app.command("checks")
 def list_checks() -> None:
     """Vypíše všechny kontroly (ID, kategorie, severity, automatická oprava)."""
