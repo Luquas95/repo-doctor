@@ -65,8 +65,16 @@ Pak pokračuj [Rychlým startem](#rychlý-start).
 
 ### Volitelné nástroje
 
-Bez nich vše funguje, jen se příslušná funkce vypne. Balíčky `.deb`/`.rpm` doporučené
-nástroje nainstalují samy, pokud je distribuce má ve svých repozitářích.
+Bez nich všechno funguje, jen se příslušná funkce vypne. Stav a co chybí ukáže
+`repo-doctor tools` nebo **Nastavení › Volitelné nástroje** v TUI. `repo-doctor tools --install`
+(nebo tlačítko „Nainstalovat chybějící“) je po potvrzení doinstaluje:
+
+- systémové balíčky přes správce balíčků distribuce (`apt-get`, `dnf`, `pacman`, `zypper`).
+  TUI se na chvíli pozastaví a příkaz poběží viditelně v terminálu přes `sudo`. repo-doctor
+  sám root nikdy nezíská.
+- `gitleaks` tam, kde ho distribuce nemá (Debian 12, Ubuntu 22.04): stáhne se oficiální
+  binárka do `~/.local/share/repo-doctor/tools` a ověří se proti SHA-256 zapsanému
+  v repo-doctoru.
 
 | nástroj | k čemu |
 |---|---|
@@ -74,7 +82,7 @@ nástroje nainstalují samy, pokud je distribuce má ve svých repozitářích.
 | `wl-clipboard` | kopírování cesty do schránky (Wayland) |
 | `xdg-utils` | otevření repa na webu |
 | `libnotify` (`notify-send`) | upozornění plánovaného skenu na ploše |
-| klíčenka Secret Service (GNOME Keyring, KWallet) | ukládání tokenů hostingů |
+| klíčenka Secret Service (GNOME Keyring, KWallet) | ukládání tokenů hostingů. Neinstaluje se, musí běžet v přihlášené relaci |
 
 ### Aktualizace
 
@@ -478,6 +486,8 @@ klávesou `o`.
   (zapíše jen soubor SBOM, který si vyžádáš), `repo-doctor guard`, náhledy `clean`/`sync`
   (`--dry-run`) a **MCP server** (žádný nástroj nic neopravuje, nefetchuje ani neklonuje).
 - `--fetch`, `F` a `f` v Synchronizaci aktualizují jen remote-tracking refy, a jen na požádání.
+- Doinstalace nástrojů spouští jen správce balíčků distribuce, viditelně v terminálu a po
+  potvrzení. `gitleaks` stažený mimo distribuci se přijme jen s SHA-256 zapsaným v repo-doctoru.
 - Kontrola nové verze se ptá jen GitHub Releases repo-doctoru a nic o tvých repech neposílá.
   `repo-doctor update` mění jen vlastní instalaci z tarballu, a to až po ověření podpisu.
 
@@ -570,6 +580,7 @@ repo-doctor checks
 repo-doctor forges test [NAME]      # token nikdy nevypíše
 repo-doctor config path|validate
 repo-doctor update [--check]        # nová verze; instalaci z tarballu i aktualizuje
+repo-doctor tools [--install] [--yes] # volitelné nástroje: stav a doinstalace
 ```
 
 Exit kódy: `0` = bez nálezů nad prahem, `1` = nálezy nad prahem, `2` = chyba. Bez TTY

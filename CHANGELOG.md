@@ -2,6 +2,18 @@
 
 Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze podle SemVer.
 
+## [Nevydáno]
+
+### Přidáno
+- **Doinstalace volitelných nástrojů (#24):** `repo-doctor tools [--install] [--yes]`
+  a sekce **Nastavení › Volitelné nástroje** ukážou stav `gitleaks`, `wl-clipboard`,
+  `xdg-utils`, `libnotify` i klíčenky. Po potvrzení doinstalují chybějící: systémové balíčky
+  přes `apt-get`/`dnf`/`pacman`/`zypper` (distribuce podle `/etc/os-release`, viditelně
+  v terminálu přes `sudo`), `gitleaks` tam, kde ho distribuce nemá, stažením do
+  `~/.local/share/repo-doctor/tools` s ověřením připnutého SHA-256 (8.30.1).
+- Sken tajemství používá i `gitleaks` stažený repo-doctorem.
+- TUI jednou upozorní, že sken tajemství by byl s `gitleaks` přesnější.
+
 ## [0.3.0] – 2026-10-16
 
 ### Změněno

@@ -292,6 +292,26 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - uv zůstává jen vývojovým nástrojem (CI, `CLAUDE.md`). Kontroly, které rozpoznávají
   `uv.lock` v cizích projektech, se netýkají instalace a zůstávají.
 
+## Volitelné nástroje (#24)
+
+- **Root jen přes viditelné `sudo` v terminálu:** TUI se pozastaví (`App.suspend`) a správce
+  balíčků běží interaktivně. Uživatel vidí přesný příkaz i závislosti a heslo zadává sám.
+  Funguje i přes SSH. `pkexec` nepoužíváme, protože bez grafické relace nefunguje a skrývá,
+  co se děje. Bez možnosti pozastavení (headless) se příkaz jen ukáže. `--yes` v CLI přidá
+  `-y`/`--noconfirm`, v TUI se správce balíčků ptá sám.
+- **Distribuce podle `/etc/os-release`** (`ID`, `ID_LIKE`) → `apt-get`, `dnf`, `pacman`,
+  `zypper`, a jen když binárka správce existuje. Jinak se jen poradí.
+- **`gitleaks` mimo distribuci** (Debian 12, Ubuntu 22.04 ho nemají): oficiální binárka
+  z GitHub Releases s verzí a SHA-256 **připnutými v kódu** (`tools.GITLEAKS`). Součet
+  stažený ze stejného místa by chránil jen před poškozením, ne před podvrhem. Z archivu se
+  vybalí jen soubor binárky (žádné `extractall`). Ukládá se do `~/.local/share/repo-doctor/tools`,
+  ne do `~/.local/lib/repo-doctor`: tu celou vyměňuje samoaktualizace tarballu. Zda ho
+  distribuce má, zjistí dotaz bez roota (`apt-cache policy`, `dnf repoquery`, `pacman -Si`,
+  `zypper search`). Verzi gitleaks zvedáme s vydáním repo-doctoru.
+- **Klíčenka se neinstaluje:** samotný balíček nestačí, Secret Service musí běžet v přihlášené
+  relaci. Ukáže se jen stav a že tokeny jdou přes `env`/`cmd`.
+- Upozornění na chybějící `gitleaks` jen jednou (značka `~/.cache/repo-doctor/tools-hint`).
+
 ## Repo a proces
 
 - **Branch:** zadání chtělo `feat/initial-implementation`, prostředí ale vyžaduje vývoj na
