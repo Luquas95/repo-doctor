@@ -10,7 +10,6 @@ import hashlib
 import json
 import math
 import re
-import shutil
 import subprocess
 import tempfile
 from collections import Counter
@@ -356,8 +355,14 @@ def parse_log_patch(lines: Iterable[str]) -> Iterator[SecretMatch]:
 
 
 # ---------------------------------------------------------------------- gitleaks
+def gitleaks_path() -> str | None:
+    from repo_doctor.tools import find
+
+    return find("gitleaks")
+
+
 def gitleaks_available() -> bool:
-    return shutil.which("gitleaks") is not None
+    return gitleaks_path() is not None
 
 
 def _exec(cmd: list[str], timeout: float, env: dict[str, str] | None = None) -> None:
@@ -376,7 +381,7 @@ def run_gitleaks(repo: Path, *, history: bool, timeout: float) -> list[SecretMat
     with tempfile.TemporaryDirectory(prefix="repo-doctor-gl-") as tmp:
         report = Path(tmp) / "report.json"
         cmd = [
-            "gitleaks",
+            gitleaks_path() or "gitleaks",
             "detect",
             "--source",
             str(repo),

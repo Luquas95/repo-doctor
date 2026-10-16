@@ -62,6 +62,8 @@ class RepoDoctorApp(App[int]):
         forge_transport: Any = None,
         schedule_backend: Any = None,
         update_checker: Callable[[], str | None] | None = None,
+        tools_backend: Any = None,
+        tools_hint: bool | None = None,
     ) -> None:
         super().__init__()
         from repo_doctor import schedule
@@ -97,6 +99,11 @@ class RepoDoctorApp(App[int]):
 
         # upozornění na novou verzi (síť); v testech jen podstrčená náhrada
         self.update_checker = update_checker or (update.notice if load_cache else None)
+        from repo_doctor import tools
+
+        # stav a instalace volitelných nástrojů (testy podstrčí náhradu)
+        self.tools_backend: Any = tools_backend or tools
+        self.tools_hint = load_cache if tools_hint is None else tools_hint
         self.history_delta = (
             history_delta if history_delta is not None else history.previous_delta()
         )
@@ -174,6 +181,26 @@ class RepoDoctorApp(App[int]):
             self.start_scan()
         if self.update_checker is not None and self.config.updates.check and not self.offline:
             self.run_worker(self._check_update, thread=True, group="update", exit_on_error=False)
+        if self.tools_hint:
+            self.run_worker(self._hint_tools, thread=True, group="tools", exit_on_error=False)
+
+    def _hint_tools(self) -> None:
+        """Jednou upozorní, že sken tajemství by byl s gitleaks přesnější."""
+        marker = paths.cache_dir() / "tools-hint"
+        if marker.exists() or self.tools_backend.find("gitleaks") is not None:
+            return
+        self.call_from_thread(
+            self.notify,
+            "Sken tajemství bude rychlejší a přesnější s gitleaks – "
+            "doinstaluješ ho v Nastavení › Volitelné nástroje.",
+            title="Tip",
+            timeout=12,
+        )
+        try:
+            paths.ensure_private_dir(marker.parent)
+            marker.touch()
+        except OSError:
+            pass
 
     def _check_update(self) -> None:
         if self.update_checker is None:  # pragma: no cover - hlídá on_mount

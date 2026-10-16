@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import subprocess
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from repo_doctor import tools
 from repo_doctor.config import Config, ConfigStore, RootConfig
 from repo_doctor.discovery import DiscoveredRepo
 from repo_doctor.models import RepoResult, ScanResult
@@ -35,6 +37,54 @@ url = "https://git.example.ts.net:3000"
 """
 
 
+class FakeTools:
+    """Náhrada `repo_doctor.tools` pro TUI: deterministický stav, nic nespouští ani nestahuje."""
+
+    ToolsError = tools.ToolsError
+
+    def __init__(self, *, missing: tuple[str, ...] = (), manager: str | None = "apt") -> None:
+        self.missing_ids = set(missing)
+        self.manager = manager
+        self.commands: list[list[str]] = []
+        self.downloads: list[str] = []
+        self.code = 0
+
+    def find(self, binary: str) -> str | None:
+        tool = next((t for t in tools.TOOLS if t.binary == binary), None)
+        return None if tool and tool.id in self.missing_ids else f"/usr/bin/{binary}"
+
+    def status(self) -> list[tools.ToolStatus]:
+        return [tools.ToolStatus(t, self.find(t.binary)) for t in tools.TOOLS]
+
+    def missing(self) -> list[tools.Tool]:
+        return [s.tool for s in self.status() if not s.installed]
+
+    def keyring_status(self) -> tuple[bool, str]:
+        return True, "SecretService Keyring"
+
+    def detect_manager(self) -> tools.PackageManager | None:
+        if self.manager is None:
+            return None
+        has = self.manager != "apt"  # „apt“ = Debian 12 bez gitleaks v repozitáři
+        return tools.PackageManager(
+            self.manager,  # type: ignore[arg-type]
+            runner=lambda _cmd: subprocess.CompletedProcess([], 0 if has else 1, "", ""),
+        )
+
+    plan = staticmethod(tools.plan)
+    describe = staticmethod(tools.describe)
+
+    def run_command(self, plan: tools.InstallPlan) -> int:
+        if plan.command:
+            self.commands.append(plan.command)
+        return self.code
+
+    def install_download(self, d: tools.Download) -> Path:
+        self.downloads.append(d.name)
+        self.missing_ids.discard(d.name)
+        return Path("/tmp/tools") / d.name
+
+
 def make_app(
     tmp: Path,
     *,
@@ -48,6 +98,7 @@ def make_app(
         text = config + (f'\n[ui]\ntheme = "{theme}"\n' if theme else "")
         cfg.write_text(text)
     kw.setdefault("auto_scan", False)
+    kw.setdefault("tools_backend", FakeTools())
     kw.setdefault("history_delta", {"high": 2, "low": -5, "no_pulse": 1})
     return RepoDoctorApp(
         store=ConfigStore(cfg),
