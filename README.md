@@ -7,6 +7,8 @@ opravy – vždy jako commity v nové větvi, kterou si zkontroluješ sám.
 
 ![Přehled / triáž](docs/screenshots/triaz.svg)
 
+📖 **[Uživatelská příručka (wiki)](https://github.com/Luquas95/repo-doctor/wiki)**: všechny obrazovky se screenshoty, kontroly, konfigurace a časté otázky.
+
 - **Triáž místo seznamu:** repozitáře roztříděné do pásem KRITICKÉ / SLEDOVAT / BEZ TEPU / ZDRAVÉ,
   skóre 0–100, tep (commity za 30 dní), stav gitu a viditelnost na hostingu.
 - **Karta repa** s diagnózou každého nálezu, vysvětlením a ručním postupem opravy.
