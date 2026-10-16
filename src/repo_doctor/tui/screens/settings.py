@@ -57,7 +57,7 @@ class SettingsScreen(BaseScreen):
             page.border_title = " nastavení "
             yield Static(
                 Text(
-                    f"Změny se ukládají okamžitě do {self.rd.store.path}",
+                    f"Změny se ukládají okamžitě do {home_path(str(self.rd.store.path))}",
                     style=Style(color=self.rd.palette.muted),
                 )
             )

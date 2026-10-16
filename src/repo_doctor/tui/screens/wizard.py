@@ -21,6 +21,7 @@ from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import NavMixin
 from repo_doctor.tui.screens.dialogs import ConfirmDialog
 from repo_doctor.tui.screens.forms import ForgeDialog, ForgeFormResult
+from repo_doctor.tui.util import home_path
 from repo_doctor.tui.widgets.forms import ExistingDir, IntRange, PathInput, PathSuggester
 from repo_doctor.tui.widgets.keybar import KeyBar
 
@@ -188,7 +189,7 @@ class WizardScreen(NavMixin, Screen[None]):
                     self.notify(str(exc), severity="error", timeout=10)
         self.rd.config_changed(config)
         self.app.pop_screen()
-        self.notify(f"Uloženo do {store.path}. Spouštím první sken…")
+        self.notify(f"Uloženo do {home_path(str(store.path))}. Spouštím první sken…")
         self.rd.start_scan()
 
     def action_skip(self) -> None:

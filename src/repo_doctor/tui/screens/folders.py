@@ -67,7 +67,7 @@ class FoldersScreen(BaseScreen):
         app = self.rd
         p = app.palette
         note = Text("Sledované složky se ukládají do ", style=Style(color=p.muted))
-        note.append(str(app.store.path), style=Style(color=p.text))
+        note.append(home_path(str(app.store.path)), style=Style(color=p.text))
         if app.roots_override:
             note.append(
                 "\nTento běh používá složky z příkazové řádky (nic se neukládá): ",
