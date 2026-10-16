@@ -20,8 +20,35 @@ opravy – vždy jako commity v nové větvi, kterou si zkontroluješ sám.
 
 ## Instalace
 
-Potřebuješ Python 3.12+ a `git`. Volitelně `gitleaks` (rychlejší sken tajemství),
-`wl-clipboard` (kopírování cesty) a `xdg-utils` (otevření repa na webu).
+repo-doctor je určený pro Linux. Balíček na PyPI zatím není, instaluje se přímo z GitHubu.
+
+### 1. Předpoklady
+
+- **Python 3.12+** – ověř `python3 --version`,
+- **git** – ověř `git --version`,
+- **uv** (doporučeno) nebo **pipx** – nástroje, které aplikaci nainstalují do vlastního
+  izolovaného prostředí, takže nic nerozbije systémový Python.
+
+| distribuce | příkaz |
+|---|---|
+| Debian / Ubuntu | `sudo apt install python3 git pipx` |
+| Fedora | `sudo dnf install python3 git pipx` |
+| Arch Linux | `sudo pacman -S python git uv` |
+
+`uv` jde nainstalovat i bez správce balíčků: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+(viz [dokumentace uv](https://docs.astral.sh/uv/getting-started/installation/)).
+
+Volitelné nástroje (bez nich vše funguje, jen se příslušná funkce vypne):
+
+| nástroj | k čemu |
+|---|---|
+| `gitleaks` | rychlejší a přesnější sken tajemství |
+| `wl-clipboard` | kopírování cesty do schránky (Wayland) |
+| `xdg-utils` | otevření repa na webu |
+| `libnotify` (`notify-send`) | upozornění plánovaného skenu na ploše |
+| klíčenka Secret Service (GNOME Keyring, KWallet) | ukládání tokenů hostingů |
+
+### 2. Instalace
 
 ```sh
 uv tool install git+https://github.com/Luquas95/repo-doctor
@@ -29,7 +56,38 @@ uv tool install git+https://github.com/Luquas95/repo-doctor
 pipx install git+https://github.com/Luquas95/repo-doctor
 ```
 
-Arch Linux: PKGBUILD je v [`packaging/aur/`](packaging/aur/PKGBUILD) (`makepkg -si`).
+Příkaz `repo-doctor` se nainstaluje do `~/.local/bin`. Pokud ho shell nenajde, přidej
+tuto složku do `PATH` (`uv tool update-shell`, resp. `pipx ensurepath`) a otevři nový terminál.
+
+Jen vyzkoušet bez instalace:
+
+```sh
+uvx --from git+https://github.com/Luquas95/repo-doctor repo-doctor
+```
+
+**Arch Linux:** PKGBUILD je v [`packaging/aur/`](packaging/aur/PKGBUILD) – v jeho složce
+spusť `makepkg -si`.
+
+### 3. Ověření
+
+```sh
+repo-doctor --version
+repo-doctor checks          # seznam dostupných kontrol
+```
+
+Pak pokračuj [Rychlým startem](#rychlý-start).
+
+### Aktualizace a odinstalace
+
+```sh
+uv tool upgrade repo-doctor          # nebo: pipx upgrade repo-doctor
+uv tool uninstall repo-doctor        # nebo: pipx uninstall repo-doctor
+```
+
+Před odinstalací vypni případný plánovaný sken (`repo-doctor schedule remove`). Konfigurace,
+cache a historie zůstanou v `~/.config/repo-doctor`, `~/.cache/repo-doctor`
+a `~/.local/share/repo-doctor` (resp. podle `XDG_*`) – smaž je ručně, pokud je nechceš.
+Tokeny uložené v klíčence odeber v jejím správci.
 
 ## Rychlý start
 
