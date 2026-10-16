@@ -61,6 +61,7 @@ class RepoDoctorApp(App[int]):
         history_delta: dict[str, int] | None = None,
         forge_transport: Any = None,
         schedule_backend: Any = None,
+        update_checker: Callable[[], str | None] | None = None,
     ) -> None:
         super().__init__()
         from repo_doctor import schedule
@@ -92,6 +93,10 @@ class RepoDoctorApp(App[int]):
 
         # poslední plánovaný běh (pro přehled); v testech se nečte
         self.scheduled: notify.RunState | None = notify.load_state() if load_cache else None
+        from repo_doctor import update
+
+        # upozornění na novou verzi (síť); v testech jen podstrčená náhrada
+        self.update_checker = update_checker or (update.notice if load_cache else None)
         self.history_delta = (
             history_delta if history_delta is not None else history.previous_delta()
         )
@@ -167,6 +172,15 @@ class RepoDoctorApp(App[int]):
             self.push_screen(WizardScreen())
         elif self.auto_scan:
             self.start_scan()
+        if self.update_checker is not None and self.config.updates.check and not self.offline:
+            self.run_worker(self._check_update, thread=True, group="update", exit_on_error=False)
+
+    def _check_update(self) -> None:
+        if self.update_checker is None:  # pragma: no cover - hlídá on_mount
+            return
+        message = self.update_checker()
+        if message:
+            self.call_from_thread(self.notify, message, title="Nová verze", timeout=15)
 
     @property
     def dashboard(self) -> DashboardScreen:

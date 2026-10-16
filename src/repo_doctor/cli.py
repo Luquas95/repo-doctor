@@ -475,6 +475,39 @@ def mcp_server() -> None:
     run(_load_config())
 
 
+@app.command("update")
+def update_cmd(
+    check: Annotated[
+        bool, typer.Option("--check", help="Jen zjistí, zda je venku nová verze.")
+    ] = False,
+) -> None:
+    """Zjistí novou verzi; instalaci z tarballu i aktualizuje (po ověření podpisu).
+
+    Balíčky .deb/.rpm a AUR aktualizuje správce balíčků systému – vypíše se jen příkaz.
+    """
+    from repo_doctor import update
+
+    try:
+        release = update.fetch_latest()
+    except update.UpdateError as err:
+        _err(str(err))
+        raise typer.Exit(2) from None
+    if release.version <= update.current_version():
+        typer.echo(f"✓ Máš nejnovější verzi {__version__}.")
+        return
+    kind = update.install_kind()
+    typer.echo(f"Je dostupná verze {release.version} (máš {__version__}).")
+    if check or kind is not update.InstallKind.TARBALL:
+        typer.echo(f"Aktualizace: {update.instructions(kind)}")
+        return
+    try:
+        update.self_update(release, progress=typer.echo)
+    except (update.UpdateError, OSError) as err:
+        _err(f"Aktualizace selhala: {err}")
+        raise typer.Exit(1) from None
+    typer.echo(f"✓ Aktualizováno na {release.version} – platí od dalšího spuštění.")
+
+
 @app.command("checks")
 def list_checks() -> None:
     """Vypíše všechny kontroly (ID, kategorie, severity, automatická oprava)."""
