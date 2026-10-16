@@ -64,6 +64,20 @@ skutečné ani regexům odpovídající hodnoty. Testy TUI používají `tests/t
    test `test_every_check_is_documented` to vyžaduje.
 4. Testy: pozitivní i negativní případ přes `tests/factory.py`.
 
+## Vydání
+
+Uživatelé instalují sestavenou aplikaci (balíčky), ne přes uv/pipx – uv je jen vývojový nástroj.
+
+```sh
+uv sync --locked --no-dev --group build && uv run packaging/build.sh   # dist/repo-doctor
+packaging/package.sh        # dist/release: .deb, .rpm, tarball, PKGBUILD, SHA256SUMS (potřebuje nfpm)
+```
+
+Vydání: zvedni verzi v `pyproject.toml` a `src/repo_doctor/__init__.py`, doplň CHANGELOG
+a pushni tag `vX.Y.Z` – `.github/workflows/release.yml` sestaví, otestuje instalaci na
+distribucích, vytvoří GitHub Release a nasadí APT/RPM repozitář na Pages (secret
+`RELEASE_SIGNING_KEY`).
+
 ## Git workflow
 
 Conventional Commits, po každém bloku musí projít testy. Rozhodnutí zapisuj do

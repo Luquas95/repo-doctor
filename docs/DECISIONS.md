@@ -257,6 +257,37 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - OSV se ptá dávkově (`querybatch`, až 1000 balíčků na dotaz) po repech, aby se tabulka
   v TUI plnila průběžně; odpovědi se cachují na disk.
 
+## Distribuce a aktualizace (0.3.0)
+
+- **Samostatná aplikace místo uv/pipx (#21):** uživatel nemá řešit Python ani izolovaná
+  prostředí. Systémový Python nestačí – Debian 12 má 3.11, Ubuntu 22.04 3.10 – a `textual`
+  ani `mcp` v repozitářích distribucí nejsou. PyInstaller (onedir) přibalí Python 3.12 i knihovny;
+  ~50 MB na disku, ~27 MB balíček. Onedir místo onefile: rychlý start bez rozbalování do /tmp.
+- **Sestavení na Ubuntu 22.04 (glibc 2.35)** s Pythonem od uv (python-build-standalone).
+  Debian 11 už nemá podporu (archiv bez balíčků). Jen x86_64.
+- **Balíčky přes nfpm** z jedné konfigurace (`packaging/nfpm.yaml`). Aplikace v
+  `/usr/lib/repo-doctor`, odkaz `/usr/bin/repo-doctor`. Značka `install-kind` vedle binárky
+  (`deb`/`rpm`/`pacman`/`tarball`) říká aplikaci, jak radit s aktualizací.
+- **Aktualizace přes správce balíčků:** `.deb`/`.rpm` instalují zdroj repozitáře
+  (`/etc/apt/sources.list.d/repo-doctor.list`, `/etc/yum.repos.d/repo-doctor.repo`, oba
+  `config|noreplace`) a veřejný klíč. Repozitáře (plochý APT, createrepo_c) jsou na GitHub
+  Pages, podepsané (`InRelease`, `repomd.xml.asc`, RPM podepsané nfpm). Bez vlastní
+  serverové infrastruktury a bez další větve (Pages přes Actions artefakt) – drží se jen
+  poslední verze.
+- **Samoaktualizace jen pro tarball** (balíčky by tím obešly správce balíčků). Podpis
+  `SHA256SUMS` se ověřuje přes `gpgv`/`gpg` jen proti klíči zabudovanému v aplikaci
+  (otisk `update.FINGERPRINT`), tarball se rozbaluje s `filter="data"`, výměna složek je dvojí
+  přejmenování; stará verze zůstane v `.repo-doctor-old` do další aktualizace (běžící
+  proces z ní může ještě načítat moduly).
+- **Kontrola verze** jen v TUI, nejvýš jednou za 24 h (cache `update-check.json`),
+  ne v offline režimu, vypnutelná `[updates] check`. Na GitHub jde jen anonymní dotaz na
+  poslední vydání.
+- **Podpisový klíč vydání** (RSA 4096, UID bez osobních údajů) je v secretu
+  `RELEASE_SIGNING_KEY`; veřejná část v `src/repo_doctor/data/signing-key.asc`. Výměna klíče
+  = nová verze aplikace s novým klíčem podepsaná ještě starým.
+- uv zůstává jen vývojovým nástrojem (CI, `CLAUDE.md`). Kontroly, které rozpoznávají
+  `uv.lock` v cizích projektech, se netýkají instalace a zůstávají.
+
 ## Repo a proces
 
 - **Branch:** zadání chtělo `feat/initial-implementation`, prostředí ale vyžaduje vývoj na
