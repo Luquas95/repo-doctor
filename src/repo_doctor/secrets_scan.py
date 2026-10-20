@@ -10,7 +10,6 @@ import hashlib
 import json
 import math
 import re
-import subprocess
 import tempfile
 from collections import Counter
 from collections.abc import Iterable, Iterator
@@ -18,7 +17,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path, PurePosixPath
 
-from repo_doctor.gitwrap import Git, git_env
+from repo_doctor.gitwrap import Git, git_env, run_process
 from repo_doctor.masking import mask
 
 
@@ -366,14 +365,7 @@ def gitleaks_available() -> bool:
 
 
 def _exec(cmd: list[str], timeout: float, env: dict[str, str] | None = None) -> None:
-    subprocess.run(
-        cmd,
-        capture_output=True,
-        timeout=timeout,
-        check=False,
-        env=git_env(env),
-        stdin=subprocess.DEVNULL,
-    )
+    run_process(cmd, timeout=timeout, env=git_env(env))
 
 
 def run_gitleaks(repo: Path, *, history: bool, timeout: float) -> list[SecretMatch]:

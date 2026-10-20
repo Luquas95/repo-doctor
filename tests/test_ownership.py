@@ -3,13 +3,12 @@
 from __future__ import annotations
 
 import json
-import subprocess
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from repo_doctor import cli
+from repo_doctor import cli, gitwrap
 from repo_doctor.checks.meta import UnsafeOwnership
 from repo_doctor.config import Config, RootConfig
 from repo_doctor.forges.urls import SshConfig
@@ -47,7 +46,7 @@ async def test_scanner_marks_repo_and_runs_nothing_else(
     root = _repo(tmp_path)
     monkeypatch.setenv("GIT_TEST_ASSUME_DIFFERENT_OWNER", "1")
     calls: list[list[str]] = []
-    original = subprocess.run
+    original = gitwrap.run_process
 
     def spy(args: Any, *a: Any, **kw: Any) -> Any:
         # jen volání nad repem (globální dotaz na core.sshCommand repo neotevírá)
@@ -55,7 +54,7 @@ async def test_scanner_marks_repo_and_runs_nothing_else(
             calls.append(args)
         return original(args, *a, **kw)
 
-    monkeypatch.setattr(subprocess, "run", spy)
+    monkeypatch.setattr(gitwrap, "run_process", spy)
     cfg = Config(roots=[RootConfig(path=str(root))])
     result = await Scanner(cfg, ScanOptions(offline=True, now=NOW), ssh_config=SshConfig()).run()
     (repo,) = result.repos
