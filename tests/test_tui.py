@@ -151,7 +151,7 @@ async def test_search(tmp_path: Path) -> None:
         assert d.state.filters.query == ""
         assert len(d.visible_repos()) > 1
         # hledání z jiné obrazovky se vrátí na přehled
-        await pilot.press("4")
+        await pilot.press("1")
         assert isinstance(app.screen, FoldersScreen)
         await pilot.press("slash")
         assert isinstance(app.screen, DashboardScreen)
@@ -162,16 +162,18 @@ async def test_screen_switching_and_help(tmp_path: Path) -> None:
     async with app.run_test(size=(100, 31)) as pilot:
         await pilot.pause()
         for key, cls in [
-            ("4", FoldersScreen),
-            ("5", ForgesScreen),
-            ("7", SettingsScreen),
-            ("8", ExportScreen),
-            ("2", DetailScreen),
+            ("1", FoldersScreen),
+            ("2", ForgesScreen),
+            ("4", SettingsScreen),
+            ("5", ExportScreen),
+            ("enter", DetailScreen),
         ]:
             await pilot.press(key)
             await pilot.pause()
             assert isinstance(app.screen, cls), key
-        await pilot.press("1")
+            if cls is not DetailScreen:
+                await pilot.press("escape")
+        await pilot.press("escape")
         assert isinstance(app.screen, DashboardScreen)
         await pilot.press("question_mark")
         await pilot.pause()
@@ -386,7 +388,7 @@ async def test_fix_refuses_dirty(tmp_path: Path) -> None:
     app = make_app(tmp_path, result=_result_for(repo))
     async with app.run_test(size=(100, 31)) as pilot:
         await pilot.pause()
-        await pilot.press("3")
+        await pilot.press("f")
         await pilot.pause(0.3)
         await app.workers.wait_for_complete()
         await pilot.pause()
@@ -402,7 +404,7 @@ async def test_export(tmp_path: Path) -> None:
     target = tmp_path / "out" / "report.json"
     async with app.run_test(size=(100, 31)) as pilot:
         await pilot.pause()
-        await pilot.press("8")
+        await pilot.press("5")
         screen = app.screen
         assert isinstance(screen, ExportScreen)
         await pilot.press("down", "space")  # JSON
@@ -423,7 +425,7 @@ async def test_folders_crud(tmp_path: Path) -> None:
     app = make_app(tmp_path)
     async with app.run_test(size=(100, 31)) as pilot:
         await pilot.pause()
-        await pilot.press("4")
+        await pilot.press("1")
         await pilot.press("n")
         for ch in str(newdir):
             await pilot.press(ch)
@@ -469,7 +471,7 @@ async def test_forges_crud_and_test(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     app = make_app(tmp_path, config="")
     async with app.run_test(size=(120, 40)) as pilot:
         await pilot.pause()
-        await pilot.press("5")
+        await pilot.press("2")
         await pilot.press("n")
         await pilot.pause()
         dialog = app.screen
@@ -517,7 +519,7 @@ async def test_forge_dialog_keyring(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     secret = "tok-" + "k" * 30
     async with app.run_test(size=(120, 40)) as pilot:
         await pilot.pause()
-        await pilot.press("5", "n")
+        await pilot.press("2", "n")
         await pilot.pause()
         app.screen.query_one("#type").value = "forgejo"  # type: ignore[attr-defined]
         app.screen.query_one("#url").value = "https://git.home.ts.net:3000"  # type: ignore[attr-defined]
@@ -623,7 +625,7 @@ async def test_settings(tmp_path: Path) -> None:
     )
     async with app.run_test(size=(100, 40)) as pilot:
         await pilot.pause()
-        await pilot.press("7")
+        await pilot.press("4")
         await pilot.pause()
         screen = app.screen
         screen.query_one("#limit-stash_days").value = "7"  # type: ignore[attr-defined]
@@ -697,7 +699,7 @@ async def test_remote_repos_and_clone(tmp_path: Path) -> None:
     app = make_app(tmp_path, config=cfg, result=result)
     async with app.run_test(size=(120, 40)) as pilot:
         await pilot.pause()
-        await pilot.press("6")
+        await pilot.press("3")
         await pilot.pause(0.3)
         await app.workers.wait_for_complete()
         await pilot.pause()
@@ -732,7 +734,7 @@ async def test_remote_offline(tmp_path: Path) -> None:
     app = make_app(tmp_path, offline=True)
     async with app.run_test(size=(100, 31)) as pilot:
         await pilot.pause()
-        await pilot.press("6")
+        await pilot.press("3")
         await pilot.pause(0.2)
         assert "Offline" in screen_text(app)
         await pilot.press("c")
@@ -750,11 +752,11 @@ async def test_responsive(tmp_path: Path, size: tuple[int, int]) -> None:
             assert "HOSTING" not in text
         if size[0] >= 90:
             assert "TEP · 30 DNÍ" in text
-        for key in ("2", "3", "4", "5", "7", "8", "question_mark"):
+        for key in ("enter", "f", "1", "2", "4", "5", "question_mark"):
             await pilot.press(key)
             await pilot.pause()
             await pilot.press("escape")
-            await pilot.press("1")
+            await pilot.pause()
 
 
 async def test_wizard_guards(tmp_path: Path) -> None:
@@ -764,7 +766,7 @@ async def test_wizard_guards(tmp_path: Path) -> None:
     async with app.run_test(size=(100, 31)) as pilot:
         await pilot.pause()
         app.screen.query_one("#folders").focus()
-        await pilot.press("4")  # přepínání obrazovek je v průvodci blokované
+        await pilot.press("1")  # přepínání obrazovek je v průvodci blokované
         assert isinstance(app.screen, WizardScreen)
         path = app.screen.query_one("#path")
         path.focus()
@@ -799,7 +801,7 @@ async def test_export_asks_before_overwrite(tmp_path: Path) -> None:
     app = make_app(tmp_path)
     async with app.run_test(size=(100, 31)) as pilot:
         await pilot.pause()
-        await pilot.press("8")
+        await pilot.press("5")
         app.screen.query_one("#path").value = str(target)  # type: ignore[attr-defined]
         await pilot.press("e")
         await pilot.pause()
@@ -848,7 +850,7 @@ async def test_dialogs_enter_saves(tmp_path: Path) -> None:
     app = make_app(tmp_path, config="")
     async with app.run_test(size=(120, 40)) as pilot:
         await pilot.pause()
-        await pilot.press("5", "n")
+        await pilot.press("2", "n")
         await pilot.pause()
         app.screen.query_one("#name").value = "gh"  # type: ignore[attr-defined]
         app.screen.query_one("#source").value = "none"  # type: ignore[attr-defined]

@@ -211,7 +211,7 @@ def test_cleanup_screen_snapshot(
     )
 
     async def run_before(pilot: object) -> None:
-        await pilot.press("9")  # type: ignore[attr-defined]
+        await pilot.press("6")  # type: ignore[attr-defined]
         await pilot.pause(0.3)  # type: ignore[attr-defined]
         await pilot.app.workers.wait_for_complete()  # type: ignore[attr-defined]
         await pilot.pause()  # type: ignore[attr-defined]
@@ -230,7 +230,7 @@ async def test_cleanup_screen_confirm_default_cancel_and_trash(tmp_path: Path) -
     result = ScanResult(repos=[RepoResult(path=str(rb.path), name="stare", root="~")])
     app = make_app(tmp_path, result=result)
     async with app.run_test(size=(120, 40)) as pilot:
-        await pilot.press("9")
+        await pilot.press("6")
         await pilot.pause(0.3)
         await app.workers.wait_for_complete()
         await pilot.pause()

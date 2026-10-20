@@ -126,7 +126,7 @@ TUI se pak vždy otevře okamžitě s výsledky posledního skenu a nový sken b
 
 ## Nastavení složek
 
-Obrazovka **Složky** (`4`): `n` přidat (s našeptáváním a kontrolou, že cesta existuje),
+Obrazovka **Složky** (`1`): `n` přidat (s našeptáváním a kontrolou, že cesta existuje),
 `e` upravit hloubku a vylučující vzory, `space` dočasně vypnout, `d` odebrat. U každé složky
 vidíš počet nalezených repozitářů. Discovery:
 
@@ -137,7 +137,7 @@ vidíš počet nalezených repozitářů. Discovery:
 
 ## Připojení hostingů
 
-Obrazovka **Hostingy** (`5`): `n` přidat, `T` otestovat připojení (ověří token a ukáže,
+Obrazovka **Hostingy** (`2`): `n` přidat, `T` otestovat připojení (ověří token a ukáže,
 kolik repozitářů účet vidí), `d` odebrat. Token se v UI nikdy nezobrazí a **nikdy se
 neukládá do `config.toml`** – zdroj tokenu je jeden z:
 
@@ -195,7 +195,7 @@ do proměnné `GIT_SSH_COMMAND` nebo do `~/.ssh/config`. `verify_tls = false` jd
 raději použij `ca_bundle`. Výpadek hostingu (Tailscale vypnutý) nic neblokuje: kontroly
 hostingu se označí jako „nedostupné“.
 
-Obrazovka **Vzdálená repa** (`6`) ukáže repozitáře na hostinzích, které nemají lokální klon
+Obrazovka **Vzdálená repa** (`3`) ukáže repozitáře na hostinzích, které nemají lokální klon
 (`c` naklonuje po potvrzení do vybrané složky, existující složku nikdy nepřepíše), a opačně
 lokální repa bez remote nebo s remote, které hosting nezná.
 
@@ -208,7 +208,7 @@ a přechod na libovolné repo podle názvu). Zkratky jdou přemapovat v `config.
 ```toml
 [keys]
 scan_all = "F5"
-detail_fix = "ctrl+f"
+open_fix = "ctrl+f"
 ```
 
 Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou chybou
@@ -220,16 +220,13 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 |---|---|
 | `?` | nápověda |
 | `ctrl+p` | příkazová paleta |
-| `1` | přehled |
-| `2` | karta repa |
-| `3` | léčba |
-| `4` | složky |
-| `5` | hostingy |
-| `6` | vzdálená repa |
-| `7` | nastavení |
-| `8` | export |
-| `9` | úklid místa |
-| `0` | synchronizace |
+| `1` | složky |
+| `2` | hostingy |
+| `3` | vzdálená repa |
+| `4` | nastavení |
+| `5` | export |
+| `6` | úklid místa |
+| `7` | synchronizace |
 | `/` | hledat |
 | `R` | sken |
 | `r` | sken repa |

@@ -399,7 +399,7 @@ async def test_forges_screen_rejects_unlisted_http_and_notes_allowed(tmp_path: P
     app = make_app(tmp_path, config="")
     async with app.run_test(size=(140, 40)) as pilot:
         await pilot.pause()
-        await pilot.press("5")
+        await pilot.press("2")
         await pilot.press("n")
         await pilot.pause()
         dialog = app.screen
@@ -421,7 +421,7 @@ async def test_forges_screen_rejects_unlisted_http_and_notes_allowed(tmp_path: P
     app = make_app(tmp_path, config=cfg)
     async with app.run_test(size=(140, 40)) as pilot:
         await pilot.pause()
-        await pilot.press("5")
+        await pilot.press("2")
         await pilot.pause()
         detail = str(app.screen.query_one("#forge-detail").render())
         assert "nešifrované spojení, povoleno v allow_http_hosts" in detail
@@ -435,7 +435,7 @@ async def test_settings_validates_allow_http_hosts(tmp_path: Path) -> None:
     app = make_app(tmp_path, config="")
     async with app.run_test(size=(120, 40)) as pilot:
         await pilot.pause()
-        await pilot.press("7")
+        await pilot.press("4")
         await pilot.pause()
         field = app.screen.query_one("#allow_http_hosts", Input)
         field.value = "*"

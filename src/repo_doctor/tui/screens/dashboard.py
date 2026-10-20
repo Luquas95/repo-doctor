@@ -48,7 +48,7 @@ DASH_KEYS: list[str | tuple[str, str]] = [
     "scan_all",
     "search",
     "open_card",
-    "dash_fix",
+    "open_fix",
     "collapse_band",
     "screen_folders",
     "screen_forges",

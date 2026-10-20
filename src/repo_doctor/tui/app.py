@@ -15,7 +15,7 @@ from textual.worker import Worker
 from repo_doctor import gitwrap, history, netpolicy, paths
 from repo_doctor.config import Config, ConfigError, ConfigStore, RootConfig
 from repo_doctor.gitwrap import configure_ssh
-from repo_doctor.keymap import BY_ID, KeymapError, build_keymap, key_label
+from repo_doctor.keymap import BY_ID, KeymapError, build_keymap, key_label, migrate_overrides
 from repo_doctor.masking import install_log_redaction
 from repo_doctor.models import RepoResult, ScanResult
 from repo_doctor.scanner import ScanEvent, Scanner, ScanOptions
@@ -157,7 +157,8 @@ class RepoDoctorApp(App[int]):
     def on_mount(self) -> None:
         try:
             self.keymap_ids = build_keymap(self.config.keys)
-            overrides = {k: v for k, v in self.keymap_ids.items() if k in self.config.keys}
+            remapped = migrate_overrides(self.config.keys)
+            overrides = {k: v for k, v in self.keymap_ids.items() if k in remapped}
             if overrides:
                 self.set_keymap(overrides)
         except KeymapError as err:
@@ -428,14 +429,17 @@ class RepoDoctorApp(App[int]):
         while len(self.screen_stack) > 2 and not isinstance(self.screen, DashboardScreen):
             self.pop_screen()
 
-    def action_switch_screen_n(self, n: int) -> None:
+    def go_home(self) -> bool:
+        """Vrátí se na přehled (v průvodci ne). Vrací, zda se to povedlo."""
         if self._in_wizard():
-            return
+            return False
+        self._pop_to_dashboard()
+        return True
+
+    def action_open_screen(self, name: str) -> None:
         from repo_doctor.tui.screens import (
             cleanup,
-            detail,
             export,
-            fix,
             folders,
             forges,
             remote,
@@ -443,29 +447,24 @@ class RepoDoctorApp(App[int]):
             sync,
         )
 
-        if n in (2, 3) and self.selected_repo is None:
-            self.notify("Nejdřív vyber repo na přehledu.", severity="warning")
-            return
-        self._pop_to_dashboard()
-        if n == 1:
-            return
-        path = self.selected_path or ""
-        factories: dict[int, Callable[[], Any]] = {
-            2: lambda: detail.DetailScreen(path),
-            3: lambda: fix.FixScreen(path),
-            4: folders.FoldersScreen,
-            5: forges.ForgesScreen,
-            6: remote.RemoteScreen,
-            7: settings.SettingsScreen,
-            8: export.ExportScreen,
-            9: cleanup.CleanupScreen,
-            0: sync.SyncScreen,
+        factories: dict[str, Callable[[], Any]] = {
+            "folders": folders.FoldersScreen,
+            "forges": forges.ForgesScreen,
+            "remote": remote.RemoteScreen,
+            "settings": settings.SettingsScreen,
+            "export": export.ExportScreen,
+            "cleanup": cleanup.CleanupScreen,
+            "sync": sync.SyncScreen,
         }
-        self.push_screen(factories[n]())
+        if self.go_home():
+            self.push_screen(factories[name]())
 
     def open_detail(self, path: str) -> None:
+        from repo_doctor.tui.screens.detail import DetailScreen
+
         self.selected_path = path
-        self.action_switch_screen_n(2)
+        if self.go_home():
+            self.push_screen(DetailScreen(path))
 
     def open_fix(self, path: str, focus_check: str | None = None) -> None:
         from repo_doctor.tui.screens.fix import FixScreen
