@@ -893,3 +893,70 @@ async def test_quit_stops_running_scan(tmp_path: Path) -> None:
     assert scanner is not None and scanner.cancelled
     assert gitwrap.aborted()
     assert app.return_code == 0
+
+
+async def test_open_editor_gui_runs_detached(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    launched: list[list[str]] = []
+    monkeypatch.setattr("repo_doctor.tui.screens.detail.open_in_editor_detached", launched.append)
+    result = sample_result()
+    repo = next(r for r in result.repos if r.name == "infra-notes")
+    repo.path = str(tmp_path / "infra-notes")
+    finding = next(f for f in repo.findings if f.location.path)
+    target = Path(repo.path) / str(finding.location.path)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("x\n")
+    app = make_app(tmp_path, config=CONFIG + '\n[ui]\neditor = "gedit"\n', result=result)
+    async with app.run_test(size=(100, 31)) as pilot:
+        await pilot.pause()
+        app.open_detail(repo.path)
+        await pilot.pause()
+        detail = app.screen
+        assert isinstance(detail, DetailScreen)
+        detail.current = finding
+        detail.action_open_editor()
+        await pilot.pause()
+        assert launched and launched[0][0] == "gedit" and launched[0][-1] == str(target)
+        assert isinstance(app.screen, DetailScreen)  # TUI se nepozastavilo
+
+
+async def test_settings_editor_choice(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    from textual.widgets import Input, Static
+
+    present = {"nvim", "code"}
+    monkeypatch.setattr(
+        "repo_doctor.tui.util.shutil.which", lambda n: f"/usr/bin/{n}" if n in present else None
+    )
+    monkeypatch.setenv("EDITOR", "nano")
+    monkeypatch.delenv("VISUAL", raising=False)
+    app = make_app(tmp_path)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.press("4")
+        await pilot.pause()
+        screen = app.screen
+        info = screen.query_one("#editor-info", Static)
+        assert "nano (podle: $EDITOR) – ⚠ není nainstalovaný" in str(info.render())
+        custom = screen.query_one("#editor", Input)
+        assert not custom.display
+        choice = screen.query_one("#editor-choice")
+        choice.value = "code"  # type: ignore[attr-defined]
+        await pilot.pause()
+        assert app.config.ui.editor == "code"
+        assert str(info.render()) == "Spustí se: code (podle: Nastavení)"
+        choice.value = "__custom__"  # type: ignore[attr-defined]
+        await pilot.pause()
+        assert custom.display and app.config.ui.editor == "code"
+        custom.value = "nvim -p"
+        await pilot.pause()
+        assert app.config.ui.editor == "nvim -p"
+        choice.value = "__auto__"
+        await pilot.pause()
+        assert app.config.ui.editor is None and not custom.display
+    # vlastní příkaz, který není v seznamu, se po otevření ukáže jako „vlastní“
+    app = make_app(tmp_path, config=CONFIG + '\n[ui]\neditor = "nvim -p"\n')
+    async with app.run_test(size=(120, 40)) as pilot:
+        await pilot.press("4")
+        await pilot.pause()
+        assert app.screen.query_one("#editor-choice").value == "__custom__"
+        assert app.screen.query_one("#editor", Input).value == "nvim -p"

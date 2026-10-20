@@ -479,7 +479,7 @@ ssh_batch_mode = true     # false = nepřidávat `-o BatchMode=yes` (vlastní SS
 [ui]
 theme = "dark"            # dark | light (t přepne)
 scan_on_start = false     # true = po spuštění TUI rovnou skenovat
-editor = "nvim"
+editor = "nvim"            # klávesa o v kartě repa; bez hodnoty $VISUAL / $EDITOR / vi
 ```
 
 `.repo-doctor.toml` v kořeni repozitáře přepisuje `checks`, `limits`, `allowlist`,

@@ -41,7 +41,9 @@ def test_git_state_and_paths() -> None:
         ("hx", ["hx", "/f:12"]),
         ("code --wait", ["code", "--wait", "--goto", "/f:12"]),
         ("zed", ["zed", "/f:12"]),
-        ("gedit", ["gedit", "/f"]),
+        ("gedit", ["gedit", "+12", "/f"]),
+        ("kate", ["kate", "--line", "12", "/f"]),
+        ("gnome-text-editor", ["gnome-text-editor", "/f"]),
     ],
 )
 def test_editor_command(editor: str, expected: list[str]) -> None:
@@ -52,6 +54,42 @@ def test_editor_from_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("VISUAL", raising=False)
     monkeypatch.setenv("EDITOR", "nano")
     assert util.editor_command(None, Path("/f"), None) == ["nano", "/f"]
+
+
+def test_resolve_editor_order(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("VISUAL", "code --wait")
+    monkeypatch.setenv("EDITOR", "nano")
+    assert util.resolve_editor("hx") == ("hx", "Nastavení")
+    assert util.resolve_editor(None) == ("code --wait", "$VISUAL")
+    monkeypatch.delenv("VISUAL")
+    assert util.resolve_editor(None) == ("nano", "$EDITOR")
+    monkeypatch.delenv("EDITOR")
+    assert util.resolve_editor(None) == ("vi", "výchozí")
+
+
+def test_available_editors_and_gui(monkeypatch: pytest.MonkeyPatch) -> None:
+    present = {"nvim", "code", "gedit"}
+    monkeypatch.setattr(
+        "repo_doctor.tui.util.shutil.which", lambda n: f"/usr/bin/{n}" if n in present else None
+    )
+    assert util.available_editors() == [
+        ("nvim", "Neovim (nvim)"),
+        ("code", "VS Code (code) · okno"),
+        ("gedit", "gedit (gedit) · okno"),
+    ]
+    assert util.is_gui_editor(["/usr/bin/code", "--wait"]) and util.is_gui_editor(["kate"])
+    assert not util.is_gui_editor(["nvim"]) and not util.is_gui_editor([])
+    assert util.editor_installed("code --wait") and not util.editor_installed("vi")
+    assert not util.editor_installed("'neuzavřené") and not util.editor_installed("")
+
+
+def test_open_in_editor_detached(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[list[str], dict[str, object]]] = []
+    monkeypatch.setattr(
+        "repo_doctor.tui.util.subprocess.Popen", lambda cmd, **kw: calls.append((cmd, kw))
+    )
+    util.open_in_editor_detached(["gedit", "/f"])
+    assert calls[0][0] == ["gedit", "/f"] and calls[0][1]["start_new_session"] is True
 
 
 def test_open_url_and_copy(monkeypatch: pytest.MonkeyPatch) -> None:

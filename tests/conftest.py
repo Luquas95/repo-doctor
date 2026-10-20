@@ -33,6 +33,10 @@ def _isolated_env(
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     monkeypatch.setenv("GIT_CONFIG_SYSTEM", "/dev/null")
     monkeypatch.delenv("GIT_SSH_COMMAND", raising=False)
+    # editor z prostředí vývojáře by měnil Nastavení i spouštěný příkaz; neexistující
+    # editor dá stejný výstup na každém stroji (i bez vi)
+    monkeypatch.delenv("VISUAL", raising=False)
+    monkeypatch.setenv("EDITOR", "repo-doctor-test-editor")
     configure_ssh(batch_mode=True)
     reset_ssh_cache()
     _allow_protocols()
