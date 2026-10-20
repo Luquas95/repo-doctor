@@ -19,6 +19,11 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 - TUI jednou upozorní, že sken tajemství by byl s `gitleaks` přesnější.
 
 ### Změněno
+- **Srozumitelnější popisky (#41):**
+  - Hlavička přehledu ukazuje „R nový sken všech rep“, v liště je `R sken všech rep`
+    i `r sken repa`.
+  - Popisky akcí v nápovědě, paletě a liště říkají, co se stane („skenovat všechna repa“,
+    „skrýt nález (allowlist)“, „přesunout do koše“…).
 - **Výběr editoru (#40):** Nastavení nabídne editory nainstalované v systému, volbu
   „automaticky ($VISUAL / $EDITOR)“ a vlastní příkaz. Vysvětlí, k čemu editor je (klávesa
   `o` v kartě repa), ukáže, který se opravdu spustí, a upozorní, když není nainstalovaný.
