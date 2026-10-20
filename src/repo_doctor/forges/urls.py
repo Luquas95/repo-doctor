@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import fnmatch
 import glob
+import ipaddress
 import re
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -126,6 +127,15 @@ class SshConfig:
             elif fnmatch.fnmatchcase(alias, p):
                 matched = True
         return matched
+
+
+def host_label(host: str) -> str:
+    """Krátký název hostingu pro přehled: první část jména, IP adresa celá (#37)."""
+    try:
+        ipaddress.ip_address(host.strip("[]"))
+    except ValueError:
+        return host.split(".")[0]
+    return host
 
 
 def parse_remote(url: str, ssh_config: SshConfig | None = None) -> RemoteURL | None:

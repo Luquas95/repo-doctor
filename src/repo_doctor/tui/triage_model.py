@@ -104,7 +104,15 @@ def sort_key(repo: RepoResult, column: str) -> tuple[object, ...]:
         "forge": forge_key(repo),
         "pulse": -sum(repo.state.pulse),
     }
-    return (keys[column], score, repo.name.lower())
+    # při shodném skóre je výš repo s vážnějšími nálezy
+    return (
+        keys[column],
+        score,
+        -c[Severity.HIGH],
+        -c[Severity.MEDIUM],
+        -c[Severity.LOW],
+        repo.name.lower(),
+    )
 
 
 def build_groups(
