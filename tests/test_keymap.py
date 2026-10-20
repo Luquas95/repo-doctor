@@ -80,9 +80,9 @@ def test_helpers() -> None:
     assert is_valid_key("alt+1") and is_valid_key("f12") and not is_valid_key("+")
     g = grouped()
     assert ("?", "nápověda") in g["Globální"]
-    assert ("R", "sken") in g["Globální"]
+    assert ("R", "skenovat všechna repa") in g["Globální"]
     g2 = grouped({**build_keymap({"scan_all": "F5"})})
-    assert ("f5", "sken") in g2["Globální"]
+    assert ("f5", "skenovat všechna repa") in g2["Globální"]
 
 
 def test_readme_key_tables_match_keymap() -> None:

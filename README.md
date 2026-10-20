@@ -224,20 +224,20 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 |---|---|
 | `?` | nápověda |
 | `ctrl+p` | příkazová paleta |
-| `1` | složky |
-| `2` | hostingy |
+| `1` | složky s repy |
+| `2` | hostingy (GitHub, Forgejo…) |
 | `3` | vzdálená repa |
 | `4` | nastavení |
 | `5` | export |
 | `6` | úklid místa |
 | `7` | synchronizace |
 | `8` | nástroje |
-| `/` | hledat |
-| `R` | sken |
-| `r` | sken repa |
-| `F` | sken s git fetch |
-| `x` | zrušit sken |
-| `O` | offline režim |
+| `/` | hledat repo |
+| `R` | skenovat všechna repa |
+| `r` | skenovat vybrané repo |
+| `F` | skenovat vše + git fetch (novinky z remote) |
+| `x` | zrušit běžící sken |
+| `O` | offline režim (bez síťových kontrol) |
 | `t` | světlé / tmavé téma |
 | `q` | zpět |
 | `ctrl+q` | konec (zastaví i běžící sken) |
@@ -259,9 +259,9 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 
 | Klávesa | Akce |
 |---|---|
-| `⏎` | karta |
-| `f` | léčba |
-| `z` | sbalit |
+| `⏎` | karta repa |
+| `f` | léčba (opravy) |
+| `z` | sbalit / rozbalit skupinu |
 | `S` | řadit podle sloupce |
 | `s` | obrátit řazení |
 | `alt+1` | filtr ▲ HIGH |
@@ -269,16 +269,16 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | `alt+3` | filtr ● LOW |
 | `p` | jen problémová repa |
 | `alt+g` | seskupit: triáž / složka / hosting / remote |
-| `b` | levý panel |
+| `b` | skrýt / ukázat levý panel |
 
 **Karta repa**
 
 | Klávesa | Akce |
 |---|---|
-| `f` | léčba |
-| `a` | allowlist |
-| `o` | editor |
-| `w` | web |
+| `f` | léčba (opravy) |
+| `a` | skrýt nález (allowlist) |
+| `o` | otevřít v editoru |
+| `w` | otevřít na webu |
 | `y` | kopírovat cestu |
 | `b` | export SBOM (CycloneDX) |
 
@@ -286,34 +286,34 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 
 | Klávesa | Akce |
 |---|---|
-| `space` | vybrat |
-| `A` | vše |
-| `⏎` | potvrdit |
+| `space` | vybrat opravu |
+| `A` | vybrat vše |
+| `⏎` | provést vybrané |
 
 **Složky**
 
 | Klávesa | Akce |
 |---|---|
-| `n` | přidat |
-| `e` | upravit |
-| `d` | odebrat |
+| `n` | přidat složku |
+| `e` | upravit složku |
+| `d` | odebrat složku |
 | `space` | zapnout / vypnout |
 
 **Hostingy**
 
 | Klávesa | Akce |
 |---|---|
-| `n` | přidat |
-| `e` | upravit |
-| `d` | odebrat |
+| `n` | přidat hosting |
+| `e` | upravit hosting |
+| `d` | odebrat hosting |
 | `T` | otestovat připojení |
 
 **Vzdálená repa**
 
 | Klávesa | Akce |
 |---|---|
-| `c` | naklonovat |
-| `v` | přepnout pohled |
+| `c` | naklonovat repo |
+| `v` | přepnout: chybí lokálně ↔ jen lokálně |
 | `ctrl+r` | načíst znovu |
 
 **Nastavení**
@@ -334,24 +334,24 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 
 | Klávesa | Akce |
 |---|---|
-| `e` | exportovat |
+| `e` | exportovat report |
 
 **Úklid**
 
 | Klávesa | Akce |
 |---|---|
-| `space` | vybrat |
-| `A` | vše / nic |
-| `⏎` | do koše |
+| `space` | vybrat repo |
+| `A` | vybrat vše / nic |
+| `⏎` | přesunout do koše |
 | `D` | trvale smazat |
 
 **Synchronizace**
 
 | Klávesa | Akce |
 |---|---|
-| `f` | fetch všech |
-| `space` | vybrat |
-| `⏎` | rychle dohnat |
+| `f` | stáhnout novinky (fetch) |
+| `space` | vybrat repo |
+| `⏎` | dohnat vybrané (fast-forward) |
 
 **Průvodce prvním spuštěním**
 

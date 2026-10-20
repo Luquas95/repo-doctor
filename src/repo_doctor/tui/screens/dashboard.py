@@ -44,14 +44,16 @@ if TYPE_CHECKING:
 
 SIDEBAR_W = 22
 MIN_NAME_W = 13  # nejdelší názvy ve wireframu („thesis-2019“, „infra-notes“) se vejdou celé
+# krátké tvary pro lištu; plné popisky jsou v nápovědě a paletě
 DASH_KEYS: list[str | tuple[str, str]] = [
-    "scan_all",
-    "search",
-    "open_card",
-    "open_fix",
-    "collapse_band",
-    "screen_folders",
-    "screen_forges",
+    ("scan_all", "sken všech rep"),
+    ("scan_repo", "sken repa"),
+    ("search", "hledat"),
+    ("open_card", "karta"),
+    ("open_fix", "léčba"),
+    ("collapse_band", "sbalit"),
+    ("screen_folders", "složky"),
+    ("screen_forges", "hostingy"),
     "help",
     ("quit", "konec"),
 ]
@@ -224,7 +226,8 @@ class DashboardScreen(NavMixin, Screen[Any]):
             msg = (
                 "Žádná repa neodpovídají filtru."
                 if self.state.filters.active()
-                else f"Zatím žádná data – {app.key('scan_all')} spustí sken."
+                else f"Zatím žádný sken – stiskni {app.key('scan_all')} a repo-doctor "
+                "zkontroluje všechna repa ve sledovaných složkách."
             )
             options.append(Option(Text(f"  {msg}", style=Style(color=p.muted)), disabled=True))
             self._row_paths.append(None)

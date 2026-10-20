@@ -60,7 +60,7 @@ def vitals_text(
         if current:
             t.append("   › ", style=Style(color=p.muted))
             t.append(current, style=Style(color=p.text))
-        t.append(f"   {keys[1]} zruší", style=Style(color=p.dim))
+        t.append(f"   {keys[1]} zruší sken", style=Style(color=p.dim))
     else:
         when = result.finished_at
         if when is not None:
@@ -68,8 +68,13 @@ def vitals_text(
             dur = (when - result.started_at).total_seconds()
             t.append(f"poslední sken {local:%-d. %-m. %H:%M}", style=Style(color=p.muted))
             t.append(f" · {dur:.0f} s", style=Style(color=p.dim))
+            t.append(" · ", style=Style(color=p.dim))
+            t.append(keys[0], style=Style(color=p.accent, bold=True))
+            t.append(" nový sken všech rep", style=Style(color=p.muted))
         else:
-            t.append(f"zatím bez skenu – {keys[0]} spustí sken", style=Style(color=p.muted))
+            t.append("zatím bez skenu – ", style=Style(color=p.muted))
+            t.append(keys[0], style=Style(color=p.accent, bold=True))
+            t.append(" zkontroluje všechna repa", style=Style(color=p.muted))
         if result.cancelled:
             t.append(" · přerušený", style=Style(color=p.med))
         if result.warnings:
