@@ -363,6 +363,16 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   Systémové balíčky aktualizuje a odinstaluje správce balíčků. Odinstalace přes `sudo` by
   mohla odebrat i závislosti jiných programů.
 
+## Editor (#40)
+
+- **Editor zůstává volitelný:** potřebuje ho jen klávesa `o` v kartě repa (otevřít soubor
+  nálezu na řádku). Bez něj vše ostatní funguje.
+- **Výběr ze seznamu známých editorů v PATH** (`tui/util.KNOWN_EDITORS`) místo volného
+  textu, s volbou „automaticky“ ($VISUAL → $EDITOR → vi) a „vlastní příkaz“ pro cokoli jiného.
+  Hodnota v `[ui] editor` je dál příkaz jako dřív, stávající konfigurace platí.
+- **Grafické editory na pozadí** (`start_new_session`, bez pozastavení TUI): `subprocess.run`
+  by čekal na zavření okna. Terminálové editory TUI pozastaví jako dřív.
+
 ## Repo a proces
 
 - **Branch:** zadání chtělo `feat/initial-implementation`, prostředí ale vyžaduje vývoj na

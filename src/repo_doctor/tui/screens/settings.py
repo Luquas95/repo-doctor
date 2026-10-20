@@ -19,12 +19,15 @@ from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import BaseScreen
 from repo_doctor.tui.screens.dialogs import ConfirmDialog
 from repo_doctor.tui.theme import DARK_NAME, LIGHT_NAME
-from repo_doctor.tui.util import home_path
+from repo_doctor.tui.util import available_editors, editor_installed, home_path, resolve_editor
 from repo_doctor.tui.widgets.forms import IntRange, PositiveNumber, split_list
 from repo_doctor.tui.widgets.keybar import KeyBar
 
 if TYPE_CHECKING:
     from repo_doctor.tui.app import RepoDoctorApp
+
+EDITOR_AUTO = "__auto__"
+EDITOR_CUSTOM = "__custom__"
 
 LIMIT_LABELS: dict[str, str] = {
     "large_file_mb": "velký soubor (MB)",
@@ -91,8 +94,41 @@ class SettingsScreen(BaseScreen):
                 allow_blank=False,
                 id="theme",
             )
-            yield Label("Editor (prázdné = $VISUAL / $EDITOR)")
-            yield Input(compact=True, value=cfg.ui.editor or "", placeholder="nvim", id="editor")
+            yield Label("Editor")
+            yield Static(
+                f"Klávesa {self.rd.key('open_editor')} v kartě repa otevře soubor nálezu "
+                "na jeho řádku – na ruční opravu toho, co nejde opravit automaticky.",
+                classes="hint",
+            )
+            editors = available_editors()
+            known = {cmd for cmd, _ in editors}
+            choice = (
+                EDITOR_AUTO
+                if not cfg.ui.editor
+                else cfg.ui.editor
+                if cfg.ui.editor in known
+                else EDITOR_CUSTOM
+            )
+            yield Select(
+                compact=True,
+                options=[
+                    ("automaticky ($VISUAL / $EDITOR)", EDITOR_AUTO),
+                    *[(label, cmd) for cmd, label in editors],
+                    ("vlastní příkaz…", EDITOR_CUSTOM),
+                ],
+                value=choice,
+                allow_blank=False,
+                id="editor-choice",
+            )
+            editor_input = Input(
+                compact=True,
+                value=cfg.ui.editor if choice == EDITOR_CUSTOM else "",
+                placeholder="např. code --wait nebo /opt/editor/bin/ed",
+                id="editor",
+            )
+            editor_input.display = choice == EDITOR_CUSTOM
+            yield editor_input
+            yield Static(id="editor-info", classes="hint")
             yield Label("Práh pro exit kód CLI (fail-on)")
             yield Select(
                 compact=True,
@@ -298,7 +334,15 @@ class SettingsScreen(BaseScreen):
         table.add_columns("hash", "kontrola", "repo", "důvod")
         self._fill_allowlist()
         self.refresh_schedule()
+        self._show_editor()
         self.query_one("#theme", Select).focus()
+
+    def _show_editor(self) -> None:
+        cmd, source = resolve_editor(self.rd.config.ui.editor)
+        text = f"Spustí se: {cmd} (podle: {source})"
+        if not editor_installed(cmd):
+            text += " – ⚠ není nainstalovaný, vyber jiný"
+        self.query_one("#editor-info", Static).update(text)
 
     def _fill_allowlist(self) -> None:
         table = self.query_one("#allowlist", DataTable)
@@ -330,6 +374,15 @@ class SettingsScreen(BaseScreen):
                 self.app.theme = LIGHT_NAME if value == "light" else DARK_NAME
         elif wid == "scan_on_start" and (value == "on") != self.rd.config.ui.scan_on_start:
             self._save(store.set_value, "ui", "scan_on_start", value == "on")
+        elif wid == "editor-choice":
+            editor_input = self.query_one("#editor", Input)
+            editor_input.display = value == EDITOR_CUSTOM
+            if value == EDITOR_CUSTOM:
+                editor_input.focus()
+                return
+            new = None if value == EDITOR_AUTO else str(value)
+            if new != self.rd.config.ui.editor and self._save(store.set_value, "ui", "editor", new):
+                self._show_editor()
         elif wid == "fail_on" and value != self.rd.config.checks.fail_on.value:
             self._save(store.set_value, "checks", "fail_on", value)
         elif wid == "license" and value != self.rd.config.license:
@@ -351,7 +404,8 @@ class SettingsScreen(BaseScreen):
             if getattr(self.rd.config.limits, key) != number:
                 self._save(store.set_value, "limits", key, number)
         elif wid == "editor" and value != (self.rd.config.ui.editor or ""):
-            self._save(store.set_value, "ui", "editor", value or None)
+            if self._save(store.set_value, "ui", "editor", value or None):
+                self._show_editor()
         elif wid == "templates_dir" and value != (self.rd.config.templates_dir or ""):
             self._save(store.set_top, "templates_dir", value or None)
         elif wid in ("ignore_paths", "ignore_repos", "allow_http_hosts"):

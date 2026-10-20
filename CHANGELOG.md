@@ -19,6 +19,9 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 - TUI jednou upozorní, že sken tajemství by byl s `gitleaks` přesnější.
 
 ### Změněno
+- **Výběr editoru (#40):** Nastavení nabídne editory nainstalované v systému, volbu
+  „automaticky ($VISUAL / $EDITOR)“ a vlastní příkaz. Vysvětlí, k čemu editor je (klávesa
+  `o` v kartě repa), ukáže, který se opravdu spustí, a upozorní, když není nainstalovaný.
 - **Jedna funkce = jedna zkratka (#32):** léčbu otevírá jen `f` (na přehledu i v kartě
   repa), kartu repa `⏎`, na přehled se vracíš `q`/`esc`. Globální `1`–`3` zmizely a ostatní
   obrazovky se přečíslovaly: složky `1`, hostingy `2`, vzdálená repa `3`, nastavení `4`,
@@ -31,6 +34,8 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 - **Konec je `ctrl+q` (#35):** `q` už aplikaci nezavírá, jen vrací o obrazovku zpět.
 
 ### Opraveno
+- Grafický editor (gedit, Kate, VS Code…) se spouští na pozadí. Dřív TUI zamrzlo, dokud
+  se okno editoru nezavřelo. gedit a Kate otevírají soubor nálezu na správném řádku.
 - **Skóre už nespadne na 0 (#37):** pod 30 body se jen blíží nule, takže repa s mnoha
   vážnými nálezy se dál liší a nejhorší je nahoře. Skóre od 30 výš se nemění. Při shodném
   skóre se řadí podle počtu HIGH, MED a LOW nálezů.

@@ -72,9 +72,62 @@ def pad(text: Text | str, width: int, style: Style | str | None = None) -> Text:
     return t
 
 
+# Editory, které Nastavení nabídne, pokud jsou v PATH: (příkaz, název, grafický).
+# Grafický se spouští na pozadí, terminálový pozastaví TUI, dokud ho nezavřeš.
+KNOWN_EDITORS: tuple[tuple[str, str, bool], ...] = (
+    ("nvim", "Neovim", False),
+    ("vim", "Vim", False),
+    ("vi", "vi", False),
+    ("nano", "nano", False),
+    ("micro", "micro", False),
+    ("hx", "Helix", False),
+    ("helix", "Helix", False),
+    ("kak", "Kakoune", False),
+    ("emacs", "Emacs", False),
+    ("code", "VS Code", True),
+    ("codium", "VSCodium", True),
+    ("subl", "Sublime Text", True),
+    ("zed", "Zed", True),
+    ("gedit", "gedit", True),
+    ("gnome-text-editor", "GNOME Text Editor", True),
+    ("kate", "Kate", True),
+)
+GUI_EDITORS = {cmd for cmd, _label, gui in KNOWN_EDITORS if gui}
+
+
+def available_editors() -> list[tuple[str, str]]:
+    """Nainstalované známé editory jako (příkaz, popisek) – pro výběr v Nastavení."""
+    return [
+        (cmd, f"{label} ({cmd})" + (" · okno" if gui else ""))
+        for cmd, label, gui in KNOWN_EDITORS
+        if shutil.which(cmd)
+    ]
+
+
+def resolve_editor(editor: str | None) -> tuple[str, str]:
+    """Jaký editor se spustí a proč: (příkaz, odkud). Pořadí: Nastavení, $VISUAL, $EDITOR, vi."""
+    if editor:
+        return editor, "Nastavení"
+    for var in ("VISUAL", "EDITOR"):
+        if value := os.environ.get(var):
+            return value, f"${var}"
+    return "vi", "výchozí"
+
+
+def editor_installed(editor: str) -> bool:
+    try:
+        parts = shlex.split(editor)
+    except ValueError:
+        return False
+    return bool(parts) and shutil.which(parts[0]) is not None
+
+
+def is_gui_editor(cmd: list[str]) -> bool:
+    return bool(cmd) and Path(cmd[0]).name in GUI_EDITORS
+
+
 def editor_command(editor: str | None, path: Path, line: int | None) -> list[str]:
-    raw = editor or os.environ.get("VISUAL") or os.environ.get("EDITOR") or "vi"
-    cmd = shlex.split(raw)
+    cmd = shlex.split(resolve_editor(editor)[0])
     name = Path(cmd[0]).name
     if line and name in {
         "vi",
@@ -87,6 +140,7 @@ def editor_command(editor: str | None, path: Path, line: int | None) -> list[str
         "hx",
         "emacs",
         "emacsclient",
+        "gedit",
     }:
         if name in {"hx", "helix"}:
             return [*cmd, f"{path}:{line}"]
@@ -95,7 +149,20 @@ def editor_command(editor: str | None, path: Path, line: int | None) -> list[str
         return [*cmd, "--goto", f"{path}:{line}"]
     if line and name in {"subl", "zed"}:
         return [*cmd, f"{path}:{line}"]
+    if line and name == "kate":
+        return [*cmd, "--line", str(line), str(path)]
     return [*cmd, str(path)]
+
+
+def open_in_editor_detached(cmd: list[str]) -> None:
+    """Grafický editor: spustit na pozadí, TUI běží dál."""
+    subprocess.Popen(
+        cmd,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
 
 
 def open_url(url: str) -> bool:

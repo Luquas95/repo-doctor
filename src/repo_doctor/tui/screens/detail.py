@@ -25,6 +25,8 @@ from repo_doctor.tui.util import (
     editor_command,
     git_state,
     home_path,
+    is_gui_editor,
+    open_in_editor_detached,
     open_url,
     relative_time,
     wl_copy,
@@ -327,8 +329,18 @@ class DetailScreen(BaseScreen):
             self.rd.config.ui.editor, target, finding.location.line if finding else None
         )
         try:
-            with self.app.suspend():
-                subprocess.run(cmd, check=False)
+            if is_gui_editor(cmd):
+                open_in_editor_detached(cmd)
+                self.notify(f"Otevírám v {cmd[0]}: {rel or repo.name}")
+            else:
+                with self.app.suspend():
+                    subprocess.run(cmd, check=False)
+        except FileNotFoundError:
+            self.notify(
+                f"Editor {cmd[0]!r} není nainstalovaný – vyber jiný v Nastavení "
+                f"(klávesa {self.rd.key('screen_settings')}).",
+                severity="error",
+            )
         except (OSError, Exception) as err:
             self.notify(f"Editor nejde spustit: {err}", severity="error")
 
