@@ -11,14 +11,27 @@ from repo_doctor.models import Finding, RepoResult, Severity
 PENALTY = {Severity.HIGH: 25, Severity.MEDIUM: 9, Severity.LOW: 3}
 # Každá kontrola může skóre srazit nejvýš o tolik (deset LOW nálezů jedné kontroly ≠ katastrofa).
 PER_CHECK_CAP = {Severity.HIGH: 50, Severity.MEDIUM: 18, Severity.LOW: 6}
+# Do 30 bodů platí 100 − srážka. Níž se skóre jen blíží nule (#37), aby se repa s mnoha
+# vážnými nálezy dál lišila a žádné nemělo 0. Přechod je spojitý a se stejným sklonem.
+LINEAR_FLOOR = 30
 
 
-def score(findings: Iterable[Finding]) -> int:
+def penalty(findings: Iterable[Finding]) -> int:
+    """Celková srážka bodů (součet za kontroly, každá omezená stropem)."""
     per_check: dict[tuple[str, Severity], int] = {}
     for f in findings:
         key = (f.check_id, f.severity)
         per_check[key] = min(PER_CHECK_CAP[f.severity], per_check.get(key, 0) + PENALTY[f.severity])
-    return max(0, 100 - sum(per_check.values()))
+    return sum(per_check.values())
+
+
+def score(findings: Iterable[Finding]) -> int:
+    lost = penalty(findings)
+    if lost <= 100 - LINEAR_FLOOR:
+        return 100 - lost
+    # hyperbola 900 / (srážka − 40): v bodě 70 dává 30 se sklonem −1, k nule se jen blíží
+    tail = LINEAR_FLOOR**2 / (lost - (100 - 2 * LINEAR_FLOOR))
+    return max(1, round(tail))
 
 
 class Band(StrEnum):

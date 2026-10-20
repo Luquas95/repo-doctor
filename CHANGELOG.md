@@ -27,6 +27,11 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 - **Konec je `ctrl+q` (#35):** `q` už aplikaci nezavírá, jen vrací o obrazovku zpět.
 
 ### Opraveno
+- **Skóre už nespadne na 0 (#37):** pod 30 body se jen blíží nule, takže repa s mnoha
+  vážnými nálezy se dál liší a nejhorší je nahoře. Skóre od 30 výš se nemění. Při shodném
+  skóre se řadí podle počtu HIGH, MED a LOW nálezů.
+- Sloupec HOSTING u remote na IP adrese ukazoval jen první číslo (`100` místo
+  `100.121.109.115`).
 - Příkazová paleta u příkazu „Konec“ ukazovala `Ctrl+C` místo skutečné klávesy.
 - **Zavření aplikace zastaví veškerou práci (#35):** běžící sken se zruší a git i gitleaks
   podprocesy (včetně jejich potomků) se ukončí. Proces dřív po zavření TUI čekal, než

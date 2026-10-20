@@ -39,7 +39,14 @@ from repo_doctor.deps import DepsData, collect, enrich
 from repo_doctor.discovery import DiscoveredRepo, discover
 from repo_doctor.forges import ForgeManager
 from repo_doctor.forges.github import GitHubForge
-from repo_doctor.forges.urls import RemoteURL, SshConfig, match_forge, parse_remote, web_url
+from repo_doctor.forges.urls import (
+    RemoteURL,
+    SshConfig,
+    host_label,
+    match_forge,
+    parse_remote,
+    web_url,
+)
 from repo_doctor.gitwrap import Git, GitError
 from repo_doctor.httpclient import HttpClient, HttpError, ResponseCache
 from repo_doctor.masking import redact, redact_url_credentials
@@ -296,7 +303,7 @@ class Scanner:
                 forge_name, owner_path = forge.name, parsed.path if parsed else None
         res.remotes = remotes
         res.forge = forge_name or (
-            parsed_primary.host.split(".")[0] if parsed_primary and parsed_primary.host else None
+            host_label(parsed_primary.host) if parsed_primary and parsed_primary.host else None
         )
         res.web_url = web_url(parsed_primary) if parsed_primary else None
         ctx = RepoContext(

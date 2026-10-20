@@ -117,6 +117,7 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   skupině NELZE ZKONTROLOVAT na konci a do průměrného zdraví ani historie se nezapočítá.
 - **Skóre:** 100 − 25 za HIGH, 9 za MED, 3 za LOW, s limitem na kontrolu (max 50 / 18 / 6),
   aby deset nálezů jedné kontroly nesrazilo repo na nulu. Kalibrováno podle wireframu.
+  Pod 30 body se skóre jen blíží nule, viz „Skóre bez nul“ (#37).
 - **Pásma triáže mají prioritu** KRITICKÉ > SLEDOVAT > BEZ TEPU > ZDRAVÉ: repo s HIGH
   nálezem, které je zároveň bez tepu, patří mezi kritická.
 
@@ -339,6 +340,18 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   čísla nebyla natvrdo v aplikaci. Název `switch_screen` nejde, je to vestavěná akce Textualu.
 - **Staré názvy akcí v `[keys]` nerozbijí start** (`LEGACY_IDS`, `REMOVED_IDS`): přejmenované
   se převedou, odebraný `screen_overview` se ignoruje.
+
+## Skóre bez nul a popisek hostingu (#37)
+
+- **Pod 30 bodů se skóre jen blíží nule:** dřív stačily HIGH nálezy dvou kontrol (2 × 50)
+  a skóre bylo 0, takže kritická repa se od sebe nedala rozlišit. Nad 30 body platí dál
+  100 − srážka, takže pásma (40 a 70), historie i reporty běžných rep zůstávají stejné.
+  Pod 30 je skóre `900 / (srážka − 40)`: navazuje spojitě a se stejným sklonem, s každým
+  dalším nálezem klesá a minimum je 1. Čistě násobné skóre („podíl ze zbytku“) jsme
+  zamítli, protože by posunulo i běžná repa mezi pásmy (7 MED: 37 → 52).
+- **Při shodném skóre** se řadí podle počtu HIGH, MED a LOW nálezů.
+- **Popisek hostingu u IP adresy** (remote bez nastaveného hostingu) je celá adresa, ne
+  první oktet (`100` u Tailscale adres `100.x.x.x`).
 
 ## Repo a proces
 
