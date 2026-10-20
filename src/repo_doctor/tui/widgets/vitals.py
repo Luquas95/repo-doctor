@@ -8,6 +8,7 @@ from rich.style import Style
 from rich.text import Text
 from textual.widgets import Static
 
+from repo_doctor.i18n import _
 from repo_doctor.models import ScanResult, Severity
 from repo_doctor.notify import RunState
 from repo_doctor.scanner import aggregate_pulse
@@ -30,7 +31,7 @@ def vitals_text(
 ) -> Text:
     s = result.summary(no_pulse_days)
     t = Text()
-    t.append(f"{s.repos} repozitářů", style=Style(color=p.text, bold=True))
+    t.append(_("{repos} repozitářů").format(repos=s.repos), style=Style(color=p.text, bold=True))
     wide = width >= 96
     gap = "    " if wide else "  "
     t.append(gap)
@@ -40,54 +41,60 @@ def vitals_text(
         t.append(f"{sev.symbol} {sev.short} {n}", style=style)
         t.append("   " if wide else "  ")
     t.append("  " if wide else "")
-    t.append("zdraví ", style=Style(color=p.muted))
+    t.append(_("zdraví "), style=Style(color=p.muted))
     blocks = 10 if width >= 90 else 5
     t.append(gauge(s.health, blocks), style=Style(color=p.score(s.health)))
     t.append(f" {s.health}", style=Style(color=p.score(s.health), bold=True))
     pulse_w = max(0, min(12, width - t.cell_len - 10))
     if pulse_w >= 6:
         t.append("    " if wide else "  ")
-        t.append("tep ", style=Style(color=p.muted))
+        t.append(_("tep "), style=Style(color=p.muted))
         t.append(sparkline(aggregate_pulse(result), pulse_w), style=Style(color=p.accent))
     t.append("\n")
     if scanning:
         bar_w = 20 if width >= 90 else 10
         filled = round(bar_w * done / total) if total else 0
-        t.append("sken ", style=Style(color=p.muted))
+        t.append(_("sken "), style=Style(color=p.muted))
         t.append("█" * filled, style=Style(color=p.accent))
         t.append("░" * (bar_w - filled), style=Style(color=p.dim))
         t.append(f" {done}/{total}", style=Style(color=p.text))
         if current:
             t.append("   › ", style=Style(color=p.muted))
             t.append(current, style=Style(color=p.text))
-        t.append(f"   {keys[1]} zruší sken", style=Style(color=p.dim))
+        t.append(_("   {v} zruší sken").format(v=keys[1]), style=Style(color=p.dim))
     else:
         when = result.finished_at
         if when is not None:
             local = when.astimezone()
             dur = (when - result.started_at).total_seconds()
-            t.append(f"poslední sken {local:%-d. %-m. %H:%M}", style=Style(color=p.muted))
+            t.append(
+                _("poslední sken {local:%-d. %-m. %H:%M}").format(local=local),
+                style=Style(color=p.muted),
+            )
             t.append(f" · {dur:.0f} s", style=Style(color=p.dim))
             t.append(" · ", style=Style(color=p.dim))
             t.append(keys[0], style=Style(color=p.accent, bold=True))
-            t.append(" nový sken všech rep", style=Style(color=p.muted))
+            t.append(_(" nový sken všech rep"), style=Style(color=p.muted))
         else:
-            t.append("zatím bez skenu – ", style=Style(color=p.muted))
+            t.append(_("zatím bez skenu – "), style=Style(color=p.muted))
             t.append(keys[0], style=Style(color=p.accent, bold=True))
-            t.append(" zkontroluje všechna repa", style=Style(color=p.muted))
+            t.append(_(" zkontroluje všechna repa"), style=Style(color=p.muted))
         if result.cancelled:
-            t.append(" · přerušený", style=Style(color=p.med))
+            t.append(_(" · přerušený"), style=Style(color=p.med))
         if result.warnings:
-            t.append(f" · ⚠ {len(result.warnings)} upozornění", style=Style(color=p.med))
+            t.append(
+                _(" · ⚠ {len} upozornění").format(len=len(result.warnings)),
+                style=Style(color=p.med),
+            )
         if scheduled is not None:
             try:
                 at = datetime.fromisoformat(scheduled.ts).astimezone()
-                label = f"{at:%-d. %-m. %H:%M}"
+                label = at.strftime(_("%-d. %-m. %H:%M"))
             except ValueError:
                 label = "?"
-            t.append(f" · plánovaný {label}", style=Style(color=p.muted))
+            t.append(_(" · plánovaný {label}").format(label=label), style=Style(color=p.muted))
             t.append(
-                " ⚠ změny" if scheduled.changes else " beze změn",
+                _(" ⚠ změny") if scheduled.changes else _(" beze změn"),
                 style=Style(color=p.med if scheduled.changes else p.dim),
             )
     t.truncate(width * 2, overflow="ellipsis")

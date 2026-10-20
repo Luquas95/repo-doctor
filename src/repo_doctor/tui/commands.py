@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 
 from textual.command import DiscoveryHit, Hit, Hits, Provider
 
+from repo_doctor.i18n import _
 from repo_doctor.keymap import ACTIONS
 from repo_doctor.models import Category
 
@@ -28,7 +29,7 @@ class RepoCommands(Provider):
                     (
                         a.description.capitalize(),
                         partial(app.run_action, a.action),
-                        f"klávesa {a.display}",
+                        _("klávesa {display}").format(display=a.display),
                     )
                 )
         dash_actions = [
@@ -36,15 +37,29 @@ class RepoCommands(Provider):
         ]
         for a in dash_actions:
             cmds.append(
-                (f"Přehled: {a.description}", partial(self._dash, a.action), f"klávesa {a.display}")
+                (
+                    _("Přehled: {description}").format(description=a.description),
+                    partial(self._dash, a.action),
+                    _("klávesa {display}").format(display=a.display),
+                )
             )
         for cat in [None, *Category]:
-            label = cat.label if cat else "vše"
-            cmds.append((f"Filtr kategorie: {label}", partial(self._category, cat), "přehled"))
-        cmds.append(("Konec", app.exit, f"klávesa {app.key('quit')}"))
+            label = cat.label if cat else _("vše")
+            cmds.append(
+                (
+                    _("Filtr kategorie: {label}").format(label=label),
+                    partial(self._category, cat),
+                    _("přehled"),
+                )
+            )
+        cmds.append((_("Konec"), app.exit, _("klávesa {key}").format(key=app.key("quit"))))
         for repo in sorted(app.result.repos, key=lambda r: r.name):
             cmds.append(
-                (f"Otevřít repo: {repo.name}", partial(app.open_detail, repo.path), repo.path)
+                (
+                    _("Otevřít repo: {name}").format(name=repo.name),
+                    partial(app.open_detail, repo.path),
+                    repo.path,
+                )
             )
         return cmds
 

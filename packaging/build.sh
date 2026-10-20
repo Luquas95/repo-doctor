@@ -26,4 +26,6 @@ app=dist/repo-doctor/repo-doctor
 "$app" --version
 "$app" checks >/dev/null
 "$app" explain secrets-history >/dev/null
+REPO_DOCTOR_LANG=en "$app" --help | grep -q "Audit and maintenance" \
+    || { echo "✗ chybí anglický překlad (locale/en.po)" >&2; exit 1; }
 echo "✓ Sestaveno: dist/repo-doctor ($(du -sh dist/repo-doctor | cut -f1))"

@@ -12,27 +12,28 @@ from pathlib import Path
 from rich.style import Style
 from rich.text import Text
 
+from repo_doctor.i18n import _
 from repo_doctor.models import RepoResult
 
 
 def relative_time(when: datetime | None, now: datetime) -> str:
     if when is None:
-        return "bez commitu"
+        return _("bez commitu")
     seconds = (now - when).total_seconds()
     if seconds < 3600:
-        return "před chvílí"
+        return _("před chvílí")
     hours = int(seconds // 3600)
     if hours < 24:
-        return f"před {hours} h"
+        return _("před {hours} h").format(hours=hours)
     days = int(seconds // 86400)
     if days == 1:
-        return "včera"
+        return _("včera")
     if days < 60:
-        return f"před {days} dny"
+        return _("před {days} dny").format(days=days)
     months = days // 30
     if months < 24:
-        return f"před {months} měs."
-    return f"před {days // 365} lety"
+        return _("před {months} měs.").format(months=months)
+    return _("před {v} lety").format(v=days // 365)
 
 
 def git_state(repo: RepoResult) -> str:
@@ -46,10 +47,10 @@ def git_state(repo: RepoResult) -> str:
     if repo.state.detached:
         parts.append("detached")
     if not repo.remotes:
-        parts.append("bez remote")
+        parts.append(_("bez remote"))
     if not parts and repo.archived:
-        parts.append("archiv")
-    return " ".join(parts) or "čisté"
+        parts.append(_("archiv"))
+    return " ".join(parts) or _("čisté")
 
 
 def home_path(path: str) -> str:
@@ -98,7 +99,7 @@ GUI_EDITORS = {cmd for cmd, _label, gui in KNOWN_EDITORS if gui}
 def available_editors() -> list[tuple[str, str]]:
     """Nainstalované známé editory jako (příkaz, popisek) – pro výběr v Nastavení."""
     return [
-        (cmd, f"{label} ({cmd})" + (" · okno" if gui else ""))
+        (cmd, f"{label} ({cmd})" + (_(" · okno") if gui else ""))
         for cmd, label, gui in KNOWN_EDITORS
         if shutil.which(cmd)
     ]
@@ -107,11 +108,11 @@ def available_editors() -> list[tuple[str, str]]:
 def resolve_editor(editor: str | None) -> tuple[str, str]:
     """Jaký editor se spustí a proč: (příkaz, odkud). Pořadí: Nastavení, $VISUAL, $EDITOR, vi."""
     if editor:
-        return editor, "Nastavení"
+        return editor, _("Nastavení")
     for var in ("VISUAL", "EDITOR"):
         if value := os.environ.get(var):
             return value, f"${var}"
-    return "vi", "výchozí"
+    return "vi", _("výchozí")
 
 
 def editor_installed(editor: str) -> bool:

@@ -17,6 +17,7 @@ from repo_doctor.forges import ForgeManager
 from repo_doctor.forges.base import ForgeRepo
 from repo_doctor.gitwrap import Git, GitError
 from repo_doctor.httpclient import HttpError
+from repo_doctor.i18n import _
 from repo_doctor.sshhelp import explain_ssh_error
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import BaseScreen
@@ -47,7 +48,7 @@ class RemoteScreen(BaseScreen):
         with Vertical(classes="page panel", id="remote-page"):
             yield Static(id="remote-note", classes="page-header")
             yield DataTable(id="remote", cursor_type="row")
-        yield KeyBar(["clone", "remote_view", "remote_refresh", ("esc", "zpět"), "help"])
+        yield KeyBar(["clone", "remote_view", "remote_refresh", ("esc", _("zpět")), "help"])
 
     def on_mount(self) -> None:
         self.render_view()
@@ -65,12 +66,18 @@ class RemoteScreen(BaseScreen):
     async def load(self) -> None:
         app = self.rd
         if app.offline:
-            self.errors = ["Offline režim – seznam vzdálených rep není k dispozici (O ho vypne)."]
+            self.errors = [
+                _("Offline režim – seznam vzdálených rep není k dispozici (O ho vypne).")
+            ]
             self.loaded = True
             self.render_view()
             return
         if not app.config.forges:
-            self.errors = ["Není připojený žádný hosting – přidej ho na obrazovce Hostingy (5)."]
+            self.errors = [
+                _("Není připojený žádný hosting – přidej ho na obrazovce Hostingy ({key}).").format(
+                    key=self.rd.key("screen_forges")
+                )
+            ]
             self.loaded = True
             self.render_view()
             return
@@ -106,7 +113,7 @@ class RemoteScreen(BaseScreen):
         out = []
         for repo in sorted(self.rd.result.repos, key=lambda r: r.name):
             if not repo.remotes:
-                out.append((repo.name, home_path(repo.path), "bez remote"))
+                out.append((repo.name, home_path(repo.path), _("bez remote")))
                 continue
             unknown = any(f.check_id == "forge-unknown-remote" for f in repo.findings)
             for remote in repo.remotes:
@@ -120,7 +127,9 @@ class RemoteScreen(BaseScreen):
                         (
                             repo.name,
                             home_path(repo.path),
-                            f"{remote.forge}: {remote.owner_path} hosting nezná",
+                            _("{forge}: {owner_path} hosting nezná").format(
+                                forge=remote.forge, owner_path=remote.owner_path
+                            ),
                         )
                     )
                     break
@@ -133,28 +142,32 @@ class RemoteScreen(BaseScreen):
         table.clear(columns=True)
         note = Text()
         if self.view == "missing":
-            page.border_title = " vzdálená repa · na hostingu bez lokálního klonu "
-            table.add_columns("hosting", "repozitář", "viditelnost", "stav", "popis")
+            page.border_title = _(" vzdálená repa · na hostingu bez lokálního klonu ")
+            table.add_columns("hosting", _("repozitář"), _("viditelnost"), _("stav"), _("popis"))
             if not self.loaded:
-                note.append("Načítám seznam repozitářů z hostingů…", style=Style(color=p.muted))
+                note.append(_("Načítám seznam repozitářů z hostingů…"), style=Style(color=p.muted))
             for name, repo in self.missing:
                 vis = (
-                    Text("◉ veřejné", style=Style(color=p.high))
+                    Text(_("◉ veřejné"), style=Style(color=p.high))
                     if not repo.private
-                    else Text("○ privátní", style=Style(color=p.muted))
+                    else Text(_("○ privátní"), style=Style(color=p.muted))
                 )
-                state = "archiv" if repo.archived else ("fork" if repo.fork else "")
+                state = _("archiv") if repo.archived else ("fork" if repo.fork else "")
                 table.add_row(name, repo.full_name, vis, state, repo.description[:50])
             if self.loaded and not self.missing and not self.errors:
-                note.append("Všechna repa z hostingů mají lokální klon. ✓", style=Style(color=p.ok))
+                note.append(
+                    _("Všechna repa z hostingů mají lokální klon. ✓"), style=Style(color=p.ok)
+                )
             elif self.missing:
                 note.append(
-                    f"{len(self.missing)} repozitářů bez lokálního klonu · c naklonuje vybrané · v přepne pohled",
+                    _(
+                        "{len} repozitářů bez lokálního klonu · c naklonuje vybrané · v přepne pohled"
+                    ).format(len=len(self.missing)),
                     style=Style(color=p.muted),
                 )
         else:
-            page.border_title = " vzdálená repa · lokální bez (známého) remote "
-            table.add_columns("repozitář", "cesta", "problém", "git")
+            page.border_title = _(" vzdálená repa · lokální bez (známého) remote ")
+            table.add_columns(_("repozitář"), _("cesta"), _("problém"), "git")
             orphans = self._orphans()
             for name, path, problem in orphans:
                 local = next((r for r in self.rd.result.repos if r.name == name), None)
@@ -165,7 +178,9 @@ class RemoteScreen(BaseScreen):
                     git_state(local) if local else "",
                 )
             note.append(
-                f"{len(orphans)} lokálních rep bez zálohy nebo s remote, který hosting nezná · v přepne pohled",
+                _(
+                    "{len} lokálních rep bez zálohy nebo s remote, který hosting nezná · v přepne pohled"
+                ).format(len=len(orphans)),
                 style=Style(color=p.muted),
             )
         for err in self.errors:
@@ -175,12 +190,17 @@ class RemoteScreen(BaseScreen):
     def action_clone(self) -> None:
         if self.view != "missing" or not self.missing:
             self.notify(
-                "Vyber repo v pohledu „na hostingu bez lokálního klonu“.", severity="warning"
+                _("Vyber repo v pohledu „na hostingu bez lokálního klonu“."), severity="warning"
             )
             return
         roots = [r for r in self.rd.config.roots if r.enabled]
         if not roots:
-            self.notify("Není nastavená žádná sledovaná složka (4).", severity="warning")
+            self.notify(
+                _("Není nastavená žádná sledovaná složka ({key}).").format(
+                    key=self.rd.key("screen_folders")
+                ),
+                severity="warning",
+            )
             return
         row = self.query_one(DataTable).cursor_row
         name, repo = self.missing[min(row, len(self.missing) - 1)]
@@ -195,17 +215,23 @@ class RemoteScreen(BaseScreen):
 
     @work(thread=True, group="clone")
     def do_clone(self, req: CloneRequest, forge: str, repo: ForgeRepo) -> None:
-        self.app.call_from_thread(self.notify, f"Klonuji {repo.full_name}…")
+        self.app.call_from_thread(
+            self.notify, _("Klonuji {full_name}…").format(full_name=repo.full_name)
+        )
         try:
             Git.clone(req.url, req.dest)
         except (GitError, FileExistsError) as err:
             if isinstance(err, GitError):
                 hint = explain_ssh_error(err.stderr, req.url)
-                msg = f"{hint}\n(git: {err.stderr[:200]})" if hint else err.stderr
+                msg = (
+                    _("{hint}\n(git: {v})").format(hint=hint, v=err.stderr[:200])
+                    if hint
+                    else err.stderr
+                )
             else:
                 msg = str(err)
             self.app.call_from_thread(
-                self.notify, f"Klon selhal: {msg}", severity="error", timeout=10
+                self.notify, _("Klon selhal: {msg}").format(msg=msg), severity="error", timeout=10
             )
             return
         self.app.call_from_thread(self._cloned, req.dest, forge, repo)
@@ -216,5 +242,7 @@ class RemoteScreen(BaseScreen):
         ]
         self.render_view()
         self.notify(
-            f"Naklonováno do {home_path(str(dest))}. {self.rd.key('scan_all')} spustí sken."
+            _("Naklonováno do {home_path}. {key} spustí sken.").format(
+                home_path=home_path(str(dest)), key=self.rd.key("scan_all")
+            )
         )

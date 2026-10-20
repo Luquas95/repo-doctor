@@ -7,23 +7,24 @@ from datetime import datetime
 from typing import Literal
 
 from repo_doctor.checks.duplicates import remote_key
+from repo_doctor.i18n import _
 from repo_doctor.models import Category, RepoResult, ScanResult, Severity
 from repo_doctor.scoring import Band, band, is_no_pulse, sort_score
 from repo_doctor.tui.util import git_state
 
 SORT_COLUMNS: tuple[str, ...] = ("score", "name", "high", "medium", "low", "git", "forge", "pulse")
 SORT_LABELS = {
-    "score": "skóre",
-    "name": "název",
+    "score": _("skóre"),
+    "name": _("název"),
     "high": "▲",
     "medium": "◆",
     "low": "●",
     "git": "git",
     "forge": "hosting",
-    "pulse": "tep",
+    "pulse": _("tep"),
 }
 GroupBy = Literal["triage", "root", "forge", "remote"]
-GROUP_LABELS = {"triage": "triáž", "root": "složka", "forge": "hosting", "remote": "remote"}
+GROUP_LABELS = {"triage": _("triáž"), "root": _("složka"), "forge": "hosting", "remote": "remote"}
 
 
 @dataclass
@@ -124,9 +125,9 @@ def build_groups(
     if state.group_by == "triage":
         for b in Band:
             note = (
-                f"žádný commit {no_pulse_days}+ dní"
+                _("žádný commit {no_pulse_days}+ dní").format(no_pulse_days=no_pulse_days)
                 if b is Band.NO_PULSE
-                else "cizí vlastník – viz nález"
+                else _("cizí vlastník – viz nález")
                 if b is Band.UNCHECKED
                 else ""
             )
@@ -139,7 +140,7 @@ def build_groups(
             key = remote_key(r) or ("?" if r.remotes else "-")
         else:
             key = r.root if state.group_by == "root" else forge_key(r)
-        label = {"-": "bez remote", "?": "neznámý remote"}.get(key, key)
+        label = {"-": _("bez remote"), "?": _("neznámý remote")}.get(key, key)
         groups.setdefault(
             key, Group(key, label.upper() if state.group_by == "forge" else label, [])
         ).repos.append(r)

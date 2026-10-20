@@ -479,6 +479,7 @@ ssh_batch_mode = true     # false = nepřidávat `-o BatchMode=yes` (vlastní SS
 [ui]
 theme = "dark"            # dark | light (t přepne)
 scan_on_start = false     # true = po spuštění TUI rovnou skenovat
+language = "auto"         # auto (podle LANG) | cs | en; jednorázově --lang nebo REPO_DOCTOR_LANG
 editor = "nvim"            # klávesa o v kartě repa; bez hodnoty $VISUAL / $EDITOR / vi
 ```
 

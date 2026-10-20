@@ -11,6 +11,7 @@ from textual.app import ComposeResult
 from textual.containers import Vertical
 from textual.widgets import Button, Input, Label, RadioButton, RadioSet, Static
 
+from repo_doctor.i18n import _
 from repo_doctor.paths import expand_path
 from repo_doctor.reports import FORMATS, ReportFormat, render
 from repo_doctor.tui.bindings import bindings
@@ -22,9 +23,9 @@ if TYPE_CHECKING:
     from repo_doctor.tui.app import RepoDoctorApp
 
 LABELS = {
-    "md": "Markdown (.md) – do issue nebo poznámek",
-    "json": "JSON (.json) – stabilní schéma pro skripty",
-    "html": "HTML (.html) – samostatná stránka s filtry",
+    "md": _("Markdown (.md) – do issue nebo poznámek"),
+    "json": _("JSON (.json) – stabilní schéma pro skripty"),
+    "html": _("HTML (.html) – samostatná stránka s filtry"),
 }
 
 
@@ -45,17 +46,17 @@ class ExportScreen(BaseScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="page panel form") as page:
-            page.border_title = " export reportu "
-            yield Label("Formát")
+            page.border_title = _(" export reportu ")
+            yield Label(_("Formát"))
             with RadioSet(id="format"):
                 for fmt in FORMATS:
                     yield RadioButton(LABELS[fmt], value=fmt == "md", name=fmt)
-            yield Label("Cesta")
+            yield Label(_("Cesta"))
             yield Input(compact=True, id="path")
-            yield Static("Tajemství jsou v reportu vždy maskovaná.", classes="hint")
-            yield Button("Exportovat", id="do-export", variant="primary")
+            yield Static(_("Tajemství jsou v reportu vždy maskovaná."), classes="hint")
+            yield Button(_("Exportovat"), id="do-export", variant="primary")
             yield Static(id="export-result")
-        yield KeyBar(["export", ("esc", "zpět"), "help"])
+        yield KeyBar(["export", ("esc", _("zpět")), "help"])
 
     def on_mount(self) -> None:
         self.query_one("#path", Input).value = self._default_path()
@@ -88,9 +89,9 @@ class ExportScreen(BaseScreen):
 
             self.app.push_screen(
                 ConfirmDialog(
-                    "Přepsat soubor",
-                    f"\nSoubor {target} už existuje. Přepsat?\n",
-                    confirm_label="Přepsat",
+                    _("Přepsat soubor"),
+                    _("\nSoubor {target} už existuje. Přepsat?\n").format(target=target),
+                    confirm_label=_("Přepsat"),
                 ),
                 done,
             )
@@ -102,7 +103,7 @@ class ExportScreen(BaseScreen):
         raw = self.query_one("#path", Input).value.strip()
         out = self.query_one("#export-result", Static)
         if not raw:
-            out.update(Text("Zadej cestu.", style=Style(color=p.high)))
+            out.update(Text(_("Zadej cestu."), style=Style(color=p.high)))
             return
         target = expand_path(raw)
         if target.is_dir():
@@ -110,7 +111,9 @@ class ExportScreen(BaseScreen):
         if not self.rd.result.repos:
             out.update(
                 Text(
-                    "Zatím nejsou žádné výsledky – nejdřív spusť sken (R).",
+                    _("Zatím nejsou žádné výsledky – nejdřív spusť sken ({key}).").format(
+                        key=self.rd.key("scan_all")
+                    ),
                     style=Style(color=p.med),
                 )
             )
@@ -122,7 +125,14 @@ class ExportScreen(BaseScreen):
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text(text, "utf-8")
         except OSError as err:
-            out.update(Text(f"Nelze zapsat {target}: {err.strerror}", style=Style(color=p.high)))
+            out.update(
+                Text(
+                    _("Nelze zapsat {target}: {strerror}").format(
+                        target=target, strerror=err.strerror
+                    ),
+                    style=Style(color=p.high),
+                )
+            )
             return
-        out.update(Text(f"✓ Uloženo: {target}", style=Style(color=p.ok)))
-        self.notify(f"Report uložen: {target}")
+        out.update(Text(_("✓ Uloženo: {target}").format(target=target), style=Style(color=p.ok)))
+        self.notify(_("Report uložen: {target}").format(target=target))

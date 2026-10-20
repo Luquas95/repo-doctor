@@ -13,6 +13,7 @@ from textual.containers import VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Static
 
+from repo_doctor.i18n import _
 from repo_doctor.keymap import grouped
 from repo_doctor.tui.screens.base import NavMixin
 
@@ -22,7 +23,7 @@ if TYPE_CHECKING:
 
 class HelpScreen(NavMixin, ModalScreen[Any]):
     BINDINGS = [
-        Binding("escape,question_mark,q", "dismiss_help", "zavřít", key_display="esc"),
+        Binding("escape,question_mark,q", "dismiss_help", _("zavřít"), key_display="esc"),
         Binding("j,down", "scroll_down", show=False),
         Binding("k,up", "scroll_up", show=False),
     ]
@@ -40,14 +41,16 @@ class HelpScreen(NavMixin, ModalScreen[Any]):
             for key, desc in items:
                 table.add_row(Text(f" {key} ", style=cap), Text(desc))
         with VerticalScroll() as scroll:
-            scroll.border_title = " nápověda · zkratky "
+            scroll.border_title = _(" nápověda · zkratky ")
             yield Static(table)
             yield Static(
                 Text(
-                    "\nesc = zpět / zavřít dialog · enter = otevřít, potvrdit, sbalit pásmo · "
-                    "ctrl+s = uložit formulář · tab = další pole (v poli cesty přijme návrh)\n"
-                    'Zkratky jdou přemapovat v config.toml, sekce [keys] (akce = "klávesa").\n'
-                    "Esc nebo ? zavře nápovědu.",
+                    _(
+                        "\nesc = zpět / zavřít dialog · enter = otevřít, potvrdit, sbalit pásmo · "
+                        "ctrl+s = uložit formulář · tab = další pole (v poli cesty přijme návrh)\n"
+                        'Zkratky jdou přemapovat v config.toml, sekce [keys] (akce = "klávesa").\n'
+                        "Esc nebo ? zavře nápovědu."
+                    ),
                     style=Style(color=p.muted),
                 )
             )

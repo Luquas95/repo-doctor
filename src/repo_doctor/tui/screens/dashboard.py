@@ -15,6 +15,8 @@ from textual.screen import Screen
 from textual.widgets import Input, OptionList, Static
 from textual.widgets.option_list import Option
 
+from repo_doctor.czech import plural
+from repo_doctor.i18n import _
 from repo_doctor.models import Category, RepoResult, Severity
 from repo_doctor.scoring import Band
 from repo_doctor.tui.bindings import bindings
@@ -46,16 +48,16 @@ SIDEBAR_W = 22
 MIN_NAME_W = 13  # nejdelší názvy ve wireframu („thesis-2019“, „infra-notes“) se vejdou celé
 # krátké tvary pro lištu; plné popisky jsou v nápovědě a paletě
 DASH_KEYS: list[str | tuple[str, str]] = [
-    ("scan_all", "sken všech rep"),
-    ("scan_repo", "sken repa"),
-    ("search", "hledat"),
-    ("open_card", "karta"),
-    ("open_fix", "léčba"),
-    ("collapse_band", "sbalit"),
-    ("screen_folders", "složky"),
+    ("scan_all", _("sken všech rep")),
+    ("scan_repo", _("sken repa")),
+    ("search", _("hledat")),
+    ("open_card", _("karta")),
+    ("open_fix", _("léčba")),
+    ("collapse_band", _("sbalit")),
+    ("screen_folders", _("složky")),
     ("screen_forges", "hostingy"),
     "help",
-    ("quit", "konec"),
+    ("quit", _("konec")),
 ]
 
 
@@ -77,7 +79,7 @@ class DashboardScreen(NavMixin, Screen[Any]):
     BINDINGS = [
         *bindings("nav"),
         *bindings("dashboard"),
-        Binding("escape", "escape", "zrušit hledání", show=False),
+        Binding("escape", "escape", _("zrušit hledání"), show=False),
     ]
 
     def __init__(self) -> None:
@@ -98,7 +100,7 @@ class DashboardScreen(NavMixin, Screen[Any]):
             with Vertical(id="triage-panel"):
                 yield Input(
                     compact=True,
-                    placeholder="hledat v názvech repozitářů a nálezech…",
+                    placeholder=_("hledat v názvech repozitářů a nálezech…"),
                     id="search",
                     classes="hidden",
                 )
@@ -143,11 +145,15 @@ class DashboardScreen(NavMixin, Screen[Any]):
         limits = app.config.limits
         vitals = self.query_one(Vitals)
         forges = len(app.config.forges)
-        mode = "○ offline" if app.offline else "● online"
+        mode = _("○ offline") if app.offline else _("● online")
         when = app.result.finished_at
-        right = f"{mode} · sken {when.astimezone():%H:%M}" if when else mode
-        right += f" · {forges} {'hosting' if forges == 1 else 'hostingy' if 1 < forges < 5 else 'hostingů'}"
-        split_title(vitals, "repo-doctor · triáž", right)
+        right = (
+            _("{mode} · sken {astimezone:%H:%M}").format(mode=mode, astimezone=when.astimezone())
+            if when
+            else mode
+        )
+        right += f" · {forges} {plural(forges, _('hosting'), _('hostingy'), _('hostingů'))}"
+        split_title(vitals, _("repo-doctor · triáž"), right)
         vitals.update(
             vitals_text(
                 app.result,
@@ -167,12 +173,14 @@ class DashboardScreen(NavMixin, Screen[Any]):
         sidebar = self.query_one(SideBar)
         sidebar.display = self._sidebar_visible()
         panel = self.query_one("#triage-panel")
-        sort = f"řazeno: {SORT_LABELS[self.state.sort]} {'↓' if self.state.reverse else '↑'}"
+        sort = _("řazeno: {v} {v2}").format(
+            v=SORT_LABELS[self.state.sort], v2="↓" if self.state.reverse else "↑"
+        )
         split_title(
             panel,
-            "TRIÁŽ"
+            _("TRIÁŽ")
             if self.state.group_by == "triage"
-            else f"PŘEHLED · {GROUP_LABELS[self.state.group_by]}",
+            else _("PŘEHLED · {v}").format(v=GROUP_LABELS[self.state.group_by]),
             sort,
         )
         if sidebar.display:
@@ -224,10 +232,11 @@ class DashboardScreen(NavMixin, Screen[Any]):
             self._row_groups.append(None)
         if not options:
             msg = (
-                "Žádná repa neodpovídají filtru."
+                _("Žádná repa neodpovídají filtru.")
                 if self.state.filters.active()
-                else f"Zatím žádný sken – stiskni {app.key('scan_all')} a repo-doctor "
-                "zkontroluje všechna repa ve sledovaných složkách."
+                else _(
+                    "Zatím žádný sken – stiskni {key} a repo-doctor zkontroluje všechna repa ve sledovaných složkách."
+                ).format(key=app.key("scan_all"))
             )
             options.append(Option(Text(f"  {msg}", style=Style(color=p.muted)), disabled=True))
             self._row_paths.append(None)
@@ -296,24 +305,30 @@ class DashboardScreen(NavMixin, Screen[Any]):
             t.append(count, style=Style(color=p.muted))
             opts.append(Option(t, id=oid))
 
-        head("SLOŽKY")
+        head(_("SLOŽKY"))
         roots = app.roots
         for root in roots:
             n = sum(1 for r in app.result.repos if r.root == root.path)
             name = home_path(str(root.expanded)).rstrip("/").rsplit("/", 1)[-1] or root.path
             item(
                 name,
-                f"{n}" if root.enabled else "vyp.",
+                f"{n}" if root.enabled else _("vyp."),
                 f"root:{root.path}",
                 active=f.root == root.path,
                 dim=not root.enabled,
             )
         if not roots:
             opts.append(
-                Option(Text("  žádné (4 přidá)", style=Style(color=p.muted)), disabled=True)
+                Option(
+                    Text(
+                        _("  žádné ({key} přidá)").format(key=app.key("screen_folders")),
+                        style=Style(color=p.muted),
+                    ),
+                    disabled=True,
+                )
             )
         opts.append(Option("", disabled=True))
-        head("HOSTINGY")
+        head(_("HOSTINGY"))
         counts: dict[str, int] = {}
         for r in app.result.repos:
             counts[forge_key(r)] = counts.get(forge_key(r), 0) + 1
@@ -322,28 +337,34 @@ class DashboardScreen(NavMixin, Screen[Any]):
             sym = "◆" if name in connected else "·"
             item(f"{sym} {name}", str(counts[name]), f"forge:{name}", active=f.forge == name)
         if "-" in counts:
-            item("○ bez remote", str(counts["-"]), "forge:-", active=f.forge == "-")
+            item(_("○ bez remote"), str(counts["-"]), "forge:-", active=f.forge == "-")
         opts.append(Option("", disabled=True))
-        head("FILTR")
-        item(("■" if f.problems_only else "□") + " jen problémová", "", "f:problems", mark=False)
+        head(_("FILTR"))
+        item(("■" if f.problems_only else "□") + _(" jen problémová"), "", "f:problems", mark=False)
         item(
             ("■" if self.state.group_by != "triage" else "□")
-            + " seskupit: "
+            + _(" seskupit: ")
             + GROUP_LABELS[self.state.group_by],
             "",
             "f:group",
             mark=False,
         )
-        sev = f"severity ≥ {f.min_severity.short}" if f.min_severity else "severity: vše"
+        sev = (
+            _("severity ≥ {short}").format(short=f.min_severity.short)
+            if f.min_severity
+            else _("severity: vše")
+        )
         item("  " + sev, "", "f:severity", active=f.min_severity is not None, mark=False)
-        cat = f"kat.: {f.category.label}" if f.category else "kategorie: vše"
+        cat = (
+            _("kat.: {label}").format(label=f.category.label) if f.category else _("kategorie: vše")
+        )
         item("  " + cat, "", "f:category", active=f.category is not None, mark=False)
         opts.append(Option("", disabled=True))
-        head("OD VČEREJŠKA")
+        head(_("OD VČEREJŠKA"))
         delta = app.history_delta
         if not delta:
-            opts.append(Option(Text("  beze změny", style=Style(color=p.muted)), disabled=True))
-        labels = {"high": "HIGH", "medium": "MED", "low": "LOW", "no_pulse": "bez tepu"}
+            opts.append(Option(Text(_("  beze změny"), style=Style(color=p.muted)), disabled=True))
+        labels = {"high": "HIGH", "medium": "MED", "low": "LOW", "no_pulse": _("bez tepu")}
         for key in ("high", "medium", "low", "no_pulse"):
             if key in delta:
                 v = delta[key]
@@ -451,7 +472,7 @@ class DashboardScreen(NavMixin, Screen[Any]):
     def action_open_fix(self) -> None:
         repo = self.rd.selected_repo
         if repo is None:
-            self.notify("Nejdřív vyber repo.", severity="warning")
+            self.notify(_("Nejdřív vyber repo."), severity="warning")
             return
         self.rd.open_fix(repo.path)
 

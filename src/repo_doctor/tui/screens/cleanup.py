@@ -31,6 +31,7 @@ from repo_doctor.cleanup import (
     is_inactive,
     mark_busy,
 )
+from repo_doctor.i18n import _
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import BaseScreen
 from repo_doctor.tui.screens.dialogs import ConfirmDialog
@@ -90,27 +91,26 @@ class CleanupScreen(BaseScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="page panel") as page:
-            page.border_title = " úklid místa "
+            page.border_title = _(" úklid místa ")
             yield Static(id="cleanup-note", classes="page-header")
             table: DataTable[str | Text] = DataTable(id="cleanup", cursor_type="row")
             yield table
             yield Static(id="cleanup-summary")
-        yield KeyBar(["cleanup_toggle", "cleanup_all", "cleanup_apply", ("esc", "zpět"), "help"])
+        yield KeyBar(["cleanup_toggle", "cleanup_all", "cleanup_apply", ("esc", _("zpět")), "help"])
 
     def on_mount(self) -> None:
         p = self.rd.palette
         cfg = self.rd.config.cleanup
         self.query_one("#cleanup-note", Static).update(
             Text(
-                f"Složky ignorované gitem ({', '.join(cfg.dirs[:6])}…), které jde znovu vytvořit. "
-                f"Předvybraná jsou repa neaktivní {cfg.inactive_days}+ dní bez změn. "
-                "Výchozí je koš; trvalé smazání (D) jen po dvojím potvrzení. "
-                "Nic sledovaného gitem se nemaže.",
+                _(
+                    "Složky ignorované gitem ({join}…), které jde znovu vytvořit. Předvybraná jsou repa neaktivní {inactive_days}+ dní bez změn. Výchozí je koš; trvalé smazání (D) jen po dvojím potvrzení. Nic sledovaného gitem se nemaže."
+                ).format(join=", ".join(cfg.dirs[:6]), inactive_days=cfg.inactive_days),
                 style=Style(color=p.muted),
             )
         )
         self.query_one("#cleanup-summary", Static).update(
-            Text("Počítám velikosti…", style=Style(color=p.muted))
+            Text(_("Počítám velikosti…"), style=Style(color=p.muted))
         )
         self.load()
         self.query_one(DataTable).focus()
@@ -154,7 +154,7 @@ class CleanupScreen(BaseScreen):
         table = self.query_one(DataTable)
         row = table.cursor_row
         table.clear(columns=True)
-        table.add_columns(" ", "repo", "složka", "velikost", "stav")
+        table.add_columns(" ", "repo", _("složka"), _("velikost"), _("stav"))
         for item in self.items:
             c = item.candidate
             mark = Text(
@@ -162,15 +162,17 @@ class CleanupScreen(BaseScreen):
                 style=Style(color=p.ok if item.selected else p.muted),
             )
             if c.busy:
-                state = Text("běží proces – nelze", style=Style(color=p.high))
+                state = Text(_("běží proces – nelze"), style=Style(color=p.high))
             elif c.kind == "clone":
-                state = Text("celý duplicitní klon", style=Style(color=p.med))
+                state = Text(_("celý duplicitní klon"), style=Style(color=p.med))
             elif item.dirty:
-                state = Text(f"~{item.dirty} necommitnuté", style=Style(color=p.med))
+                state = Text(
+                    _("~{dirty} necommitnuté").format(dirty=item.dirty), style=Style(color=p.med)
+                )
             elif item.inactive:
-                state = Text("neaktivní", style=Style(color=p.ok))
+                state = Text(_("neaktivní"), style=Style(color=p.ok))
             else:
-                state = Text("aktivní", style=Style(color=p.muted))
+                state = Text(_("aktivní"), style=Style(color=p.muted))
             table.add_row(
                 mark,
                 item.repo_name,
@@ -180,7 +182,7 @@ class CleanupScreen(BaseScreen):
                 key=item.key,
             )
         if not self.items and self.loaded:
-            table.add_row("", Text("nic k úklidu", style=Style(color=p.muted)), "", "", "")
+            table.add_row("", Text(_("nic k úklidu"), style=Style(color=p.muted)), "", "", "")
         if table.row_count:
             table.move_cursor(row=min(row, table.row_count - 1))
         self._summary()
@@ -189,9 +191,14 @@ class CleanupScreen(BaseScreen):
         p = self.rd.palette
         chosen = self.chosen()
         total = sum(i.candidate.size for i in chosen)
-        t = Text(f"vybráno {len(chosen)} · uvolní se {human(total)}", style=Style(color=p.text))
+        t = Text(
+            _("vybráno {len} · uvolní se {human}").format(len=len(chosen), human=human(total)),
+            style=Style(color=p.text),
+        )
         t.append(
-            f"   (vše dohromady {human(sum(i.candidate.size for i in self.items))})",
+            _("   (vše dohromady {human})").format(
+                human=human(sum(i.candidate.size for i in self.items))
+            ),
             style=Style(color=p.muted),
         )
         self.query_one("#cleanup-summary", Static).update(t)
@@ -211,7 +218,7 @@ class CleanupScreen(BaseScreen):
         if item is None:
             return
         if item.candidate.busy:
-            self.notify("V této složce běží proces – nejde ji smazat.", severity="warning")
+            self.notify(_("V této složce běží proces – nejde ji smazat."), severity="warning")
             return
         item.selected = not item.selected
         self.refresh_table()
@@ -227,9 +234,9 @@ class CleanupScreen(BaseScreen):
         p = self.rd.palette
         body = Text()
         total = sum(i.candidate.size for i in chosen)
-        verb = "trvale smaže" if permanent else "přesune do koše"
+        verb = _("trvale smaže") if permanent else _("přesune do koše")
         if permanent:
-            body.append("\nTrvalé smazání nejde vrátit.\n", style=Style(color=p.high, bold=True))
+            body.append(_("\nTrvalé smazání nejde vrátit.\n"), style=Style(color=p.high, bold=True))
         body.append(f"\nrepo-doctor {verb} {czech.items(len(chosen))} ({human(total)}):\n")
         shown = 5
         for i in chosen[:shown]:
@@ -239,15 +246,17 @@ class CleanupScreen(BaseScreen):
         dirty = sorted({i.repo_name for i in chosen if i.dirty})
         if dirty:
             body.append(
-                f"\nRepa s necommitnutými změnami: {', '.join(dirty)}. Mažou se jen složky ignorované "
-                "gitem, změny zůstanou.\n",
+                _(
+                    "\nRepa s necommitnutými změnami: {join}. Mažou se jen složky ignorované gitem, změny zůstanou.\n"
+                ).format(join=", ".join(dirty)),
                 style=Style(color=p.med),
             )
         clones = [i for i in chosen if i.candidate.kind == "clone"]
         if clones:
             body.append(
-                f"\n{len(clones)}× celý duplicitní klon. Těsně před smazáním se znovu ověří, že "
-                "nemá změny, nepushnuté commity, stashe ani vlastní ignorované soubory (.env).\n",
+                _(
+                    "\n{len}× celý duplicitní klon. Těsně před smazáním se znovu ověří, že nemá změny, nepushnuté commity, stashe ani vlastní ignorované soubory (.env).\n"
+                ).format(len=len(clones)),
                 style=Style(color=p.med),
             )
         return body
@@ -255,20 +264,20 @@ class CleanupScreen(BaseScreen):
     def action_cleanup_apply(self) -> None:
         chosen = self.chosen()
         if not chosen:
-            self.notify("Nic není vybráno.", severity="warning")
+            self.notify(_("Nic není vybráno."), severity="warning")
             return
 
         def done(ok: bool | None) -> None:
             if ok:
                 self.do_apply(chosen, False)
             else:
-                self.notify("Úklid zrušen – nic se nezměnilo.")
+                self.notify(_("Úklid zrušen – nic se nezměnilo."))
 
         self.app.push_screen(
             ConfirmDialog(
-                "Přesunout do koše",
+                _("Přesunout do koše"),
                 self._confirm_body(chosen, permanent=False),
-                confirm_label="Do koše",
+                confirm_label=_("Do koše"),
             ),
             done,
         )
@@ -276,24 +285,28 @@ class CleanupScreen(BaseScreen):
     def action_cleanup_permanent(self) -> None:
         chosen = self.chosen()
         if not chosen:
-            self.notify("Nic není vybráno.", severity="warning")
+            self.notify(_("Nic není vybráno."), severity="warning")
             return
 
         def second(ok: bool | None) -> None:
             if ok:
                 self.do_apply(chosen, True)
             else:
-                self.notify("Úklid zrušen – nic se nezměnilo.")
+                self.notify(_("Úklid zrušen – nic se nezměnilo."))
 
         def first(ok: bool | None) -> None:
             if not ok:
-                self.notify("Úklid zrušen – nic se nezměnilo.")
+                self.notify(_("Úklid zrušen – nic se nezměnilo."))
                 return
             self.app.push_screen(
                 ConfirmDialog(
-                    "Opravdu trvale smazat?",
-                    Text(f"\nPoslední potvrzení: {czech.items(len(chosen))} zmizí bez koše.\n"),
-                    confirm_label="Trvale smazat",
+                    _("Opravdu trvale smazat?"),
+                    Text(
+                        _("\nPoslední potvrzení: {items} zmizí bez koše.\n").format(
+                            items=czech.items(len(chosen))
+                        )
+                    ),
+                    confirm_label=_("Trvale smazat"),
                     danger=True,
                 ),
                 second,
@@ -301,9 +314,9 @@ class CleanupScreen(BaseScreen):
 
         self.app.push_screen(
             ConfirmDialog(
-                "Trvale smazat",
+                _("Trvale smazat"),
                 self._confirm_body(chosen, permanent=True),
-                confirm_label="Pokračovat",
+                confirm_label=_("Pokračovat"),
                 danger=True,
             ),
             first,
@@ -315,13 +328,15 @@ class CleanupScreen(BaseScreen):
         self.app.call_from_thread(self._applied, result, permanent)
 
     def _applied(self, result: CleanResult, permanent: bool) -> None:
-        where = "Trvale smazáno" if permanent else "Přesunuto do koše"
-        msg = f"{where}: {czech.items(len(result.removed))}, uvolněno {human(result.freed)}."
+        where = _("Trvale smazáno") if permanent else _("Přesunuto do koše")
+        msg = _("{where}: {items}, uvolněno {human}.").format(
+            where=where, items=czech.items(len(result.removed)), human=human(result.freed)
+        )
         for path, reason in result.skipped[:5]:
             msg += f"\n! {home_path(str(path))}: {reason}"
         self.notify(
             msg,
-            title="Úklid hotový",
+            title=_("Úklid hotový"),
             timeout=12,
             severity="warning" if result.skipped else "information",
         )

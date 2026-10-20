@@ -21,6 +21,7 @@ from typing import Literal
 import httpx
 
 from repo_doctor import paths
+from repo_doctor.i18n import _
 
 ManagerName = Literal["apt", "dnf", "pacman", "zypper"]
 Runner = Callable[[list[str]], "subprocess.CompletedProcess[str]"]
@@ -69,16 +70,23 @@ def _same(pkg: str) -> dict[ManagerName, str]:
 
 TOOLS: tuple[Tool, ...] = (
     Tool(
-        "gitleaks", "gitleaks", "rychlejší a přesnější sken tajemství", _same("gitleaks"), GITLEAKS
+        "gitleaks",
+        "gitleaks",
+        _("rychlejší a přesnější sken tajemství"),
+        _same("gitleaks"),
+        GITLEAKS,
     ),
     Tool(
-        "wl-clipboard", "wl-copy", "kopírování cesty do schránky (Wayland)", _same("wl-clipboard")
+        "wl-clipboard",
+        "wl-copy",
+        _("kopírování cesty do schránky (Wayland)"),
+        _same("wl-clipboard"),
     ),
-    Tool("xdg-utils", "xdg-open", "otevření repa na webu", _same("xdg-utils")),
+    Tool("xdg-utils", "xdg-open", _("otevření repa na webu"), _same("xdg-utils")),
     Tool(
         "libnotify",
         "notify-send",
-        "upozornění plánovaného skenu na ploše",
+        _("upozornění plánovaného skenu na ploše"),
         {
             "apt": "libnotify-bin",
             "dnf": "libnotify",
@@ -130,10 +138,10 @@ class ToolStatus:
     @property
     def source(self) -> str:
         if self.path is None:
-            return "chybí"
+            return _("chybí")
         if self.downloaded:
-            return f"stažený {self.version or '(neznámá verze)'}"
-        return "systém"
+            return _("stažený {v}").format(v=self.version or _("(neznámá verze)"))
+        return _("systém")
 
 
 def tool_status(t: Tool) -> ToolStatus:
@@ -159,7 +167,11 @@ def remove_download(tool: Tool) -> Path:
     """Smaže binárku staženou repo-doctorem. Systémové balíčky nechává správci balíčků."""
     st = tool_status(tool)
     if not st.downloaded or st.path is None:
-        raise ToolsError(f"{tool.id} není stažený repo-doctorem – odinstaluj ho správcem balíčků.")
+        raise ToolsError(
+            _("{id} není stažený repo-doctorem – odinstaluj ho správcem balíčků.").format(
+                id=tool.id
+            )
+        )
     target = Path(st.path)
     target.unlink(missing_ok=True)
     (tools_dir() / f"{tool.binary}.version").unlink(missing_ok=True)
@@ -174,11 +186,11 @@ def keyring_status() -> tuple[bool, str]:
 
         backend = keyring.get_keyring()
     except Exception as err:  # backendy keyringu hází různé výjimky
-        return False, f"klíčenka není dostupná ({type(err).__name__})"
+        return False, _("klíčenka není dostupná ({name})").format(name=type(err).__name__)
     if isinstance(backend, fail.Keyring) or (
         isinstance(backend, chainer.ChainerBackend) and not backend.backends
     ):
-        return False, "žádná klíčenka (Secret Service) neběží – tokeny jdou přes env nebo cmd"
+        return False, _("žádná klíčenka (Secret Service) neběží – tokeny jdou přes env nebo cmd")
     return True, getattr(backend, "name", type(backend).__name__)
 
 
@@ -313,14 +325,17 @@ def describe(p: InstallPlan) -> list[str]:
     """Řádky pro náhled před potvrzením (TUI i CLI)."""
     lines: list[str] = []
     if p.command:
-        lines.append(f"Spustí v terminálu: {' '.join(p.command)}")
+        lines.append(_("Spustí v terminálu: {join}").format(join=" ".join(p.command)))
     for d in p.downloads:
         lines.append(
-            f"Stáhne {d.name} {d.version} z GitHubu do {tools_dir()} "
-            f"(ověří SHA-256 zapsaný v repo-doctoru)"
+            _(
+                "Stáhne {name} {version} z GitHubu do {tools_dir} (ověří SHA-256 zapsaný v repo-doctoru)"
+            ).format(name=d.name, version=d.version, tools_dir=tools_dir())
         )
     for tool in p.manual:
-        lines.append(f"Nainstaluj ručně: {tool.id} ({tool.purpose})")
+        lines.append(
+            _("Nainstaluj ručně: {id} ({purpose})").format(id=tool.id, purpose=tool.purpose)
+        )
     return lines
 
 
@@ -329,13 +344,15 @@ def run_command(p: InstallPlan, runner: Callable[[list[str]], int] | None = None
     if p.command is None:
         return 0
     if p.command[0] == "sudo" and shutil.which("sudo") is None:
-        raise ToolsError("Chybí sudo – spusť příkaz jako root: " + " ".join(p.command[1:]))
+        raise ToolsError(_("Chybí sudo – spusť příkaz jako root: ") + " ".join(p.command[1:]))
     if runner is not None:
         return runner(p.command)
     try:
         return subprocess.run(p.command, check=False).returncode
     except OSError as err:
-        raise ToolsError(f"Příkaz nejde spustit: {type(err).__name__}") from None
+        raise ToolsError(
+            _("Příkaz nejde spustit: {name}").format(name=type(err).__name__)
+        ) from None
 
 
 def install_download(
@@ -353,24 +370,30 @@ def install_download(
             archive = Path(tmp) / "archive.tar.gz"
             _download(http, d.url, archive)
             if _sha256(archive) != d.sha256:
-                raise ToolsError(f"Kontrolní součet {d.name} nesedí – soubor nepoužiju.")
+                raise ToolsError(
+                    _("Kontrolní součet {name} nesedí – soubor nepoužiju.").format(name=d.name)
+                )
             staged = Path(tmp) / d.name
             try:
                 with tarfile.open(archive, "r:gz") as tar:
                     member = tar.getmember(d.member)
                     source = tar.extractfile(member) if member.isfile() else None
                     if source is None:
-                        raise ToolsError(f"Archiv {d.name} nemá očekávaný obsah.")
+                        raise ToolsError(
+                            _("Archiv {name} nemá očekávaný obsah.").format(name=d.name)
+                        )
                     with source, staged.open("wb") as out:
                         shutil.copyfileobj(source, out)
             except (tarfile.TarError, KeyError):
-                raise ToolsError(f"Archiv {d.name} nejde rozbalit.") from None
+                raise ToolsError(_("Archiv {name} nejde rozbalit.").format(name=d.name)) from None
             staged.chmod(0o755)
             final = target / d.name
             staged.replace(final)
             (target / f"{d.name}.version").write_text(d.version + "\n", "utf-8")
     except httpx.HTTPError as err:
-        raise ToolsError(f"Stažení {d.name} selhalo: {type(err).__name__}") from None
+        raise ToolsError(
+            _("Stažení {name} selhalo: {name2}").format(name=d.name, name2=type(err).__name__)
+        ) from None
     except UpdateError as err:  # HTTP chyba nebo překročená velikost z _download
         raise ToolsError(str(err)) from None
     finally:

@@ -18,6 +18,7 @@ from textual.widgets import Button, Checkbox, Input, Label, Select, Static
 from repo_doctor.config import ForgeConfig, RootConfig, format_validation_error
 from repo_doctor.discovery import suggest_depth
 from repo_doctor.forges.base import ForgeRepo
+from repo_doctor.i18n import _
 from repo_doctor.paths import expand_path
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.dialogs import ConfirmDialog
@@ -33,7 +34,7 @@ from repo_doctor.tui.widgets.forms import (
 class RootDialog(ModalScreen[RootConfig | None]):
     """Přidání / úprava sledované složky."""
 
-    BINDINGS = [Binding("escape", "cancel", "zrušit"), *bindings("dialog")]
+    BINDINGS = [Binding("escape", "cancel", _("zrušit")), *bindings("dialog")]
 
     def __init__(self, root: RootConfig | None = None) -> None:
         super().__init__()
@@ -42,8 +43,8 @@ class RootDialog(ModalScreen[RootConfig | None]):
     def compose(self) -> ComposeResult:
         r = self.root
         with VerticalScroll(classes="dialog wide") as box:
-            box.border_title = " Upravit složku " if r else " Přidat složku "
-            yield Label("Cesta (tab doplní návrh)")
+            box.border_title = _(" Upravit složku ") if r else _(" Přidat složku ")
+            yield Label(_("Cesta (tab doplní návrh)"))
             yield PathInput(
                 compact=True,
                 value=r.path if r else "",
@@ -53,28 +54,28 @@ class RootDialog(ModalScreen[RootConfig | None]):
                 id="path",
             )
             yield Static("", classes="hint", id="found")
-            yield Label("Hloubka prohledávání (0–12)")
+            yield Label(_("Hloubka prohledávání (0–12)"))
             yield Input(
                 compact=True,
                 value=str(r.depth if r else 3),
                 validators=[IntRange(0, 12)],
                 id="depth",
             )
-            yield Label("Vylučující vzory (čárkami, např. **/archiv/**)")
+            yield Label(_("Vylučující vzory (čárkami, např. **/archiv/**)"))
             yield Input(compact=True, value=", ".join(r.exclude) if r else "", id="exclude")
             yield Checkbox(
                 compact=True,
-                label="Následovat symlinky",
+                label=_("Následovat symlinky"),
                 value=r.follow_symlinks if r else False,
                 id="symlinks",
             )
             yield Checkbox(
-                compact=True, label="Zapnuto", value=r.enabled if r else True, id="enabled"
+                compact=True, label=_("Zapnuto"), value=r.enabled if r else True, id="enabled"
             )
             yield Static("", classes="error", id="error")
             with Horizontal(classes="buttons"):
-                yield Button("Zrušit", id="cancel")
-                yield Button("Uložit", id="ok", variant="primary")
+                yield Button(_("Zrušit"), id="cancel")
+                yield Button(_("Uložit"), id="ok", variant="primary")
             yield Static(dialog_hint(self), classes="hint")
 
     def on_mount(self) -> None:
@@ -93,9 +94,11 @@ class RootDialog(ModalScreen[RootConfig | None]):
     def _probe(self, value: str) -> None:
         depth, count = suggest_depth(expand_path(value), max_depth=5)
         text = (
-            f"nalezeno {count} repozitářů · navržená hloubka {depth}"
+            _("nalezeno {count} repozitářů · navržená hloubka {depth}").format(
+                count=count, depth=depth
+            )
             if count
-            else "zatím žádné git repozitáře (do hloubky 5)"
+            else _("zatím žádné git repozitáře (do hloubky 5)")
         )
         self.app.call_from_thread(self.query_one("#found", Static).update, text)
 
@@ -106,7 +109,7 @@ class RootDialog(ModalScreen[RootConfig | None]):
         for inp in (path_in, depth_in):
             res = inp.validate(inp.value)
             if res and not res.is_valid:
-                label = "Cesta" if inp.id == "path" else "Hloubka"
+                label = _("Cesta") if inp.id == "path" else _("Hloubka")
                 error.update(f"{label}: {'; '.join(res.failure_descriptions)}")
                 inp.focus()
                 return None
@@ -119,7 +122,7 @@ class RootDialog(ModalScreen[RootConfig | None]):
                 enabled=self.query_one("#enabled", Checkbox).value,
             )
         except ValidationError as err:
-            error.update(format_validation_error(err, "složka"))
+            error.update(format_validation_error(err, _("složka")))
             return None
 
     def action_save(self) -> None:
@@ -146,7 +149,7 @@ class RootDialog(ModalScreen[RootConfig | None]):
 def dialog_hint(screen: ModalScreen[Any]) -> str:
     """Jednotná nápověda formulářových dialogů (klávesa uložení podle aktuálního mapování)."""
     key = getattr(screen.app, "key", lambda _id: "ctrl+s")("dialog_save")
-    return f"tab další pole · enter / {key} uložit · esc zrušit"
+    return _("tab další pole · enter / {key} uložit · esc zrušit").format(key=key)
 
 
 @dataclass
@@ -157,10 +160,10 @@ class ForgeFormResult:
 
 
 TOKEN_SOURCES = [
-    ("systémová klíčenka (doporučeno)", "keyring"),
-    ("proměnná prostředí", "env"),
-    ("příkaz (např. pass)", "cmd"),
-    ("bez tokenu (jen veřejná data)", "none"),
+    (_("systémová klíčenka (doporučeno)"), "keyring"),
+    (_("proměnná prostředí"), "env"),
+    (_("příkaz (např. pass)"), "cmd"),
+    (_("bez tokenu (jen veřejná data)"), "none"),
 ]
 FORGE_TYPES = [
     ("GitHub", "github"),
@@ -173,7 +176,7 @@ FORGE_TYPES = [
 class ForgeDialog(ModalScreen[ForgeFormResult | None]):
     """Přidání / úprava hostingu. Token se nikdy nezobrazí (pole je maskované a prázdné)."""
 
-    BINDINGS = [Binding("escape", "cancel", "zrušit"), *bindings("dialog")]
+    BINDINGS = [Binding("escape", "cancel", _("zrušit")), *bindings("dialog")]
 
     def __init__(
         self,
@@ -191,8 +194,8 @@ class ForgeDialog(ModalScreen[ForgeFormResult | None]):
     def compose(self) -> ComposeResult:
         f = self.forge
         with VerticalScroll(classes="dialog wide") as box:
-            box.border_title = " Upravit hosting " if f else " Přidat hosting "
-            yield Label("Typ")
+            box.border_title = _(" Upravit hosting ") if f else _(" Přidat hosting ")
+            yield Label(_("Typ"))
             yield Select(
                 compact=True,
                 options=FORGE_TYPES,
@@ -200,27 +203,30 @@ class ForgeDialog(ModalScreen[ForgeFormResult | None]):
                 allow_blank=False,
                 id="type",
             )
-            yield Label("Název (jedinečný, např. github nebo domaci-forgejo)")
+            yield Label(_("Název (jedinečný, např. github nebo domaci-forgejo)"))
             yield Input(compact=True, value=f.name if f else "", placeholder="github", id="name")
-            yield Label("URL instance (prázdné = github.com / gitlab.com)")
+            yield Label(_("URL instance (prázdné = github.com / gitlab.com)"))
             yield Input(
                 compact=True,
                 value=f.url or "" if f else "",
                 placeholder="https://git.tailnet.ts.net:3000",
                 id="url",
             )
-            yield Label("Uživatel / organizace (volitelné)")
+            yield Label(_("Uživatel / organizace (volitelné)"))
             with Horizontal(classes="row"):
                 yield Input(
-                    compact=True, value=f.user or "" if f else "", placeholder="uživatel", id="user"
+                    compact=True,
+                    value=f.user or "" if f else "",
+                    placeholder=_("uživatel"),
+                    id="user",
                 )
                 yield Input(
                     compact=True,
                     value=f.org or "" if f else "",
-                    placeholder="organizace / skupina",
+                    placeholder=_("organizace / skupina"),
                     id="org",
                 )
-            yield Label("Zdroj tokenu")
+            yield Label(_("Zdroj tokenu"))
             yield Select(
                 compact=True,
                 options=TOKEN_SOURCES,
@@ -231,35 +237,35 @@ class ForgeDialog(ModalScreen[ForgeFormResult | None]):
             yield Input(
                 compact=True,
                 password=True,
-                placeholder="token – uloží se do klíčenky (prázdné = beze změny)",
+                placeholder=_("token – uloží se do klíčenky (prázdné = beze změny)"),
                 id="token",
             )
             yield Input(
                 compact=True,
                 value=f.token_env or "" if f else "",
-                placeholder="název proměnné, např. FORGEJO_TOKEN",
+                placeholder=_("název proměnné, např. FORGEJO_TOKEN"),
                 id="token_env",
             )
             yield Input(
                 compact=True,
                 value=f.token_cmd or "" if f else "",
-                placeholder="příkaz, např. pass show git/forgejo",
+                placeholder=_("příkaz, např. pass show git/forgejo"),
                 id="token_cmd",
             )
             yield Checkbox(
                 compact=True,
-                label="Ověřovat TLS certifikát",
+                label=_("Ověřovat TLS certifikát"),
                 value=f.verify_tls if f else True,
                 id="verify",
             )
             yield Input(
                 compact=True,
                 value=f.ca_bundle or "" if f else "",
-                placeholder="vlastní CA (cesta k .pem) – pro self-signed",
+                placeholder=_("vlastní CA (cesta k .pem) – pro self-signed"),
                 id="ca",
             )
             yield Static("", classes="error", id="tls-warning")
-            yield Label("Protokol pro klonování")
+            yield Label(_("Protokol pro klonování"))
             yield Select(
                 compact=True,
                 options=[("SSH", "ssh"), ("HTTPS", "https")],
@@ -269,10 +275,10 @@ class ForgeDialog(ModalScreen[ForgeFormResult | None]):
             )
             yield Static("", classes="error", id="error")
             with Horizontal(classes="buttons"):
-                yield Button("Zrušit", id="cancel")
-                yield Button("Uložit", id="ok", variant="primary")
+                yield Button(_("Zrušit"), id="cancel")
+                yield Button(_("Uložit"), id="ok", variant="primary")
             yield Static(
-                "Token se nikdy nezobrazí ani neuloží do config.toml.\n" + dialog_hint(self),
+                _("Token se nikdy nezobrazí ani neuloží do config.toml.\n") + dialog_hint(self),
                 classes="hint",
             )
 
@@ -294,7 +300,9 @@ class ForgeDialog(ModalScreen[ForgeFormResult | None]):
         self.query_one("#tls-warning", Static).update(
             ""
             if verify
-            else "⚠ Ověřování TLS je vypnuté – spojení jde odposlechnout. Raději nastav vlastní CA."
+            else _(
+                "⚠ Ověřování TLS je vypnuté – spojení jde odposlechnout. Raději nastav vlastní CA."
+            )
         )
         name = self.query_one("#name", Input)
         if not name.value and self.forge is None:
@@ -310,7 +318,7 @@ class ForgeDialog(ModalScreen[ForgeFormResult | None]):
         source = str(self.query_one("#source", Select).value)
         error = self.query_one("#error", Static)
         if name in self.existing:
-            error.update(f"Hosting s názvem {name} už existuje.")
+            error.update(_("Hosting s názvem {name} už existuje.").format(name=name))
             return None
         try:
             config = ForgeConfig(
@@ -357,12 +365,11 @@ class ForgeDialog(ModalScreen[ForgeFormResult | None]):
 
         self.app.push_screen(
             ConfirmDialog(
-                "Nešifrované spojení",
-                f"URL instance používá http:// – token i data půjdou po síti bez šifrování.\n"
-                f"To je v pořádku jen v důvěryhodné síti, kde šifrování zajišťuje VPN "
-                f"(např. Tailscale). Na veřejném internetu ho může kdokoli po cestě přečíst.\n\n"
-                f"Přidat {host} do allow_http_hosts?",
-                confirm_label="Povolit http pro tento host",
+                _("Nešifrované spojení"),
+                _(
+                    "URL instance používá http:// – token i data půjdou po síti bez šifrování.\nTo je v pořádku jen v důvěryhodné síti, kde šifrování zajišťuje VPN (např. Tailscale). Na veřejném internetu ho může kdokoli po cestě přečíst.\n\nPřidat {host} do allow_http_hosts?"
+                ).format(host=host),
+                confirm_label=_("Povolit http pro tento host"),
                 danger=True,
             ),
             answered,
@@ -390,7 +397,7 @@ class CloneRequest:
 class CloneDialog(ModalScreen[CloneRequest | None]):
     """Volba cílové složky pro klon. Výchozí tlačítko = Zrušit, existující cíl se odmítne."""
 
-    BINDINGS = [Binding("escape", "cancel", "zrušit"), *bindings("dialog")]
+    BINDINGS = [Binding("escape", "cancel", _("zrušit")), *bindings("dialog")]
 
     def __init__(self, repo: ForgeRepo, roots: list[RootConfig], protocol: str) -> None:
         super().__init__()
@@ -408,23 +415,23 @@ class CloneDialog(ModalScreen[CloneRequest | None]):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="dialog wide") as box:
-            box.border_title = f" Naklonovat {self.repo.full_name} "
-            yield Label("Cílová sledovaná složka")
+            box.border_title = _(" Naklonovat {full_name} ").format(full_name=self.repo.full_name)
+            yield Label(_("Cílová sledovaná složka"))
             yield Select(
                 compact=True,
                 options=[(r.path, r.path) for r in self.roots],
                 value=self.roots[0].path if self.roots else Select.BLANK,
                 id="root",
             )
-            yield Label("Název složky")
+            yield Label(_("Název složky"))
             yield Input(compact=True, value=self.repo.name, id="dirname")
             yield Static("", id="target", classes="hint")
             yield Static("", classes="error", id="error")
             with Horizontal(classes="buttons"):
-                yield Button("Zrušit", id="cancel")
-                yield Button("Naklonovat", id="ok", variant="primary")
+                yield Button(_("Zrušit"), id="cancel")
+                yield Button(_("Naklonovat"), id="ok", variant="primary")
             yield Static(
-                "Klonuje se jen po potvrzení; existující složku nic nepřepíše.\n"
+                _("Klonuje se jen po potvrzení; existující složku nic nepřepíše.\n")
                 + dialog_hint(self),
                 classes="hint",
             )
@@ -449,9 +456,9 @@ class CloneDialog(ModalScreen[CloneRequest | None]):
         )
         error = ""
         if dest is None:
-            error = "Vyber složku a platný název."
+            error = _("Vyber složku a platný název.")
         elif dest.exists():
-            error = "Cíl už existuje – klon ho nepřepíše, zvol jiný název."
+            error = _("Cíl už existuje – klon ho nepřepíše, zvol jiný název.")
         self.query_one("#error", Static).update(error)
 
     @on(Input.Submitted)

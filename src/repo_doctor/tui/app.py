@@ -15,6 +15,7 @@ from textual.worker import Worker
 from repo_doctor import gitwrap, history, netpolicy, paths
 from repo_doctor.config import Config, ConfigError, ConfigStore, RootConfig
 from repo_doctor.gitwrap import configure_ssh
+from repo_doctor.i18n import _
 from repo_doctor.keymap import BY_ID, KeymapError, build_keymap, key_label, migrate_overrides
 from repo_doctor.masking import install_log_redaction
 from repo_doctor.models import RepoResult, ScanResult
@@ -41,12 +42,12 @@ class RepoDoctorApp(App[int]):
         Binding(
             BY_ID["command_palette"].key,
             "command_palette",
-            "paleta",
+            _("paleta"),
             show=False,
             priority=True,
             id="command_palette",
         ),
-        Binding(BY_ID["quit"].key, "quit", "konec", show=False, priority=True, id="quit"),
+        Binding(BY_ID["quit"].key, "quit", _("konec"), show=False, priority=True, id="quit"),
     ]
 
     def __init__(
@@ -165,13 +166,13 @@ class RepoDoctorApp(App[int]):
             self.keymap_error = str(err)
             self.notify(
                 str(err),
-                title="Chyba v [keys] – používám výchozí zkratky",
+                title=_("Chyba v [keys] – používám výchozí zkratky"),
                 severity="error",
                 timeout=20,
             )
         if self.config_error:
             self.notify(
-                self.config_error, title="Neplatná konfigurace", severity="error", timeout=20
+                self.config_error, title=_("Neplatná konfigurace"), severity="error", timeout=20
             )
         from repo_doctor.tui.screens.dashboard import DashboardScreen
 
@@ -195,9 +196,10 @@ class RepoDoctorApp(App[int]):
             return
         self.call_from_thread(
             self.notify,
-            "Sken tajemství bude rychlejší a přesnější s gitleaks – "
-            f"doinstaluješ ho na obrazovce Nástroje (klávesa {self.key('screen_tools')}).",
-            title="Tip",
+            _(
+                "Sken tajemství bude rychlejší a přesnější s gitleaks – doinstaluješ ho na obrazovce Nástroje (klávesa {key})."
+            ).format(key=self.key("screen_tools")),
+            title=_("Tip"),
             timeout=12,
         )
         try:
@@ -211,12 +213,12 @@ class RepoDoctorApp(App[int]):
             return
         message = self.update_checker()
         if message:
-            self.call_from_thread(self.notify, message, title="Nová verze", timeout=15)
+            self.call_from_thread(self.notify, message, title=_("Nová verze"), timeout=15)
 
     @property
     def dashboard(self) -> DashboardScreen:
         if self._dashboard is None:  # pragma: no cover - vzniká v on_mount
-            raise RuntimeError("dashboard ještě neexistuje")
+            raise RuntimeError(_("dashboard ještě neexistuje"))
         return self._dashboard
 
     # ------------------------------------------------------------------ konfigurace
@@ -242,18 +244,25 @@ class RepoDoctorApp(App[int]):
 
     def start_scan(self, repo_path: str | None = None, *, fetch: bool = False) -> None:
         if self.scanning:
-            self.notify(f"Sken už běží ({self.key('cancel_scan')} ho zruší).", severity="warning")
+            self.notify(
+                _("Sken už běží ({key} ho zruší).").format(key=self.key("cancel_scan")),
+                severity="warning",
+            )
             return
         roots = self.roots
         if not roots:
             self.notify(
-                "Nejsou nastavené žádné složky – přidej je na obrazovce Složky (4).",
+                _("Nejsou nastavené žádné složky – přidej je na obrazovce Složky ({key}).").format(
+                    key=self.key("screen_folders")
+                ),
                 severity="warning",
             )
             return
         if fetch and self.offline:
             self.notify(
-                f"Fetch potřebuje síť – vypni offline režim ({self.key('toggle_offline')}).",
+                _("Fetch potřebuje síť – vypni offline režim ({key}).").format(
+                    key=self.key("toggle_offline")
+                ),
                 severity="warning",
             )
             return
@@ -298,24 +307,32 @@ class RepoDoctorApp(App[int]):
                 )
                 self.history_delta = history.previous_delta()
             except OSError as err:  # pragma: no cover
-                self.notify(f"Výsledek skenu nejde uložit: {err}", severity="warning")
+                self.notify(
+                    _("Výsledek skenu nejde uložit: {err}").format(err=err), severity="warning"
+                )
         else:
             self.result.warnings = result.warnings or self.result.warnings
         self.result.offline = self.offline
         self.scan_current = ""
         self._refresh_views()
         if cancelled:
-            self.notify("Sken zrušen – zobrazuji dosavadní výsledky.", severity="warning")
+            self.notify(_("Sken zrušen – zobrazuji dosavadní výsledky."), severity="warning")
         else:
             n = sum(len(r.findings) for r in result.repos)
             self.notify(
-                f"Sken dokončen: {len(result.repos)} repozitářů, {n} nálezů.", title="repo-doctor"
+                _("Sken dokončen: {len} repozitářů, {n} nálezů.").format(
+                    len=len(result.repos), n=n
+                ),
+                title="repo-doctor",
             )
             failed = [r.name for r in result.repos if "fetch" in r.errors]
             if fetch and failed:
                 self.notify(
-                    f"Fetch selhal u {len(failed)} rep ({', '.join(failed[:3])}"
-                    f"{'…' if len(failed) > 3 else ''}) – důvod je v kartě repa.",
+                    _("Fetch selhal u {len} rep ({join}{v}) – důvod je v kartě repa.").format(
+                        len=len(failed),
+                        join=", ".join(failed[:3]),
+                        v="…" if len(failed) > 3 else "",
+                    ),
                     severity="warning",
                     timeout=10,
                 )
@@ -356,7 +373,7 @@ class RepoDoctorApp(App[int]):
 
     def cancel_scan(self) -> None:
         if not self.scanning or self.scanner is None:
-            self.notify("Žádný sken neběží.")
+            self.notify(_("Žádný sken neběží."))
             return
         self.scanner.cancel()
 
@@ -375,7 +392,7 @@ class RepoDoctorApp(App[int]):
 
     def action_scan_repo(self) -> None:
         if self.selected_path is None:
-            self.notify("Není vybrané žádné repo.", severity="warning")
+            self.notify(_("Není vybrané žádné repo."), severity="warning")
             return
         self.start_scan(self.selected_path)
 
@@ -385,8 +402,12 @@ class RepoDoctorApp(App[int]):
     def action_toggle_offline(self) -> None:
         self.offline = not self.offline
         self.result.offline = self.offline
-        state = "zapnutý – síťové kontroly budou přeskočeny" if self.offline else "vypnutý"
-        self.notify(f"Offline režim {state}. {self.key('scan_all')} spustí nový sken.")
+        state = _("zapnutý – síťové kontroly budou přeskočeny") if self.offline else _("vypnutý")
+        self.notify(
+            _("Offline režim {state}. {key} spustí nový sken.").format(
+                state=state, key=self.key("scan_all")
+            )
+        )
         self._refresh_views()
 
     def action_toggle_theme(self) -> None:
@@ -407,7 +428,7 @@ class RepoDoctorApp(App[int]):
 
         if isinstance(self.screen, WizardScreen):
             self.notify(
-                "Nejdřív dokonči průvodce (ctrl+s) nebo ho přeskoč (esc).", severity="warning"
+                _("Nejdřív dokonči průvodce (ctrl+s) nebo ho přeskoč (esc)."), severity="warning"
             )
             return True
         return False
@@ -419,7 +440,7 @@ class RepoDoctorApp(App[int]):
             return
 
         if isinstance(self.screen, DashboardScreen):
-            self.notify(f"Aplikaci ukončíš klávesou {self.key('quit')}.")
+            self.notify(_("Aplikaci ukončíš klávesou {key}.").format(key=self.key("quit")))
         elif len(self.screen_stack) > 1:
             self.pop_screen()
 
@@ -486,7 +507,10 @@ def run(roots_override: list[str] | None) -> int:
         build_keymap(config.keys)
     except KeymapError as err:
         print(err, file=sys.stderr)
-        print(f"Oprav sekci [keys] v {paths.config_file()}", file=sys.stderr)
+        print(
+            _("Oprav sekci [keys] v {config_file}").format(config_file=paths.config_file()),
+            file=sys.stderr,
+        )
         return 2
     app = RepoDoctorApp(store=store, roots_override=roots_override)
     code = app.run()

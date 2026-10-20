@@ -387,6 +387,20 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   zbylo místo na nálezy.
 - **JSON report:** `repos[].details` přidáno bez zvýšení `schema_version` (jen nové pole).
 
+## Překlady (#33)
+
+- **gettext `.po` bez kompilace:** msgid je český text přímo v kódu (`_("…")`), překlady
+  v `src/repo_doctor/locale/en.po` (standardní formát, Poedit). Malý parser v `i18n.py` čte
+  `.po` za běhu – žádný `.mo`, build krok ani nová závislost. `i18n_tools` texty vytáhne
+  z AST a katalog synchronizuje; test hlídá úplnost a zachování `{placeholderů}`.
+- **Jazyk se určí při importu balíčku** (`--lang` → `REPO_DOCTOR_LANG` → `[ui] language` →
+  `LC_ALL`/`LC_MESSAGES`/`LANG`, bez locale angličtina), protože texty v konstantách modulů
+  (zkratky, popisky) se překládají při importu. Proto změna v Nastavení platí po restartu.
+- **Fáze:** 1 = TUI, CLI, zkratky (+ popisky kategorií, pásem a nástrojů); 2 = zprávy
+  kontrol, opravy a jejich dokumentace; 3 = reporty a zbytek. Test fáze 1 hlídá, že v jejích
+  modulech nezůstal český text mimo `_()`.
+- **Množné číslo:** `czech.plural(n, one, few, many)` – anglicky jen `one`/`many`.
+
 ## Repo a proces
 
 - **Branch:** zadání chtělo `feat/initial-implementation`, prostředí ale vyžaduje vývoj na

@@ -6,6 +6,7 @@ from collections.abc import Iterable
 from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 
+from repo_doctor.i18n import _
 from repo_doctor.models import Finding, RepoResult, Severity
 
 PENALTY = {Severity.HIGH: 25, Severity.MEDIUM: 9, Severity.LOW: 3}
@@ -44,11 +45,11 @@ class Band(StrEnum):
     @property
     def label(self) -> str:
         return {
-            "critical": "KRITICKÉ",
-            "watch": "SLEDOVAT",
-            "no_pulse": "BEZ TEPU",
-            "healthy": "ZDRAVÉ",
-            "unchecked": "NELZE ZKONTROLOVAT",
+            "critical": _("KRITICKÉ"),
+            "watch": _("SLEDOVAT"),
+            "no_pulse": _("BEZ TEPU"),
+            "healthy": _("ZDRAVÉ"),
+            "unchecked": _("NELZE ZKONTROLOVAT"),
         }[self.value]
 
     @property

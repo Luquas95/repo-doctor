@@ -18,6 +18,7 @@ uv run ruff check src tests && uv run ruff format --check src tests
 uv run mypy                   # --strict
 uv run pytest tests/test_snapshots.py --snapshot-update   # po vědomé změně vzhledu TUI
 uv run python -m repo_doctor.reports.jsonreport > docs/report-schema.json  # po změně JSON schématu
+uv run python -m repo_doctor.i18n_tools          # po změně textů: doplní locale/en.po (pak přelož)
 ```
 
 Testovací „tajemství“ se skládají až za běhu (`tests/factory.py`), do repa nepatří žádné
@@ -36,6 +37,9 @@ skutečné ani regexům odpovídající hodnoty. Testy TUI používají `tests/t
 - Kontroly nevolají síť: scanner předem připraví `RepoContext.deps` (OSV, registry, licence),
   `RepoContext.forge_snapshot` (API hostingu), `noreply_email` a `action_shas`.
 - Zkratky jsou jen v `keymap.py` (TUI, nápověda i README se generují odtud; test hlídá tabulky v README).
+- Texty pro uživatele jsou česky v `_("…")` (`repo_doctor.i18n`), anglicky v `locale/en.po`.
+  Proměnné přes `_("… {jmeno} …").format(jmeno=…)`, ne f-string; tvary podle čísla přes
+  `czech.plural`. Test hlídá úplnost překladu (fáze 1: TUI, CLI, zkratky – #33).
 
 ## Přidání nové kontroly
 

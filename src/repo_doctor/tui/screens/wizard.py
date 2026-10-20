@@ -16,6 +16,7 @@ from textual.widgets import Button, DataTable, Input, Label, Static
 from repo_doctor.config import ConfigError, ForgeConfig, RootConfig
 from repo_doctor.discovery import suggest_depth
 from repo_doctor.forges.tokens import TokenError, store_in_keyring
+from repo_doctor.i18n import _
 from repo_doctor.paths import expand_path
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import NavMixin
@@ -32,7 +33,7 @@ if TYPE_CHECKING:
 class WizardScreen(NavMixin, Screen[None]):
     BINDINGS = [
         *bindings("wizard"),
-        Binding("escape", "skip", "přeskočit"),
+        Binding("escape", "skip", _("přeskočit")),
     ]
 
     def __init__(self) -> None:
@@ -47,17 +48,19 @@ class WizardScreen(NavMixin, Screen[None]):
     def compose(self) -> ComposeResult:
         p = self.rd.palette
         with VerticalScroll(classes="page panel form", id="wizard") as page:
-            page.border_title = " repo-doctor · první spuštění "
+            page.border_title = _(" repo-doctor · první spuštění ")
             intro = Text(
-                "Vítej! repo-doctor projde tvoje git repozitáře, najde bezpečnostní a hygienické problémy ",
+                _(
+                    "Vítej! repo-doctor projde tvoje git repozitáře, najde bezpečnostní a hygienické problémy "
+                ),
                 style=Style(color=p.text),
             )
             intro.append(
-                "a umí bezpečně připravit opravy. Ve výchozím stavu jen čte a nic nepushuje.",
+                _("a umí bezpečně připravit opravy. Ve výchozím stavu jen čte a nic nepushuje."),
                 style=Style(color=p.muted),
             )
             yield Static(intro)
-            yield Label("1 · Složky s repozitáři (tab doplní cestu, enter přidá)")
+            yield Label(_("1 · Složky s repozitáři (tab doplní cestu, enter přidá)"))
             yield PathInput(
                 compact=True,
                 placeholder="~/projekty",
@@ -67,29 +70,35 @@ class WizardScreen(NavMixin, Screen[None]):
             )
             yield Static("", classes="error", id="path-error")
             yield DataTable(id="folders", cursor_type="row")
-            yield Label("2 · Hloubka prohledávání (návrh podle nalezených rep)")
+            yield Label(_("2 · Hloubka prohledávání (návrh podle nalezených rep)"))
             yield Input(compact=True, value="3", validators=[IntRange(0, 12)], id="depth")
-            yield Label("3 · Git hosting (volitelné) – připojení jen pro čtení")
+            yield Label(_("3 · Git hosting (volitelné) – připojení jen pro čtení"))
             with Horizontal(classes="row"):
                 yield Button(
-                    f"Přidat hosting…  ({self.rd.key('wizard_add_forge')})", id="add-forge"
+                    _("Přidat hosting…  ({key})").format(key=self.rd.key("wizard_add_forge")),
+                    id="add-forge",
                 )
             yield Static("", id="forge-list", classes="hint")
             with Horizontal(classes="row"):
                 yield Button(
-                    f"Uložit a skenovat  ({self.rd.key('wizard_finish')})",
+                    _("Uložit a skenovat  ({key})").format(key=self.rd.key("wizard_finish")),
                     id="finish",
                     variant="primary",
                 )
-                yield Button("Přeskočit  (esc)", id="skip")
+                yield Button(_("Přeskočit  (esc)"), id="skip")
             yield Static("", classes="error", id="wizard-error")
         yield KeyBar(
-            [("enter", "přidat složku"), "wizard_finish", "wizard_add_forge", ("esc", "přeskočit")]
+            [
+                ("enter", _("přidat složku")),
+                "wizard_finish",
+                "wizard_add_forge",
+                ("esc", _("přeskočit")),
+            ]
         )
 
     def on_mount(self) -> None:
         self.query_one("#folders", DataTable).add_columns(
-            "složka", "repozitářů", "navržená hloubka"
+            _("složka"), _("repozitářů"), _("navržená hloubka")
         )
         self.query_one("#path", Input).focus()
 
@@ -102,9 +111,9 @@ class WizardScreen(NavMixin, Screen[None]):
             err.update("; ".join(res.failure_descriptions))
             return
         if any(f[0] == value for f in self.folders):
-            err.update("Složka už je v seznamu.")
+            err.update(_("Složka už je v seznamu."))
             return
-        err.update("zjišťuji repozitáře…")
+        err.update(_("zjišťuji repozitáře…"))
         self.probe(value)
         event.input.value = ""
 
@@ -120,7 +129,9 @@ class WizardScreen(NavMixin, Screen[None]):
         suggestion = max(f[1] for f in self.folders)
         self.query_one("#depth", Input).value = str(suggestion)
         self.query_one("#path-error", Static).update(
-            "" if count else f"V {value} zatím nejsou žádná repa (do hloubky 5)."
+            ""
+            if count
+            else _("V {value} zatím nejsou žádná repa (do hloubky 5).").format(value=value)
         )
 
     def action_add_forge(self) -> None:
@@ -130,7 +141,7 @@ class WizardScreen(NavMixin, Screen[None]):
             if result is not None:
                 self.forges.append(result)
                 self.query_one("#forge-list", Static).update(
-                    "přidáno: "
+                    _("přidáno: ")
                     + ", ".join(f"{f.config.name} ({f.config.type})" for f in self.forges)
                 )
 
@@ -152,12 +163,12 @@ class WizardScreen(NavMixin, Screen[None]):
         err = self.query_one("#wizard-error", Static)
         pending = self.query_one("#path", Input).value.strip()
         if not self.folders and not pending:
-            err.update("Přidej aspoň jednu složku (nebo přeskoč průvodce klávesou esc).")
+            err.update(_("Přidej aspoň jednu složku (nebo přeskoč průvodce klávesou esc)."))
             return
         depth_in = self.query_one("#depth", Input)
         res = depth_in.validate(depth_in.value)
         if res is not None and not res.is_valid:
-            err.update("Hloubka: " + "; ".join(res.failure_descriptions))
+            err.update(_("Hloubka: ") + "; ".join(res.failure_descriptions))
             return
         depth = int(depth_in.value)
         paths = [f[0] for f in self.folders]
@@ -189,7 +200,11 @@ class WizardScreen(NavMixin, Screen[None]):
                     self.notify(str(exc), severity="error", timeout=10)
         self.rd.config_changed(config)
         self.app.pop_screen()
-        self.notify(f"Uloženo do {home_path(str(store.path))}. Spouštím první sken…")
+        self.notify(
+            _("Uloženo do {home_path}. Spouštím první sken…").format(
+                home_path=home_path(str(store.path))
+            )
+        )
         self.rd.start_scan()
 
     def action_skip(self) -> None:
@@ -202,10 +217,11 @@ class WizardScreen(NavMixin, Screen[None]):
 
             self.app.push_screen(
                 ConfirmDialog(
-                    "Přeskočit průvodce",
-                    f"\nZahodit {pending} přidaných položek (složky, hostingy)?\n"
-                    "Uložit je můžeš klávesou ctrl+s.\n",
-                    confirm_label="Zahodit",
+                    _("Přeskočit průvodce"),
+                    _(
+                        "\nZahodit {pending} přidaných položek (složky, hostingy)?\nUložit je můžeš klávesou ctrl+s.\n"
+                    ).format(pending=pending),
+                    confirm_label=_("Zahodit"),
                     danger=True,
                 ),
                 done,
@@ -221,7 +237,11 @@ class WizardScreen(NavMixin, Screen[None]):
             return
         self.rd.config_changed(config)
         self.app.pop_screen()
-        self.notify("Průvodce přeskočen. Složky přidáš na obrazovce Složky (4).")
+        self.notify(
+            _("Průvodce přeskočen. Složky přidáš na obrazovce Složky ({key}).").format(
+                key=self.rd.key("screen_folders")
+            )
+        )
 
 
 __all__ = ["ForgeConfig", "WizardScreen"]

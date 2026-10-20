@@ -9,6 +9,8 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
+from repo_doctor.i18n import _
+
 
 class Severity(StrEnum):
     HIGH = "high"
@@ -42,10 +44,10 @@ class Category(StrEnum):
     @property
     def label(self) -> str:
         return {
-            "security": "Bezpečnost",
-            "maintenance": "Údržba",
-            "git": "Stav gitu",
-            "forge": "Hosting",
+            "security": _("Bezpečnost"),
+            "maintenance": _("Údržba"),
+            "git": _("Stav gitu"),
+            "forge": _("Hosting"),
         }[self.value]
 
 

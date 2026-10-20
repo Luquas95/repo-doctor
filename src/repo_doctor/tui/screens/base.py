@@ -9,6 +9,7 @@ from textual.screen import ModalScreen, Screen
 from textual.widget import Widget
 from textual.widgets import DataTable, OptionList, SelectionList, Tree
 
+from repo_doctor.i18n import _
 from repo_doctor.tui.bindings import bindings
 
 
@@ -98,7 +99,7 @@ class BaseScreen(NavMixin, Screen[Any]):
 
     BINDINGS = [
         *bindings("nav"),
-        Binding("escape", "close", "zpět", key_display="esc"),
+        Binding("escape", "close", _("zpět"), key_display="esc"),
     ]
 
     def action_close(self) -> None:
@@ -106,7 +107,7 @@ class BaseScreen(NavMixin, Screen[Any]):
 
 
 class BaseModal(NavMixin, ModalScreen[Any]):
-    BINDINGS = [*bindings("nav"), Binding("escape", "cancel", "zrušit", key_display="esc")]
+    BINDINGS = [*bindings("nav"), Binding("escape", "cancel", _("zrušit"), key_display="esc")]
 
     def action_cancel(self) -> None:
         self.dismiss(None)
