@@ -48,7 +48,9 @@ class KeyBar(Static):
             action = BY_ID[action_id]
             key = app.keymap_ids.get(action_id, action.key)
             shown = action.label if action.label and key == action.key else display_key(key)
-            parts.append((shown, desc or action.description, action_id not in {"help", "back"}))
+            parts.append(
+                (shown, desc or action.description, action_id not in {"help", "back", "quit"})
+            )
 
         def total() -> int:
             return sum(len(k) + len(d) + 4 for k, d, _ in parts)

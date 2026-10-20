@@ -14,6 +14,17 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 - Sken tajemství používá i `gitleaks` stažený repo-doctorem.
 - TUI jednou upozorní, že sken tajemství by byl s `gitleaks` přesnější.
 
+### Změněno
+- **Sken po spuštění je volitelný (#35):** TUI po startu ukáže poslední uložený výsledek;
+  rovnou skenovat začne jen se zapnutou volbou **Nastavení › Sken po spuštění aplikace**
+  (`[ui] scan_on_start = true`). Po prvním nastavení v průvodci se skenuje vždy.
+- **Konec je `ctrl+q` (#35):** `q` už aplikaci nezavírá, jen vrací o obrazovku zpět.
+
+### Opraveno
+- **Zavření aplikace zastaví veškerou práci (#35):** běžící sken se zruší a git i gitleaks
+  podprocesy (včetně jejich potomků) se ukončí. Proces dřív po zavření TUI čekal, než
+  rozběhnuté git příkazy doběhnou.
+
 ## [0.3.0] – 2026-10-16
 
 ### Změněno

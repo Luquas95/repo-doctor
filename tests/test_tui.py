@@ -25,7 +25,7 @@ from repo_doctor.tui.screens.wizard import WizardScreen
 from repo_doctor.tui.theme import LIGHT_NAME
 from tests import factory as fx
 from tests.sample import sample_result
-from tests.tui_helpers import fake_factory, make_app
+from tests.tui_helpers import CONFIG, fake_factory, make_app
 
 
 def dash(app: RepoDoctorApp) -> DashboardScreen:
@@ -183,7 +183,10 @@ async def test_screen_switching_and_help(tmp_path: Path) -> None:
         assert app.theme == LIGHT_NAME
         await pilot.press("O")
         assert app.offline
-        await pilot.press("q")
+        await pilot.press("q")  # na přehledu jen poradí, aplikaci nezavře
+        await pilot.pause()
+        assert isinstance(app.screen, DashboardScreen)
+        await pilot.press("ctrl+q")
     assert app.return_code == 0
 
 
@@ -296,6 +299,7 @@ async def test_auto_scan_with_real_scanner(tmp_path: Path) -> None:
         auto_scan=True,
         offline=True,
     )
+    app.config.ui.scan_on_start = True
     async with app.run_test(size=(100, 31)) as pilot:
         await pilot.pause(0.5)
         await app.workers.wait_for_complete()
@@ -634,6 +638,7 @@ async def test_settings(tmp_path: Path) -> None:
         screen.query_one("#ignore_paths").value = "vendor/**, docs/**"  # type: ignore[attr-defined]
         screen.query_one("#templates_dir").value = "~/tpl"  # type: ignore[attr-defined]
         screen.query_one("#theme").value = "light"  # type: ignore[attr-defined]
+        screen.query_one("#scan_on_start").value = "on"  # type: ignore[attr-defined]
         screen.query_one("#fail_on").value = "medium"  # type: ignore[attr-defined]
         screen.query_one("#license").value = "ISC"  # type: ignore[attr-defined]
         await pilot.pause()
@@ -654,6 +659,7 @@ async def test_settings(tmp_path: Path) -> None:
         await pilot.pause()
     cfg = ConfigStore(tmp_path / "config.toml").load()
     assert cfg.limits.large_file_mb == 2.5 and cfg.ui.editor == "nvim" and cfg.ui.theme == "light"
+    assert cfg.ui.scan_on_start
     assert cfg.ignore_paths == ["vendor/**", "docs/**"] and cfg.templates_dir == "~/tpl"
     assert cfg.checks.fail_on.value == "medium" and cfg.license == "ISC"
     assert cfg.checks.disabled == ["stashes"]
@@ -855,3 +861,42 @@ async def test_dialogs_enter_saves(tmp_path: Path) -> None:
     g = grouped()
     assert ("ctrl+s", "uložit a skenovat") in g["Průvodce prvním spuštěním"]
     assert ("ctrl+s", "uložit / potvrdit formulář") in g["Formulářové dialogy"]
+
+
+async def test_scan_on_start_is_opt_in(tmp_path: Path) -> None:
+    repos = sample_result().repos[:2]
+    app = make_app(tmp_path, auto_scan=True, scanner_factory=fake_factory(repos, 0.01))
+    async with app.run_test(size=(100, 31)) as pilot:
+        await pilot.pause()
+        assert app.scanner is None  # výchozí: jen poslední výsledek, žádný sken
+    app = make_app(
+        tmp_path,
+        config=CONFIG + "\n[ui]\nscan_on_start = true\n",
+        auto_scan=True,
+        scanner_factory=fake_factory(repos, 0.01),
+    )
+    async with app.run_test(size=(100, 31)) as pilot:
+        await pilot.pause()
+        assert app.scanner is not None
+        await app.workers.wait_for_complete()
+
+
+async def test_quit_stops_running_scan(tmp_path: Path) -> None:
+    from repo_doctor import gitwrap
+
+    repos = sample_result().repos
+    app = make_app(
+        tmp_path,
+        result=sample_result().model_copy(update={"repos": []}),
+        scanner_factory=fake_factory(repos, 0.2),
+    )
+    async with app.run_test(size=(100, 31)) as pilot:
+        await pilot.pause()
+        await pilot.press("R")
+        await pilot.pause(0.3)
+        assert app.scanning
+        scanner = app.scanner
+        await pilot.press("ctrl+q")
+    assert scanner is not None and scanner.cancelled
+    assert gitwrap.aborted()
+    assert app.return_code == 0

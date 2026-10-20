@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from repo_doctor.gitwrap import Git, GitError, GitNotFound, GitTimeout
+from repo_doctor import gitwrap
+from repo_doctor.gitwrap import Git, GitAborted, GitError, GitNotFound, GitTimeout
 from tests.factory import RepoBuilder, git, with_remote
 
 
@@ -135,7 +136,7 @@ def test_timeout(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     def boom(*a: object, **k: object) -> None:
         raise subprocess.TimeoutExpired("git", 1)
 
-    monkeypatch.setattr(subprocess, "run", boom)
+    monkeypatch.setattr(gitwrap, "run_process", boom)
     with pytest.raises(GitTimeout):
         Git(tmp_path).run("status")
     assert not Git(tmp_path).ok("status")
@@ -242,3 +243,35 @@ def test_repo_config_cannot_run_programs(tmp_path: Path) -> None:
     assert not marker.exists()
     env = g.hardening_env()
     assert "filter.x.clean" in env.values() and env["GIT_CONFIG_COUNT"].isdigit()
+
+
+def test_abort_stops_running_process_and_blocks_new(tmp_path: Path) -> None:
+    import threading
+    import time
+
+    RepoBuilder.create(tmp_path / "r").write("a.txt", "a\n").commit()
+    outcome: list[BaseException] = []
+
+    def slow() -> None:
+        try:
+            gitwrap.run_process(["sleep", "30"], timeout=60)
+        except BaseException as exc:
+            outcome.append(exc)
+
+    worker = threading.Thread(target=slow)
+    start = time.monotonic()
+    worker.start()
+    while not gitwrap._LIVE:
+        time.sleep(0.01)
+    gitwrap.abort_all()
+    worker.join(10)
+    assert not worker.is_alive() and time.monotonic() - start < 10
+    assert len(outcome) == 1 and isinstance(outcome[0], GitAborted)
+    assert gitwrap.aborted()
+    g = Git(tmp_path / "r")
+    with pytest.raises(GitAborted):
+        g.run("status")
+    with pytest.raises(GitAborted):
+        list(g.stream_lines("log"))
+    gitwrap.reset_abort()
+    assert g.run("log", "--format=%s").strip()

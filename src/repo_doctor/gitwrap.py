@@ -11,8 +11,10 @@ Zásady:
 
 from __future__ import annotations
 
+import contextlib
 import os
 import re
+import signal
 import subprocess
 import tempfile
 import threading
@@ -125,6 +127,106 @@ class GitNotFound(GitError):
         super().__init__(["git"], 127, "příkaz git nebyl nalezen v PATH")
 
 
+class GitAborted(GitError):
+    def __init__(self, args: Sequence[str]) -> None:
+        super().__init__(args, -1, "přerušeno – aplikace se ukončuje")
+
+
+# ---------------------------------------------------------------------- přerušení
+# Běžící podprocesy (git, gitleaks). Při zavření TUI je `abort_all()` ukončí a další
+# spuštění odmítne, aby vlákna skenu hned doběhla a interpret na ně nečekal.
+_LIVE: set[subprocess.Popen[bytes]] = set()
+_LIVE_LOCK = threading.Lock()
+_ABORTED = threading.Event()
+_KILL_GRACE = 2.0
+
+
+def abort_all() -> None:
+    """Ukončí všechny evidované podprocesy (SIGTERM, po chvíli SIGKILL) a další nepustí."""
+    with _LIVE_LOCK:
+        _ABORTED.set()
+        procs = list(_LIVE)
+    for proc in procs:
+        _signal(proc, kill=False)
+    if procs:
+        # git po SIGTERM uklidí zámky (index.lock); kdo nereaguje, dostane SIGKILL
+        timer = threading.Timer(_KILL_GRACE, _kill_all, (procs,))
+        timer.daemon = True
+        timer.start()
+
+
+def reset_abort() -> None:
+    """Znovu povolí spouštění podprocesů (nová instance aplikace, testy)."""
+    _ABORTED.clear()
+
+
+def aborted() -> bool:
+    return _ABORTED.is_set()
+
+
+def _kill_all(procs: list[subprocess.Popen[bytes]]) -> None:
+    for proc in procs:
+        _signal(proc, kill=True)
+
+
+def _signal(proc: subprocess.Popen[bytes], *, kill: bool) -> None:
+    """Signál celé skupině procesu – potomci (ssh, pack-objects) by jinak drželi roury."""
+    if proc.poll() is not None:
+        return
+    with contextlib.suppress(OSError):  # proces mezitím skončil
+        os.killpg(proc.pid, signal.SIGKILL if kill else signal.SIGTERM)
+
+
+def _track(proc: subprocess.Popen[bytes]) -> None:
+    with _LIVE_LOCK:
+        _LIVE.add(proc)
+        if _ABORTED.is_set():  # abort_all() proběhl mezi kontrolou a spuštěním
+            _signal(proc, kill=False)
+
+
+def _untrack(proc: subprocess.Popen[bytes]) -> None:
+    with _LIVE_LOCK:
+        _LIVE.discard(proc)
+
+
+def run_process(
+    cmd: Sequence[str],
+    *,
+    timeout: float,
+    env: Mapping[str, str] | None = None,
+    input: bytes | None = None,
+    cwd: Path | None = None,
+) -> subprocess.CompletedProcess[bytes]:
+    """Jako `subprocess.run(capture_output=True)`, ale proces jde ukončit přes `abort_all()`.
+
+    Po vypršení limitu proces zabije a vyhodí `subprocess.TimeoutExpired`, po přerušení
+    `GitAborted`.
+    """
+    if _ABORTED.is_set():
+        raise GitAborted(cmd)
+    with subprocess.Popen(
+        list(cmd),
+        stdin=subprocess.PIPE if input is not None else subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=env,
+        cwd=cwd,
+        start_new_session=True,
+    ) as proc:
+        _track(proc)
+        try:
+            out, err = proc.communicate(input, timeout=timeout)
+        except subprocess.TimeoutExpired:
+            _signal(proc, kill=True)
+            proc.communicate()
+            raise
+        finally:
+            _untrack(proc)
+    if _ABORTED.is_set():
+        raise GitAborted(cmd)
+    return subprocess.CompletedProcess(list(cmd), proc.returncode, out, err)
+
+
 _SSH_LOCK = threading.Lock()
 _ssh_command: str | None = None
 _ssh_batch_mode = True
@@ -178,16 +280,13 @@ def _user_config_query(scope: str, *args: str, timeout: float = 5.0) -> str:
     env = {k: v for k, v in os.environ.items() if not k.startswith("GIT_CONFIG_PARAMETERS")}
     env.update({"GIT_TERMINAL_PROMPT": "0", "LC_ALL": "C"})
     try:
-        proc = subprocess.run(
+        proc = run_process(
             ["git", "config", scope, "--includes", *args],
-            capture_output=True,
             timeout=timeout,
             env=env,
-            check=False,
-            stdin=subprocess.DEVNULL,
-            cwd=Path.home() if Path.home().is_dir() else "/",
+            cwd=Path.home() if Path.home().is_dir() else Path("/"),
         )
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError, GitAborted):
         return ""
     return proc.stdout.decode("utf-8", "replace") if proc.returncode == 0 else ""
 
@@ -339,7 +438,7 @@ class Git:
         if self._hardening is None:
             pairs: list[tuple[str, str]] = []
             try:
-                proc = subprocess.run(
+                proc = run_process(
                     [
                         "git",
                         "-C",
@@ -351,11 +450,8 @@ class Git:
                         "--get-regexp",
                         _HARDEN_REGEX,
                     ],
-                    capture_output=True,
                     timeout=self.timeout,
                     env=git_env(),
-                    check=False,
-                    stdin=subprocess.DEVNULL,
                 )
                 names = proc.stdout.decode("utf-8", "replace").split()
             except (subprocess.TimeoutExpired, FileNotFoundError, NotADirectoryError):
@@ -421,15 +517,7 @@ class Git:
     ) -> subprocess.CompletedProcess[bytes]:
         limit = self.timeout if timeout is None else timeout
         try:
-            proc = subprocess.run(
-                self._cmd(args),
-                input=input,
-                capture_output=True,
-                timeout=limit,
-                env=git_env(env),
-                check=False,
-                stdin=None if input is not None else subprocess.DEVNULL,
-            )
+            proc = run_process(self._cmd(args), input=input, timeout=limit, env=git_env(env))
         except subprocess.TimeoutExpired as exc:
             raise GitTimeout(args, limit) from exc
         except FileNotFoundError as exc:
@@ -467,6 +555,8 @@ class Git:
         Volající může zachytit GitTimeout a pracovat s dosud přečtenými řádky.
         """
         limit = self.timeout if timeout is None else timeout
+        if _ABORTED.is_set():
+            raise GitAborted(args)
         try:
             proc = subprocess.Popen(
                 self._cmd(args),
@@ -474,14 +564,16 @@ class Git:
                 stderr=subprocess.PIPE,
                 stdin=subprocess.DEVNULL,
                 env=git_env(),
+                start_new_session=True,
             )
         except FileNotFoundError as exc:
             raise GitNotFound() from exc
+        _track(proc)
         timed_out = threading.Event()
 
         def _kill() -> None:
             timed_out.set()
-            proc.kill()
+            _signal(proc, kill=True)
 
         timer = threading.Timer(limit, _kill)
         timer.daemon = True
@@ -497,11 +589,14 @@ class Git:
             proc.wait()
         finally:
             timer.cancel()
+            _untrack(proc)
             if proc.poll() is None:
-                proc.kill()
+                _signal(proc, kill=True)
                 proc.wait()
             proc.stdout.close()
             proc.stderr.close()
+        if _ABORTED.is_set():
+            raise GitAborted(args)
         if timed_out.is_set():
             raise GitTimeout(args, limit)
         if proc.returncode != 0:
@@ -577,7 +672,7 @@ class Git:
         # bez hardeningu: ten by si četl lokální konfiguraci dalším voláním gitu a
         # `rev-parse --git-dir` žádný program z konfigurace repa nespouští
         try:
-            proc = subprocess.run(
+            proc = run_process(
                 [
                     "git",
                     "--no-pager",
@@ -587,11 +682,8 @@ class Git:
                     "rev-parse",
                     "--git-dir",
                 ],
-                capture_output=True,
                 timeout=self.timeout,
                 env=git_env(),
-                check=False,
-                stdin=subprocess.DEVNULL,
             )
         except subprocess.TimeoutExpired as exc:
             raise GitTimeout(["rev-parse"], self.timeout) from exc
@@ -908,13 +1000,10 @@ class Git:
         """Příkaz mimo konkrétní repo (clone, ls-remote) se stejným bezpečným prostředím."""
         opts, extra = network_options([url]) if url else ([], {})
         try:
-            proc = subprocess.run(
+            proc = run_process(
                 ["git", "--no-pager", *_SAFE_CONFIG, *opts, *args],
-                capture_output=True,
                 timeout=timeout,
                 env=git_env(extra),
-                check=False,
-                stdin=subprocess.DEVNULL,
                 cwd=cwd,
             )
         except subprocess.TimeoutExpired as exc:

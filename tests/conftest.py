@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 from repo_doctor import netpolicy
-from repo_doctor.gitwrap import _allow_protocols, configure_ssh, reset_ssh_cache
+from repo_doctor.gitwrap import _allow_protocols, configure_ssh, reset_abort, reset_ssh_cache
 from repo_doctor.masking import REGISTRY
 
 os.environ["TZ"] = "UTC"  # deterministické časy ve snapshotech
@@ -41,6 +41,7 @@ def _isolated_env(
     monkeypatch.setattr("repo_doctor.sshhelp.run_probe", lambda url: None)
     yield
     REGISTRY.clear()
+    reset_abort()
     configure_ssh(batch_mode=True)
     _allow_protocols()
     netpolicy.configure([])
