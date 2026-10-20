@@ -312,6 +312,21 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   relaci. Ukáže se jen stav a že tokeny jdou přes `env`/`cmd`.
 - Upozornění na chybějící `gitleaks` jen jednou (značka `~/.cache/repo-doctor/tools-hint`).
 
+## Ukončení aplikace (#35)
+
+- **Proč proces čekal:** Textual běží přes `asyncio.run`, které při ukončení čeká na vlákna
+  výchozího executoru (`asyncio.to_thread`) – a v nich běžely git příkazy skenu. Zrušení
+  asyncio úloh vlákno nezastaví.
+- **Řešení:** všechny podprocesy gitu a gitleaks jdou přes `gitwrap.run_process` /
+  `stream_lines`, které je evidují. `RepoDoctorApp.exit()` zruší sken a zavolá
+  `gitwrap.abort_all()`: SIGTERM celé skupině procesů (vlastní session, aby padli i potomci
+  jako ssh, kteří drží roury), po 2 s SIGKILL, a každé další spuštění vyhodí `GitAborted`.
+  SIGTERM jako první proto, že git po něm uklidí zámky (`index.lock`).
+- **Sken po spuštění je ve výchozím stavu vypnutý** (`ui.scan_on_start = false`), protože
+  se ukazuje poslední uložený výsledek. Průvodce prvním spuštěním skenuje vždy.
+- **Konec jen přes `ctrl+q`** (výchozí klávesa Textualu), `q` je jen „zpět“ – omylem
+  zmáčknuté `q` na přehledu už nezavře aplikaci uprostřed skenu.
+
 ## Repo a proces
 
 - **Branch:** zadání chtělo `feat/initial-implementation`, prostředí ale vyžaduje vývoj na

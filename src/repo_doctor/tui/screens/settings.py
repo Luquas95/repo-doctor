@@ -76,6 +76,14 @@ class SettingsScreen(BaseScreen):
                 yield Button("Zapnout", id="schedule-install", compact=True)
                 yield Button("Vypnout", id="schedule-remove", compact=True)
                 yield Button("Test upozornění", id="schedule-test", compact=True)
+            yield Label("Sken po spuštění aplikace")
+            yield Select(
+                compact=True,
+                options=[("vypnutý – ukázat poslední výsledek", "off"), ("zapnutý", "on")],
+                value="on" if cfg.ui.scan_on_start else "off",
+                allow_blank=False,
+                id="scan_on_start",
+            )
             yield Label("Vzhled")
             yield Select(
                 compact=True,
@@ -405,6 +413,8 @@ class SettingsScreen(BaseScreen):
         if wid == "theme" and value != self.rd.config.ui.theme:
             if self._save(store.set_value, "ui", "theme", value):
                 self.app.theme = LIGHT_NAME if value == "light" else DARK_NAME
+        elif wid == "scan_on_start" and (value == "on") != self.rd.config.ui.scan_on_start:
+            self._save(store.set_value, "ui", "scan_on_start", value == "on")
         elif wid == "fail_on" and value != self.rd.config.checks.fail_on.value:
             self._save(store.set_value, "checks", "fail_on", value)
         elif wid == "license" and value != self.rd.config.license:

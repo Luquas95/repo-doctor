@@ -12,7 +12,7 @@ from textual.app import App
 from textual.binding import Binding
 from textual.worker import Worker
 
-from repo_doctor import history, netpolicy, paths
+from repo_doctor import gitwrap, history, netpolicy, paths
 from repo_doctor.config import Config, ConfigError, ConfigStore, RootConfig
 from repo_doctor.gitwrap import configure_ssh
 from repo_doctor.keymap import BY_ID, KeymapError, build_keymap, key_label
@@ -24,6 +24,8 @@ from repo_doctor.tui.commands import RepoCommands
 from repo_doctor.tui.theme import DARK_NAME, LIGHT_NAME, THEMES, Palette, palette_for
 
 if TYPE_CHECKING:
+    from rich.console import RenderableType
+
     from repo_doctor.tui.screens.dashboard import DashboardScreen
 
 ScannerFactory = Callable[[Config, ScanOptions, Callable[[ScanEvent], None]], Scanner]
@@ -71,6 +73,7 @@ class RepoDoctorApp(App[int]):
         # install/remove/status plánovaného skenu (testy podstrčí náhradu bez systemd)
         self.schedule_backend: Any = schedule_backend or schedule
         install_log_redaction()
+        gitwrap.reset_abort()  # předchozí instance mohla spouštění zastavit
         self.store = store or ConfigStore()
         self.config_error: str | None = None
         try:
@@ -177,7 +180,7 @@ class RepoDoctorApp(App[int]):
             from repo_doctor.tui.screens.wizard import WizardScreen
 
             self.push_screen(WizardScreen())
-        elif self.auto_scan:
+        elif self.auto_scan and self.config.ui.scan_on_start:
             self.start_scan()
         if self.update_checker is not None and self.config.updates.check and not self.offline:
             self.run_worker(self._check_update, thread=True, group="update", exit_on_error=False)
@@ -335,6 +338,21 @@ class RepoDoctorApp(App[int]):
         if self._dashboard is not None and self._dashboard.is_attached:
             self._dashboard.refresh_data(light=throttle)
 
+    def exit(
+        self,
+        result: int | None = None,
+        return_code: int = 0,
+        message: RenderableType | None = None,
+    ) -> None:
+        self.stop_work()
+        super().exit(result, return_code, message)
+
+    def stop_work(self) -> None:
+        """Zastaví veškerou práci na pozadí, aby proces po zavření nečekal na sken."""
+        if self.scanner is not None:
+            self.scanner.cancel()
+        gitwrap.abort_all()
+
     def cancel_scan(self) -> None:
         if not self.scanning or self.scanner is None:
             self.notify("Žádný sken neběží.")
@@ -400,7 +418,7 @@ class RepoDoctorApp(App[int]):
             return
 
         if isinstance(self.screen, DashboardScreen):
-            self.exit(0)
+            self.notify(f"Aplikaci ukončíš klávesou {self.key('quit')}.")
         elif len(self.screen_stack) > 1:
             self.pop_screen()
 

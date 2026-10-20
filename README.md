@@ -235,8 +235,8 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | `x` | zrušit sken |
 | `O` | offline režim |
 | `t` | světlé / tmavé téma |
-| `q` | zpět / konec |
-| `ctrl+c` | okamžitý konec |
+| `q` | zpět |
+| `ctrl+q` | konec (zastaví i běžící sken) |
 
 **Pohyb**
 
@@ -466,6 +466,7 @@ ssh_batch_mode = true     # false = nepřidávat `-o BatchMode=yes` (vlastní SS
 
 [ui]
 theme = "dark"            # dark | light (t přepne)
+scan_on_start = false     # true = po spuštění TUI rovnou skenovat
 editor = "nvim"
 ```
 

@@ -145,6 +145,8 @@ class UIConfig(_Model):
     editor: str | None = None
     group_by: Literal["triage", "root", "forge", "remote"] = "triage"
     show_sidebar: bool = True
+    # true = TUI po spuštění rovnou skenuje (jinak ukáže poslední uložený výsledek)
+    scan_on_start: bool = False
 
 
 class CIConfig(_Model):

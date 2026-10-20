@@ -53,7 +53,7 @@ DASH_KEYS: list[str | tuple[str, str]] = [
     "screen_folders",
     "screen_forges",
     "help",
-    ("back", "konec"),
+    ("quit", "konec"),
 ]
 
 
