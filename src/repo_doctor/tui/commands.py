@@ -23,7 +23,7 @@ class RepoCommands(Provider):
         app = self.rd
         cmds: list[tuple[str, object, str]] = []
         for a in ACTIONS:
-            if a.context in ("global",) and a.id not in {"command_palette", "quit"}:
+            if a.context == "global" and a.id not in {"command_palette", "quit"}:
                 cmds.append(
                     (
                         a.description.capitalize(),
@@ -41,7 +41,7 @@ class RepoCommands(Provider):
         for cat in [None, *Category]:
             label = cat.label if cat else "vše"
             cmds.append((f"Filtr kategorie: {label}", partial(self._category, cat), "přehled"))
-        cmds.append(("Konec", app.exit, "Ctrl+C"))
+        cmds.append(("Konec", app.exit, f"klávesa {app.key('quit')}"))
         for repo in sorted(app.result.repos, key=lambda r: r.name):
             cmds.append(
                 (f"Otevřít repo: {repo.name}", partial(app.open_detail, repo.path), repo.path)
@@ -50,13 +50,13 @@ class RepoCommands(Provider):
 
     def _dash(self, action: str) -> None:
         app = self.rd
-        app.action_switch_screen_n(1)
-        app.call_later(app.dashboard.run_action, action)
+        if app.go_home():
+            app.call_later(app.dashboard.run_action, action)
 
     def _category(self, cat: Category | None) -> None:
         app = self.rd
-        app.action_switch_screen_n(1)
-        app.dashboard.set_category(cat)
+        if app.go_home():
+            app.dashboard.set_category(cat)
 
     async def discover(self) -> Hits:
         for name, callback, help_text in self._commands():

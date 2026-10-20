@@ -155,7 +155,7 @@ def diagnosis(finding: Finding | None, app: RepoDoctorApp) -> Text:
             t.append("\n" + doc.note + "\n", style=Style(color=p.med))
     if finding.fixable:
         t.append(
-            f"\n✓ opravitelné automaticky – {app.key('detail_fix')} připraví opravu\n",
+            f"\n✓ opravitelné automaticky – {app.key('open_fix')} připraví opravu\n",
             style=Style(color=p.ok),
         )
     t.append(
@@ -197,7 +197,7 @@ class DetailScreen(BaseScreen):
             [
                 ("esc", "zpět"),
                 ("j/k", "nález"),
-                "detail_fix",
+                "open_fix",
                 "allowlist",
                 "open_editor",
                 "open_web",

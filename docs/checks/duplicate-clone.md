@@ -13,5 +13,5 @@ Dva klony téhož repa se rozjedou: změny v jednom chybí v druhém, snadno upr
 ## Postup
 
 1. Porovnej klony (`git -C <cesta> log --oneline -5`, `git status`) a zbytek práce přenes do hlavního klonu (push/pull, nebo `git fetch ../jiny-klon`).
-2. Klon bez necommitnutých a nepushnutých změn smaž – repo-doctor ho sám nemaže; na obrazovce **Úklid** (`9`) ho po potvrzení přesune do koše.
+2. Klon bez necommitnutých a nepushnutých změn smaž – repo-doctor ho sám nemaže; na obrazovce **Úklid** (`6`) ho po potvrzení přesune do koše.
 3. Na přehledu pomůže seskupení podle remotu (`alt+g`).

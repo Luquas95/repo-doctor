@@ -327,6 +327,19 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - **Konec jen přes `ctrl+q`** (výchozí klávesa Textualu), `q` je jen „zpět“ – omylem
   zmáčknuté `q` na přehledu už nezavře aplikaci uprostřed skenu.
 
+## Jedna funkce, jedna zkratka (#32)
+
+- **Kontextové klávesy vyhrály nad čísly:** léčba `f`, karta `⏎`, zpět `q`/`esc`. Globální
+  `1`–`3` jen duplikovaly totéž (a potřebovaly vybrané repo). Čísla zůstala obrazovkám, které
+  na výběru repa nezávisí, a jsou přečíslovaná od `1`.
+- **Akce může platit ve víc kontextech** (`KeyAction.also`): `open_fix` je jedna akce pro
+  přehled i kartu repa, takže se přemapuje na jednom místě a kolize se hlídají v obou.
+  Test `test_every_function_has_one_action` hlídá, aby se duplicity nevrátily.
+- **Obrazovky se otevírají podle jména** (`open_screen('folders')`), ne podle čísla, aby
+  čísla nebyla natvrdo v aplikaci. Název `switch_screen` nejde, je to vestavěná akce Textualu.
+- **Staré názvy akcí v `[keys]` nerozbijí start** (`LEGACY_IDS`, `REMOVED_IDS`): přejmenované
+  se převedou, odebraný `screen_overview` se ignoruje.
+
 ## Repo a proces
 
 - **Branch:** zadání chtělo `feat/initial-implementation`, prostředí ale vyžaduje vývoj na

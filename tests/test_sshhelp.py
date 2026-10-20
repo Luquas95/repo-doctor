@@ -179,7 +179,7 @@ async def test_tui_clone_shows_czech_message(
     app = make_app(tmp_path, offline=True)
     async with app.run_test(size=(120, 40)) as pilot:
         await pilot.pause()
-        await pilot.press("6")
+        await pilot.press("3")
         await pilot.pause()
         screen = app.screen
         assert isinstance(screen, RemoteScreen)
@@ -286,7 +286,7 @@ async def test_tui_forge_test_notifies_ssh_problem(
     app = make_app(tmp_path, config=cfg)
     async with app.run_test(size=(120, 40)) as pilot:
         await pilot.pause()
-        await pilot.press("5")
+        await pilot.press("2")
         await pilot.pause()
         await pilot.press("T")
         await pilot.pause(0.3)

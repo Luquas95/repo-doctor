@@ -11,6 +11,7 @@ from repo_doctor.keymap import (
     display_key,
     grouped,
     is_valid_key,
+    migrate_overrides,
     normalize_key,
 )
 
@@ -22,9 +23,32 @@ def test_defaults_have_no_collisions() -> None:
 
 
 def test_remap_ok() -> None:
-    km = build_keymap({"scan_all": "F5", "detail_fix": "ctrl+f"})
+    km = build_keymap({"scan_all": "F5", "open_fix": "ctrl+f"})
     assert km["scan_all"] == "f5"
-    assert km["detail_fix"] == "ctrl+f"
+    assert km["open_fix"] == "ctrl+f"
+
+
+def test_every_function_has_one_action() -> None:
+    """Jedna funkce = jedna akce = jedna klávesa (#32)."""
+    actions = [a.action for a in ACTIONS]
+    assert len(actions) == len(set(actions))
+    descriptions = [(a.context, a.description) for a in ACTIONS]
+    assert len(descriptions) == len(set(descriptions))
+
+
+def test_legacy_ids_still_work() -> None:
+    assert migrate_overrides({"dash_fix": "F3", "screen_overview": "F1"}) == {"open_fix": "F3"}
+    assert migrate_overrides({"detail_fix": "F3", "open_fix": "F4"}) == {"open_fix": "F4"}
+    assert migrate_overrides({"screen_detail": "F2"}) == {"open_card": "F2"}
+    km = build_keymap({"detail_fix": "ctrl+f", "screen_overview": "F1"})
+    assert km["open_fix"] == "ctrl+f"
+
+
+def test_open_fix_conflicts_in_both_contexts() -> None:
+    with pytest.raises(KeymapError, match="kolize"):
+        build_keymap({"open_fix": "o"})  # o = editor v kartě repa
+    with pytest.raises(KeymapError, match="kolize"):
+        build_keymap({"open_fix": "z"})  # z = sbalit na přehledu
 
 
 @pytest.mark.parametrize(

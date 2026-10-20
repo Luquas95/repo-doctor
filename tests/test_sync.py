@@ -148,7 +148,7 @@ def test_sync_screen_snapshot(snap_compare: object, tmp_path: Path, size: tuple[
     )
 
     async def run_before(pilot: object) -> None:
-        await pilot.press("0")  # type: ignore[attr-defined]
+        await pilot.press("7")  # type: ignore[attr-defined]
         await pilot.pause(0.3)  # type: ignore[attr-defined]
         await pilot.app.workers.wait_for_complete()  # type: ignore[attr-defined]
         await pilot.pause()  # type: ignore[attr-defined]
@@ -167,7 +167,7 @@ async def test_sync_screen_confirm_default_cancel_then_apply(tmp_path: Path) -> 
     result = ScanResult(repos=[RepoResult(path=str(local.path), name="obet", root="~")])
     app = make_app(tmp_path, result=result)
     async with app.run_test(size=(140, 40)) as pilot:
-        await pilot.press("0")
+        await pilot.press("7")
         await pilot.pause(0.3)
         await app.workers.wait_for_complete()
         await pilot.pause()

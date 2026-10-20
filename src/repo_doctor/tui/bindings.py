@@ -10,7 +10,7 @@ from repo_doctor.keymap import ACTIONS
 def bindings(*contexts: str, priority: bool = False) -> list[Binding]:
     out = []
     for a in ACTIONS:
-        if a.context in contexts:
+        if set(a.contexts) & set(contexts):
             out.append(
                 Binding(
                     a.key,

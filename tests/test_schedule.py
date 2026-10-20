@@ -232,7 +232,7 @@ def test_settings_schedule_snapshot(
     from tests.tui_helpers import make_app
 
     async def run_before(pilot: Any) -> None:
-        await pilot.press("7")
+        await pilot.press("4")
         await pilot.pause(0.3)
         await pilot.app.workers.wait_for_complete()
         await pilot.pause()
@@ -252,7 +252,7 @@ async def test_settings_install_and_remove(tmp_path: Path) -> None:
     backend = FakeBackend()
     app = make_app(tmp_path, schedule_backend=backend)
     async with app.run_test(size=(140, 40)) as pilot:
-        await pilot.press("7")
+        await pilot.press("4")
         await pilot.pause()
         settings = app.screen
         settings.query_one("#schedule-time", Input).value = "06:45"

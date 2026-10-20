@@ -37,10 +37,15 @@ class KeyAction:
     action: str
     show: bool = True
     label: str = ""  # jak klávesu zobrazit (výchozí: key)
+    also: tuple[str, ...] = ()  # další kontexty, kde akce platí (jedna klávesa, jedno přemapování)
 
     @property
     def display(self) -> str:
         return self.label or display_key(self.key)
+
+    @property
+    def contexts(self) -> tuple[str, ...]:
+        return (self.context, *self.also)
 
 
 def _a(
@@ -52,24 +57,23 @@ def _a(
     *,
     show: bool = True,
     label: str = "",
+    also: tuple[str, ...] = (),
 ) -> KeyAction:
-    return KeyAction(id, key, ctx, desc, action or id, show, label)
+    return KeyAction(id, key, ctx, desc, action or id, show, label, also)
 
 
 ACTIONS: tuple[KeyAction, ...] = (
     # globální
     _a("help", "question_mark", "global", "nápověda", label="?"),
     _a("command_palette", "ctrl+p", "global", "příkazová paleta", show=False),
-    _a("screen_overview", "1", "global", "přehled", "switch_screen_n(1)", show=False),
-    _a("screen_detail", "2", "global", "karta repa", "switch_screen_n(2)", show=False),
-    _a("screen_fix", "3", "global", "léčba", "switch_screen_n(3)", show=False),
-    _a("screen_folders", "4", "global", "složky", "switch_screen_n(4)"),
-    _a("screen_forges", "5", "global", "hostingy", "switch_screen_n(5)"),
-    _a("screen_remote", "6", "global", "vzdálená repa", "switch_screen_n(6)", show=False),
-    _a("screen_settings", "7", "global", "nastavení", "switch_screen_n(7)", show=False),
-    _a("screen_export", "8", "global", "export", "switch_screen_n(8)", show=False),
-    _a("screen_cleanup", "9", "global", "úklid místa", "switch_screen_n(9)", show=False),
-    _a("screen_sync", "0", "global", "synchronizace", "switch_screen_n(0)", show=False),
+    # přehled, karta repa a léčba nemají číslo: ⏎ a f na přehledu, zpět q / esc (#32)
+    _a("screen_folders", "1", "global", "složky", "open_screen('folders')"),
+    _a("screen_forges", "2", "global", "hostingy", "open_screen('forges')"),
+    _a("screen_remote", "3", "global", "vzdálená repa", "open_screen('remote')", show=False),
+    _a("screen_settings", "4", "global", "nastavení", "open_screen('settings')", show=False),
+    _a("screen_export", "5", "global", "export", "open_screen('export')", show=False),
+    _a("screen_cleanup", "6", "global", "úklid místa", "open_screen('cleanup')", show=False),
+    _a("screen_sync", "7", "global", "synchronizace", "open_screen('sync')", show=False),
     _a("search", "slash", "global", "hledat", label="/"),
     _a("scan_all", "R", "global", "sken"),
     _a("scan_repo", "r", "global", "sken repa", show=False),
@@ -90,7 +94,7 @@ ACTIONS: tuple[KeyAction, ...] = (
     _a("focus_previous", "shift+tab", "nav", "předchozí panel", show=False),
     # přehled
     _a("open_card", "enter", "dashboard", "karta", label="⏎"),
-    _a("dash_fix", "f", "dashboard", "léčba", "open_fix"),
+    _a("open_fix", "f", "dashboard", "léčba", also=("detail",)),
     _a("collapse_band", "z", "dashboard", "sbalit"),
     _a("sort_cycle", "S", "dashboard", "řadit podle sloupce", show=False),
     _a("sort_reverse", "s", "dashboard", "obrátit řazení", show=False),
@@ -107,7 +111,6 @@ ACTIONS: tuple[KeyAction, ...] = (
     ),
     _a("toggle_sidebar", "b", "dashboard", "levý panel", show=False),
     # karta repa
-    _a("detail_fix", "f", "detail", "léčba", "open_fix"),
     _a("allowlist", "a", "detail", "allowlist"),
     _a("open_editor", "o", "detail", "editor"),
     _a("open_web", "w", "detail", "web"),
@@ -152,6 +155,15 @@ ACTIONS: tuple[KeyAction, ...] = (
 )
 
 BY_ID: dict[str, KeyAction] = {a.id: a for a in ACTIONS}
+
+# Sloučené a odebrané akce (#32) – staré názvy v [keys] dál fungují nebo se tiše ignorují.
+LEGACY_IDS = {
+    "dash_fix": "open_fix",
+    "detail_fix": "open_fix",
+    "screen_fix": "open_fix",
+    "screen_detail": "open_card",
+}
+REMOVED_IDS = {"screen_overview"}  # na přehled vede q / esc
 
 _SYMBOLS = {
     "?": "question_mark",
@@ -250,11 +262,24 @@ def _conflicts(ctx_a: str, ctx_b: str) -> bool:
     return "global" in (ctx_a, ctx_b) or "nav" in (ctx_a, ctx_b)
 
 
+def migrate_overrides(overrides: Mapping[str, str]) -> dict[str, str]:
+    """Převede staré názvy akcí z [keys] na současné (nový název má přednost)."""
+    out: dict[str, str] = {}
+    for action_id, key in overrides.items():
+        if action_id in REMOVED_IDS:
+            continue
+        new = LEGACY_IDS.get(action_id, action_id)
+        if new != action_id and new in overrides:
+            continue
+        out.setdefault(new, key)
+    return out
+
+
 def build_keymap(overrides: Mapping[str, str]) -> dict[str, str]:
     """Vrátí {id akce: klávesa} po aplikaci přemapování. Při chybě KeymapError."""
     problems: list[str] = []
     result = {a.id: a.key for a in ACTIONS}
-    for action_id, key in overrides.items():
+    for action_id, key in migrate_overrides(overrides).items():
         if action_id not in BY_ID:
             problems.append(f"neznámá akce `{action_id}` (platné: {', '.join(sorted(BY_ID))})")
             continue
@@ -271,10 +296,7 @@ def build_keymap(overrides: Mapping[str, str]) -> dict[str, str]:
     for key, actions in sorted(seen.items()):
         for i, first in enumerate(actions):
             for second in actions[i + 1 :]:
-                # stejná akce ve dvou kontextech (např. `f` léčba) kolizí není
-                if first.action == second.action and first.context != second.context:
-                    continue
-                if _conflicts(first.context, second.context):
+                if any(_conflicts(a, b) for a in first.contexts for b in second.contexts):
                     problems.append(
                         f"kolize: klávesa {display_key(key)!r} je přiřazena akcím `{first.id}` "
                         f"({CONTEXTS[first.context]}) a `{second.id}` ({CONTEXTS[second.context]})"
@@ -300,5 +322,6 @@ def grouped(keymap: Mapping[str, str] | None = None) -> dict[str, list[tuple[str
     for a in ACTIONS:
         key = keymap.get(a.id, a.key)
         shown = a.label if a.label and key == a.key else display_key(key)
-        out[CONTEXTS[a.context]].append((shown, a.description))
+        for ctx in a.contexts:
+            out[CONTEXTS[ctx]].append((shown, a.description))
     return {k: v for k, v in out.items() if v}
