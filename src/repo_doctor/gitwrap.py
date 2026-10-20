@@ -850,6 +850,50 @@ class Git:
         out = self.run("rev-list", "--count", "--all", check=False).strip()
         return int(out) if out.isdigit() else 0
 
+    def first_commit_ts(self) -> int | None:
+        """Čas nejstaršího kořenového commitu HEAD (stáří repa)."""
+        out = self.run("log", "--max-parents=0", "--format=%ct", "HEAD", "--", check=False)
+        stamps = [int(x) for x in out.split() if x.isdigit()]
+        return min(stamps) if stamps else None
+
+    def commit_count_since(self, since_ts: int) -> int:
+        out = self.run(
+            "rev-list", "--count", f"--since={since_ts}", "--branches", "--", check=False
+        ).strip()
+        return int(out) if out.isdigit() else 0
+
+    def authors(self) -> list[tuple[str, int]]:
+        """Autoři HEAD podle počtu commitů (bez merge), sestupně. Jen jména, ne e-maily."""
+        out = self.run("shortlog", "-sn", "--no-merges", "HEAD", "--", check=False)
+        result: list[tuple[str, int]] = []
+        for line in out.splitlines():
+            count, _, name = line.strip().partition("\t")
+            if count.isdigit() and name:
+                result.append((name.strip(), int(count)))
+        return result
+
+    def last_tag(self) -> tuple[str, int | None] | None:
+        """Nejbližší tag dosažitelný z HEAD a čas jeho commitu."""
+        name = self.run("describe", "--tags", "--abbrev=0", "HEAD", check=False).strip()
+        if not name or "\n" in name:
+            return None
+        ts = self.run(
+            "log", "-1", "--format=%ct", "--end-of-options", f"refs/tags/{name}", "--", check=False
+        ).strip()
+        return name, int(ts) if ts.isdigit() else None
+
+    def objects_bytes(self) -> int | None:
+        """Velikost objektů v .git (volné + balíčky) podle `git count-objects -v`."""
+        out = self.run("count-objects", "-v", check=False)
+        values: dict[str, int] = {}
+        for line in out.splitlines():
+            key, _, value = line.partition(":")
+            if value.strip().isdigit():
+                values[key.strip()] = int(value.strip())
+        if "size" not in values and "size-pack" not in values:
+            return None
+        return (values.get("size", 0) + values.get("size-pack", 0)) * 1024
+
     def ls_files(self, *, untracked: bool = False) -> list[str]:
         args = ["ls-files", "-z", "--cached"]
         if untracked:

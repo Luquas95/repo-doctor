@@ -72,7 +72,7 @@ Button:focus { border: tall $accent; text-style: bold; }
 Button.-primary { background: $accent 20%; }
 
 /* karta repa */
-#card-header { height: auto; max-height: 8; padding: 0 1; }
+#card-header { height: auto; max-height: 12; padding: 0 1; }
 #card-body { height: 1fr; }
 #findings-panel { width: 34; }
 #findings-panel Tree { height: 1fr; }

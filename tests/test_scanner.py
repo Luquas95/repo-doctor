@@ -53,6 +53,9 @@ async def test_scan_offline_end_to_end(tmp_path: Path) -> None:
     assert any(f.check_id == "secrets-history" for f in names["leaky"].findings)
     assert (names["leaky"].score or 0) < (names["healthy"].score or 0)
     assert names["noreadme"].skipped["deps-vulnerable"] == "offline režim"
+    # detaily repa se sbírají i offline
+    healthy = names["healthy"].details
+    assert healthy.files and healthy.first_commit is not None and healthy.authors
     assert "forge-ci-failing" in names["noreadme"].skipped
     kinds = [e.kind for e in events]
     assert kinds[0] == "discovered" and kinds[-1] == "finished"
@@ -178,6 +181,12 @@ async def test_network_enrichment_with_forge(
             "default_branch": "main",
             "private": False,
             "html_url": "https://github.com/nekdo/proj",
+            "description": "Ukázkový projekt",
+            "stargazers_count": 4,
+            "forks_count": 1,
+            "open_issues_count": 3,
+            "topics": ["demo"],
+            "created_at": "2025-01-01T00:00:00Z",
         }
     )
     respx.get(f"{api}/repos/nekdo/proj/branches/main").respond(
@@ -223,6 +232,10 @@ async def test_network_enrichment_with_forge(
     assert "deps-outdated" in ids
     assert res.forge_info["ci"] == "failure"
     assert "forge-mirror-drift" not in ids
+    d = res.details
+    assert d.forge_description == "Ukázkový projekt" and d.forge_topics == ["demo"]
+    assert (d.forge_stars, d.forge_forks, d.forge_open_issues) == (4, 1, 3)
+    assert d.ecosystems[0].name == "python" and d.ecosystems[0].managers == ["pip"]
 
 
 @respx.mock

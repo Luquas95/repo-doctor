@@ -6,9 +6,13 @@ from datetime import UTC, datetime, timedelta
 
 from repo_doctor.checks import get_check
 from repo_doctor.models import (
+    AuthorCount,
+    EcosystemInfo,
     Finding,
+    LanguageShare,
     Location,
     RemoteInfo,
+    RepoDetails,
     RepoResult,
     RepoState,
     ScanResult,
@@ -294,6 +298,36 @@ def sample_result() -> ScanResult:
         "alerts": 1,
         "open_items": 2,
     }
+    repos[0].details = RepoDetails(
+        languages=[
+            LanguageShare(name="HCL", bytes=61_000),
+            LanguageShare(name="Python", bytes=24_000),
+            LanguageShare(name="Shell", bytes=9_000),
+            LanguageShare(name="Dockerfile", bytes=1_200),
+        ],
+        files=148,
+        worktree_bytes=2_400_000,
+        git_bytes=5_100_000,
+        ecosystems=[EcosystemInfo(name="python", managers=["uv"], direct=6, total=31)],
+        first_commit=datetime(2023, 2, 3, tzinfo=UTC),
+        commits_30d=14,
+        commits_year=210,
+        authors=2,
+        top_authors=[
+            AuthorCount(name="Nekdo", commits=380),
+            AuthorCount(name="renovate[bot]", commits=42),
+        ],
+        branches=4,
+        last_tag="v2.3.0",
+        last_tag_date=datetime(2026, 8, 20, tzinfo=UTC),
+        forge_description="Inventář a konfigurace domácí sítě",
+        forge_topics=["ansible", "terraform", "homelab"],
+        forge_stars=3,
+        forge_forks=1,
+        forge_open_issues=5,
+        forge_created=datetime(2023, 2, 3, tzinfo=UTC),
+        forge_pushed=NOW - timedelta(days=2),
+    )
     for r in repos:
         if r.name in extra:
             r.findings = [*r.findings, *extra[r.name]]

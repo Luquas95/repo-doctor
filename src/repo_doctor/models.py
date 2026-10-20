@@ -114,6 +114,49 @@ class RepoState(BaseModel):
     root_commit: str | None = None  # nejstarší kořenový commit HEAD (duplicitní klony bez remote)
 
 
+class LanguageShare(BaseModel):
+    name: str
+    bytes: int
+
+
+class EcosystemInfo(BaseModel):
+    name: str  # python, node, rust, go
+    managers: list[str] = Field(default_factory=list)  # uv, npm, pnpm, cargo…
+    direct: int = 0  # přímé závislosti
+    total: int = 0  # všechny (z lockfilu)
+
+
+class AuthorCount(BaseModel):
+    name: str
+    commits: int
+
+
+class RepoDetails(BaseModel):
+    """Popis repa pro kartu a reporty (offline z gitu; `forge_*` z API hostingu)."""
+
+    languages: list[LanguageShare] = Field(default_factory=list)  # sestupně podle velikosti
+    files: int | None = None
+    worktree_bytes: int | None = None  # součet velikostí souborů v HEAD
+    git_bytes: int | None = None  # objekty v .git
+    ecosystems: list[EcosystemInfo] = Field(default_factory=list)
+    license: str | None = None
+    first_commit: datetime | None = None
+    commits_30d: int | None = None
+    commits_year: int | None = None
+    authors: int | None = None
+    top_authors: list[AuthorCount] = Field(default_factory=list)
+    branches: int | None = None
+    last_tag: str | None = None
+    last_tag_date: datetime | None = None
+    forge_description: str | None = None
+    forge_topics: list[str] = Field(default_factory=list)
+    forge_stars: int | None = None
+    forge_forks: int | None = None
+    forge_open_issues: int | None = None
+    forge_created: datetime | None = None
+    forge_pushed: datetime | None = None
+
+
 Visibility = Literal["public", "private", "unknown"]
 
 
@@ -132,6 +175,7 @@ class RepoResult(BaseModel):
     skipped: dict[str, str] = Field(default_factory=dict)  # check_id → důvod
     errors: dict[str, str] = Field(default_factory=dict)
     forge_info: dict[str, str | int | bool | None] = Field(default_factory=dict)
+    details: RepoDetails = Field(default_factory=RepoDetails)
     score: int | None = 100  # None = repo nešlo zkontrolovat (např. nedůvěryhodný vlastník)
     untrusted_owner: bool = False  # git odmítl repo kvůli safe.directory
     duration_ms: int = 0

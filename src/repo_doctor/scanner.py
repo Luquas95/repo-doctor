@@ -50,7 +50,7 @@ from repo_doctor.forges.urls import (
 from repo_doctor.gitwrap import Git, GitError
 from repo_doctor.httpclient import HttpClient, HttpError, ResponseCache
 from repo_doctor.masking import redact, redact_url_credentials
-from repo_doctor.models import RemoteInfo, RepoResult, RepoState, ScanResult
+from repo_doctor.models import RemoteInfo, RepoDetails, RepoResult, RepoState, ScanResult
 from repo_doctor.scoring import score
 from repo_doctor.sshhelp import explain_ssh_error
 
@@ -358,6 +358,29 @@ class Scanner:
             root_commit=git.root_commit() if head else None,
         )
 
+    @staticmethod
+    def _details(ctx: RepoContext, now: datetime) -> RepoDetails:
+        from repo_doctor import details
+        from repo_doctor.licenses import project_license
+
+        files = ctx.tracked_files
+        deps = ctx.deps or collect(files, ctx.read_text)  # offline jen rozparsované lockfily
+        result = details.collect(
+            ctx.git, files=files, deps=deps, license=project_license(files, ctx.read_text), now=now
+        )
+        snap = ctx.forge_snapshot
+        if snap is not None and snap.repo is not None:
+            r = snap.repo
+            issues = r.open_issues
+            if issues is not None and snap.kind == "github":  # GitHub počítá PR mezi issues
+                issues = max(0, issues - sum(1 for i in snap.open_items if i.kind == "pr"))
+            result.forge_description = r.description or None
+            result.forge_topics = list(r.topics)
+            result.forge_stars, result.forge_forks = r.stars, r.forks
+            result.forge_open_issues = issues
+            result.forge_created, result.forge_pushed = r.created_at, r.pushed_at
+        return result
+
     async def _network(self, ctx: RepoContext, res: RepoResult) -> None:
         net = self._net
         if self.options.offline or net is None:
@@ -458,6 +481,7 @@ class Scanner:
             return res
         ctx, res = await asyncio.to_thread(self._context, repo, now)
         await self._network(ctx, res)
+        res.details = await asyncio.to_thread(self._details, ctx, now)
         findings = []
         disabled = set(ctx.config.checks.disabled)  # včetně .repo-doctor.toml
         for check in self.checks:

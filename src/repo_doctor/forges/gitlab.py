@@ -12,7 +12,9 @@ from repo_doctor.forges.base import (
     Forge,
     ForgeRepo,
     PullRequest,
+    opt_int,
     parse_time,
+    str_tuple,
 )
 from repo_doctor.httpclient import ForbiddenError, HttpClient, HttpError, NotFoundError
 
@@ -48,6 +50,11 @@ def _repo(d: dict[str, object]) -> ForgeRepo:
         fork="forked_from_project" in d,
         description=str(d.get("description") or ""),
         id=str(d.get("id") or ""),
+        stars=opt_int(d.get("star_count")),
+        forks=opt_int(d.get("forks_count")),
+        open_issues=opt_int(d.get("open_issues_count")),
+        topics=str_tuple(d.get("topics") or d.get("tag_list")),
+        created_at=parse_time(d.get("created_at")),
     )
 
 
