@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import subprocess
+from datetime import datetime
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -15,7 +16,9 @@ from textual.events import Resize
 from textual.widgets import Static, Tree
 
 from repo_doctor.checkdocs import load as load_doc
+from repo_doctor.cleanup import human
 from repo_doctor.config import AllowEntry, ConfigError
+from repo_doctor.czech import plural
 from repo_doctor.models import Category, Finding, RepoResult
 from repo_doctor.scoring import gauge, score_label, sparkline
 from repo_doctor.tui.bindings import bindings
@@ -36,6 +39,7 @@ from repo_doctor.tui.widgets.panel import split_title
 
 if TYPE_CHECKING:
     from repo_doctor.tui.app import RepoDoctorApp
+    from repo_doctor.tui.theme import Palette
 
 CATEGORY_ORDER = (Category.SECURITY, Category.FORGE, Category.MAINTENANCE, Category.GIT)
 
@@ -109,7 +113,115 @@ def card_header(repo: RepoResult, app: RepoDoctorApp, width: int) -> Text:
         t.append(repo.errors["fetch"], style=Style(color=p.text))
         if "fetch_detail" in repo.errors:
             t.append(f"  (git: {repo.errors['fetch_detail']})", style=Style(color=p.dim))
+    wrap = app.size.height >= WRAP_MIN_HEIGHT  # na nízkém terminálu zbude místo na nálezy
+    for label, items in detail_items(repo, app):
+        for line in layout_items(label, items, max(30, width - 4), wrap=wrap, p=p):
+            t.append("\n")
+            t.append_text(line)
     return t
+
+
+def _date(when: datetime) -> str:
+    return f"{when.astimezone():%-d. %-m. %Y}"
+
+
+LABEL_W = 12
+WRAP_MIN_HEIGHT = 32
+
+
+def layout_items(
+    label: str, items: list[Text], width: int, *, wrap: bool, p: Palette
+) -> list[Text]:
+    """Popisek a položky oddělené „ · “; zalomí se mezi položkami, jinak se uřízne."""
+    sep = Text(" · ", style=Style(color=p.dim))
+    lines = [Text(label.ljust(LABEL_W), style=Style(color=p.muted))]
+    for item in items:
+        line = lines[-1]
+        first = line.cell_len <= LABEL_W
+        if wrap and not first and line.cell_len + sep.cell_len + item.cell_len > width:
+            line = Text(" " * LABEL_W)
+            lines.append(line)
+            first = True
+        if not first:
+            line.append_text(sep)
+        line.append_text(item)
+    for line in lines:
+        line.truncate(width, overflow="ellipsis")
+    return lines
+
+
+def detail_items(repo: RepoResult, app: RepoDoctorApp) -> list[tuple[str, list[Text]]]:
+    """Řádky KÓD / ZÁVISLOSTI / HISTORIE / NA HOSTINGU z `repo.details` (#36); prázdné vynechá."""
+    p = app.palette
+    d = repo.details
+    label, text = Style(color=p.muted), Style(color=p.text)
+
+    def item(*parts: tuple[str, Style]) -> Text:
+        return Text.assemble(*parts)
+
+    result: list[tuple[str, list[Text]]] = []
+    code: list[Text] = []
+    total = sum(lang.bytes for lang in d.languages)
+    for lang in d.languages:
+        share = lang.bytes * 100 / total if total else 0
+        code.append(item((lang.name, text), (f" {share:.0f} %" if share >= 1 else " <1 %", label)))
+    if d.files is not None:
+        code.append(item((f"{d.files} {plural(d.files, 'soubor', 'soubory', 'souborů')}", label)))
+    if d.worktree_bytes is not None:
+        code.append(item((human(d.worktree_bytes), label)))
+    if d.git_bytes is not None:
+        code.append(item((f".git {human(d.git_bytes)}", label)))
+    if d.license:
+        code.append(item(("licence ", label), (d.license, text)))
+    if code:
+        result.append(("KÓD", code))
+
+    deps = []
+    for eco in d.ecosystems:
+        managers = f" ({', '.join(eco.managers)})" if eco.managers else ""
+        counts = f" {eco.direct} přímých / {eco.total} celkem" if eco.total or eco.direct else ""
+        deps.append(item((f"{eco.name}{managers}", text), (counts, label)))
+    if deps:
+        result.append(("ZÁVISLOSTI", deps))
+
+    hist: list[Text] = []
+    if d.first_commit is not None:
+        hist.append(item(("od ", label), (_date(d.first_commit), text)))
+    if n := repo.state.commit_count:
+        hist.append(item((f"{n} {plural(n, 'commit', 'commity', 'commitů')}", text)))
+    if d.commits_30d is not None:
+        hist.append(item((f"{d.commits_30d} za 30 dní", label)))
+    if d.commits_year is not None:
+        hist.append(item((f"{d.commits_year} za rok", label)))
+    if d.authors:
+        top = ", ".join(f"{a.name} {a.commits}" for a in d.top_authors)
+        hist.append(item((f"autoři {d.authors}", text), (f" ({top})" if top else "", label)))
+    if d.branches is not None:
+        hist.append(item((f"větve {d.branches}", text)))
+    if d.last_tag:
+        when = f" ({_date(d.last_tag_date)})" if d.last_tag_date else ""
+        hist.append(item((f"tag {d.last_tag}", text), (when, label)))
+    if hist:
+        result.append(("HISTORIE", hist))
+
+    forge: list[Text] = []
+    if d.forge_description:
+        forge.append(item((d.forge_description, text)))
+    if d.forge_topics:
+        forge.append(item(("témata ", label), (", ".join(d.forge_topics), text)))
+    if d.forge_stars is not None:
+        forge.append(item((f"★ {d.forge_stars}", text)))
+    if d.forge_forks is not None:
+        forge.append(item((f"forky {d.forge_forks}", text)))
+    if d.forge_open_issues is not None:
+        forge.append(item((f"issues {d.forge_open_issues}", text)))
+    if d.forge_created is not None:
+        forge.append(item((f"vytvořeno {_date(d.forge_created)}", label)))
+    if d.forge_pushed is not None:
+        forge.append(item((f"push {relative_time(d.forge_pushed, app.now())}", label)))
+    if forge:
+        result.append(("NA HOSTINGU", forge))
+    return result
 
 
 def diagnosis(finding: Finding | None, app: RepoDoctorApp) -> Text:

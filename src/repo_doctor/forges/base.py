@@ -27,6 +27,11 @@ class ForgeRepo:
     fork: bool = False
     description: str = ""
     id: str = ""  # interní ID (GitLab)
+    stars: int | None = None
+    forks: int | None = None
+    open_issues: int | None = None  # u GitHubu včetně PR – scanner je odečte
+    topics: tuple[str, ...] = ()
+    created_at: datetime | None = None
 
     @property
     def name(self) -> str:
@@ -88,6 +93,14 @@ def valid_owner_path(owner_path: str) -> bool:
     return bool(_OWNER_PATH.fullmatch(owner_path)) and not any(
         part in {".", ".."} for part in owner_path.split("/")
     )
+
+
+def opt_int(value: object) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def str_tuple(value: object) -> tuple[str, ...]:
+    return tuple(str(v) for v in value if isinstance(v, str)) if isinstance(value, list) else ()
 
 
 def parse_time(value: object) -> datetime | None:

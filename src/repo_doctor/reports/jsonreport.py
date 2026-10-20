@@ -10,7 +10,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from repo_doctor import __version__
-from repo_doctor.models import Finding, RepoResult, ScanResult, Severity
+from repo_doctor.models import Finding, RepoDetails, RepoResult, ScanResult, Severity
 from repo_doctor.scoring import band
 
 SCHEMA_VERSION = 1
@@ -68,6 +68,10 @@ class JRepo(BaseModel):
     allowlisted: int
     skipped: dict[str, str]
     errors: dict[str, str]
+    details: RepoDetails = Field(
+        default_factory=RepoDetails,
+        description="Jazyky, velikost, závislosti, historie a data z hostingu (přidáno v 0.4)",
+    )
 
 
 class JSummary(BaseModel):
@@ -140,6 +144,7 @@ def build(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None =
                 allowlisted=r.allowlisted,
                 skipped=r.skipped,
                 errors=r.errors,
+                details=r.details,
             )
         )
     return JReport(

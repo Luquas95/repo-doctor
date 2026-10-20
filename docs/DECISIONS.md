@@ -373,6 +373,20 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - **Grafické editory na pozadí** (`start_new_session`, bez pozastavení TUI): `subprocess.run`
   by čekal na zavření okna. Terminálové editory TUI pozastaví jako dřív.
 
+## Detaily repa (#36)
+
+- **Obsah po konzultaci s uživatelem:** jazyky, velikost, ekosystém a závislosti, licence,
+  stáří a aktivita, autoři, větve a tagy a z hostingu popis, témata, hvězdy, forky, issues
+  a data. Vše v rozšířené hlavičce karty (volba uživatele, ne přepínací panel).
+- **Jazyky jako lišta na GitHubu:** podle velikosti blobů v HEAD (`ls-tree -l`), jen
+  programovací a značkovací jazyky (bez JSON/YAML/Markdown) a bez `vendor`, `node_modules`,
+  `dist` apod. Bez závislosti na linguistu.
+- **Autoři jen jménem** (`shortlog -sn --no-merges`), e-maily se nikam neukládají.
+- **Issues z GitHubu bez PR:** `open_issues_count` je počítá spolu s PR, odečítáme otevřené PR.
+- **Zalamování jen na vyšším terminálu** (≥ 32 řádků), na menším se řádky uříznou, aby
+  zbylo místo na nálezy.
+- **JSON report:** `repos[].details` přidáno bez zvýšení `schema_version` (jen nové pole).
+
 ## Repo a proces
 
 - **Branch:** zadání chtělo `feat/initial-implementation`, prostředí ale vyžaduje vývoj na

@@ -347,7 +347,69 @@
         ],
         "allowlisted": 0,
         "skipped": {},
-        "errors": {}
+        "errors": {},
+        "details": {
+          "languages": [
+            {
+              "name": "HCL",
+              "bytes": 61000
+            },
+            {
+              "name": "Python",
+              "bytes": 24000
+            },
+            {
+              "name": "Shell",
+              "bytes": 9000
+            },
+            {
+              "name": "Dockerfile",
+              "bytes": 1200
+            }
+          ],
+          "files": 148,
+          "worktree_bytes": 2400000,
+          "git_bytes": 5100000,
+          "ecosystems": [
+            {
+              "name": "python",
+              "managers": [
+                "uv"
+              ],
+              "direct": 6,
+              "total": 31
+            }
+          ],
+          "license": null,
+          "first_commit": "2023-02-03T00:00:00Z",
+          "commits_30d": 14,
+          "commits_year": 210,
+          "authors": 2,
+          "top_authors": [
+            {
+              "name": "Nekdo",
+              "commits": 380
+            },
+            {
+              "name": "renovate[bot]",
+              "commits": 42
+            }
+          ],
+          "branches": 4,
+          "last_tag": "v2.3.0",
+          "last_tag_date": "2026-08-20T00:00:00Z",
+          "forge_description": "Inventář a konfigurace domácí sítě",
+          "forge_topics": [
+            "ansible",
+            "terraform",
+            "homelab"
+          ],
+          "forge_stars": 3,
+          "forge_forks": 1,
+          "forge_open_issues": 5,
+          "forge_created": "2023-02-03T00:00:00Z",
+          "forge_pushed": "2026-09-28T14:32:00Z"
+        }
       },
       {
         "name": "api-gateway",
@@ -517,7 +579,30 @@
         ],
         "allowlisted": 0,
         "skipped": {},
-        "errors": {}
+        "errors": {},
+        "details": {
+          "languages": [],
+          "files": null,
+          "worktree_bytes": null,
+          "git_bytes": null,
+          "ecosystems": [],
+          "license": null,
+          "first_commit": null,
+          "commits_30d": null,
+          "commits_year": null,
+          "authors": null,
+          "top_authors": [],
+          "branches": null,
+          "last_tag": null,
+          "last_tag_date": null,
+          "forge_description": null,
+          "forge_topics": [],
+          "forge_stars": null,
+          "forge_forks": null,
+          "forge_open_issues": null,
+          "forge_created": null,
+          "forge_pushed": null
+        }
       },
       {
         "name": "scraper",
@@ -683,7 +768,30 @@
         ],
         "allowlisted": 0,
         "skipped": {},
-        "errors": {}
+        "errors": {},
+        "details": {
+          "languages": [],
+          "files": null,
+          "worktree_bytes": null,
+          "git_bytes": null,
+          "ecosystems": [],
+          "license": null,
+          "first_commit": null,
+          "commits_30d": null,
+          "commits_year": null,
+          "authors": null,
+          "top_authors": [],
+          "branches": null,
+          "last_tag": null,
+          "last_tag_date": null,
+          "forge_description": null,
+          "forge_topics": [],
+          "forge_stars": null,
+          "forge_forks": null,
+          "forge_open_issues": null,
+          "forge_created": null,
+          "forge_pushed": null
+        }
       },
       {
         "name": "cz-tools",
@@ -829,7 +937,30 @@
         ],
         "allowlisted": 0,
         "skipped": {},
-        "errors": {}
+        "errors": {},
+        "details": {
+          "languages": [],
+          "files": null,
+          "worktree_bytes": null,
+          "git_bytes": null,
+          "ecosystems": [],
+          "license": null,
+          "first_commit": null,
+          "commits_30d": null,
+          "commits_year": null,
+          "authors": null,
+          "top_authors": [],
+          "branches": null,
+          "last_tag": null,
+          "last_tag_date": null,
+          "forge_description": null,
+          "forge_topics": [],
+          "forge_stars": null,
+          "forge_forks": null,
+          "forge_open_issues": null,
+          "forge_created": null,
+          "forge_pushed": null
+        }
       },
       {
         "name": "dotfiles",
@@ -959,7 +1090,30 @@
         ],
         "allowlisted": 0,
         "skipped": {},
-        "errors": {}
+        "errors": {},
+        "details": {
+          "languages": [],
+          "files": null,
+          "worktree_bytes": null,
+          "git_bytes": null,
+          "ecosystems": [],
+          "license": null,
+          "first_commit": null,
+          "commits_30d": null,
+          "commits_year": null,
+          "authors": null,
+          "top_authors": [],
+          "branches": null,
+          "last_tag": null,
+          "last_tag_date": null,
+          "forge_description": null,
+          "forge_topics": [],
+          "forge_stars": null,
+          "forge_forks": null,
+          "forge_open_issues": null,
+          "forge_created": null,
+          "forge_pushed": null
+        }
       },
       {
         "name": "blog",
@@ -1087,7 +1241,30 @@
         ],
         "allowlisted": 0,
         "skipped": {},
-        "errors": {}
+        "errors": {},
+        "details": {
+          "languages": [],
+          "files": null,
+          "worktree_bytes": null,
+          "git_bytes": null,
+          "ecosystems": [],
+          "license": null,
+          "first_commit": null,
+          "commits_30d": null,
+          "commits_year": null,
+          "authors": null,
+          "top_authors": [],
+          "branches": null,
+          "last_tag": null,
+          "last_tag_date": null,
+          "forge_description": null,
+          "forge_topics": [],
+          "forge_stars": null,
+          "forge_forks": null,
+          "forge_open_issues": null,
+          "forge_created": null,
+          "forge_pushed": null
+        }
       },
       {
         "name": "game-proto",
@@ -1215,7 +1392,30 @@
         ],
         "allowlisted": 0,
         "skipped": {},
-        "errors": {}
+        "errors": {},
+        "details": {
+          "languages": [],
+          "files": null,
+          "worktree_bytes": null,
+          "git_bytes": null,
+          "ecosystems": [],
+          "license": null,
+          "first_commit": null,
+          "commits_30d": null,
+          "commits_year": null,
+          "authors": null,
+          "top_authors": [],
+          "branches": null,
+          "last_tag": null,
+          "last_tag_date": null,
+          "forge_description": null,
+          "forge_topics": [],
+          "forge_stars": null,
+          "forge_forks": null,
+          "forge_open_issues": null,
+          "forge_created": null,
+          "forge_pushed": null
+        }
       },
       {
         "name": "old-cli",
@@ -1301,7 +1501,30 @@
         ],
         "allowlisted": 0,
         "skipped": {},
-        "errors": {}
+        "errors": {},
+        "details": {
+          "languages": [],
+          "files": null,
+          "worktree_bytes": null,
+          "git_bytes": null,
+          "ecosystems": [],
+          "license": null,
+          "first_commit": null,
+          "commits_30d": null,
+          "commits_year": null,
+          "authors": null,
+          "top_authors": [],
+          "branches": null,
+          "last_tag": null,
+          "last_tag_date": null,
+          "forge_description": null,
+          "forge_topics": [],
+          "forge_stars": null,
+          "forge_forks": null,
+          "forge_open_issues": null,
+          "forge_created": null,
+          "forge_pushed": null
+        }
       },
       {
         "name": "thesis-2019",
@@ -1393,7 +1616,30 @@
         ],
         "allowlisted": 0,
         "skipped": {},
-        "errors": {}
+        "errors": {},
+        "details": {
+          "languages": [],
+          "files": null,
+          "worktree_bytes": null,
+          "git_bytes": null,
+          "ecosystems": [],
+          "license": null,
+          "first_commit": null,
+          "commits_30d": null,
+          "commits_year": null,
+          "authors": null,
+          "top_authors": [],
+          "branches": null,
+          "last_tag": null,
+          "last_tag_date": null,
+          "forge_description": null,
+          "forge_topics": [],
+          "forge_stars": null,
+          "forge_forks": null,
+          "forge_open_issues": null,
+          "forge_created": null,
+          "forge_pushed": null
+        }
       },
       {
         "name": "notes",
@@ -1449,7 +1695,30 @@
         ],
         "allowlisted": 0,
         "skipped": {},
-        "errors": {}
+        "errors": {},
+        "details": {
+          "languages": [],
+          "files": null,
+          "worktree_bytes": null,
+          "git_bytes": null,
+          "ecosystems": [],
+          "license": null,
+          "first_commit": null,
+          "commits_30d": null,
+          "commits_year": null,
+          "authors": null,
+          "top_authors": [],
+          "branches": null,
+          "last_tag": null,
+          "last_tag_date": null,
+          "forge_description": null,
+          "forge_topics": [],
+          "forge_stars": null,
+          "forge_forks": null,
+          "forge_open_issues": null,
+          "forge_created": null,
+          "forge_pushed": null
+        }
       },
       {
         "name": "website",
@@ -1486,7 +1755,30 @@
         "findings": [],
         "allowlisted": 0,
         "skipped": {},
-        "errors": {}
+        "errors": {},
+        "details": {
+          "languages": [],
+          "files": null,
+          "worktree_bytes": null,
+          "git_bytes": null,
+          "ecosystems": [],
+          "license": null,
+          "first_commit": null,
+          "commits_30d": null,
+          "commits_year": null,
+          "authors": null,
+          "top_authors": [],
+          "branches": null,
+          "last_tag": null,
+          "last_tag_date": null,
+          "forge_description": null,
+          "forge_topics": [],
+          "forge_stars": null,
+          "forge_forks": null,
+          "forge_open_issues": null,
+          "forge_created": null,
+          "forge_pushed": null
+        }
       },
       {
         "name": "homelab",
@@ -1542,7 +1834,30 @@
         ],
         "allowlisted": 0,
         "skipped": {},
-        "errors": {}
+        "errors": {},
+        "details": {
+          "languages": [],
+          "files": null,
+          "worktree_bytes": null,
+          "git_bytes": null,
+          "ecosystems": [],
+          "license": null,
+          "first_commit": null,
+          "commits_30d": null,
+          "commits_year": null,
+          "authors": null,
+          "top_authors": [],
+          "branches": null,
+          "last_tag": null,
+          "last_tag_date": null,
+          "forge_description": null,
+          "forge_topics": [],
+          "forge_stars": null,
+          "forge_forks": null,
+          "forge_open_issues": null,
+          "forge_created": null,
+          "forge_pushed": null
+        }
       },
       {
         "name": "scripts",
@@ -1579,7 +1894,30 @@
         "findings": [],
         "allowlisted": 0,
         "skipped": {},
-        "errors": {}
+        "errors": {},
+        "details": {
+          "languages": [],
+          "files": null,
+          "worktree_bytes": null,
+          "git_bytes": null,
+          "ecosystems": [],
+          "license": null,
+          "first_commit": null,
+          "commits_30d": null,
+          "commits_year": null,
+          "authors": null,
+          "top_authors": [],
+          "branches": null,
+          "last_tag": null,
+          "last_tag_date": null,
+          "forge_description": null,
+          "forge_topics": [],
+          "forge_stars": null,
+          "forge_forks": null,
+          "forge_open_issues": null,
+          "forge_created": null,
+          "forge_pushed": null
+        }
       },
       {
         "name": "kbd-layout",
@@ -1635,7 +1973,30 @@
         ],
         "allowlisted": 0,
         "skipped": {},
-        "errors": {}
+        "errors": {},
+        "details": {
+          "languages": [],
+          "files": null,
+          "worktree_bytes": null,
+          "git_bytes": null,
+          "ecosystems": [],
+          "license": null,
+          "first_commit": null,
+          "commits_30d": null,
+          "commits_year": null,
+          "authors": null,
+          "top_authors": [],
+          "branches": null,
+          "last_tag": null,
+          "last_tag_date": null,
+          "forge_description": null,
+          "forge_topics": [],
+          "forge_stars": null,
+          "forge_forks": null,
+          "forge_open_issues": null,
+          "forge_created": null,
+          "forge_pushed": null
+        }
       }
     ],
     "warnings": [

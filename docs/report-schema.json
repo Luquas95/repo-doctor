@@ -1,5 +1,53 @@
 {
   "$defs": {
+    "AuthorCount": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "commits": {
+          "title": "Commits",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "commits"
+      ],
+      "title": "AuthorCount",
+      "type": "object"
+    },
+    "EcosystemInfo": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "managers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Managers",
+          "type": "array"
+        },
+        "direct": {
+          "default": 0,
+          "title": "Direct",
+          "type": "integer"
+        },
+        "total": {
+          "default": 0,
+          "title": "Total",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "EcosystemInfo",
+      "type": "object"
+    },
     "JFinding": {
       "properties": {
         "id": {
@@ -263,6 +311,10 @@
           },
           "title": "Errors",
           "type": "object"
+        },
+        "details": {
+          "$ref": "#/$defs/RepoDetails",
+          "description": "Jazyky, velikost, závislosti, historie a data z hostingu (přidáno v 0.4)"
         }
       },
       "required": [
@@ -384,6 +436,267 @@
         "no_pulse"
       ],
       "title": "JSummary",
+      "type": "object"
+    },
+    "LanguageShare": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "bytes": {
+          "title": "Bytes",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "bytes"
+      ],
+      "title": "LanguageShare",
+      "type": "object"
+    },
+    "RepoDetails": {
+      "description": "Popis repa pro kartu a reporty (offline z gitu; `forge_*` z API hostingu).",
+      "properties": {
+        "languages": {
+          "items": {
+            "$ref": "#/$defs/LanguageShare"
+          },
+          "title": "Languages",
+          "type": "array"
+        },
+        "files": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Files"
+        },
+        "worktree_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Worktree Bytes"
+        },
+        "git_bytes": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Git Bytes"
+        },
+        "ecosystems": {
+          "items": {
+            "$ref": "#/$defs/EcosystemInfo"
+          },
+          "title": "Ecosystems",
+          "type": "array"
+        },
+        "license": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "License"
+        },
+        "first_commit": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "First Commit"
+        },
+        "commits_30d": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Commits 30D"
+        },
+        "commits_year": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Commits Year"
+        },
+        "authors": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Authors"
+        },
+        "top_authors": {
+          "items": {
+            "$ref": "#/$defs/AuthorCount"
+          },
+          "title": "Top Authors",
+          "type": "array"
+        },
+        "branches": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Branches"
+        },
+        "last_tag": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Tag"
+        },
+        "last_tag_date": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Last Tag Date"
+        },
+        "forge_description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Forge Description"
+        },
+        "forge_topics": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Forge Topics",
+          "type": "array"
+        },
+        "forge_stars": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Forge Stars"
+        },
+        "forge_forks": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Forge Forks"
+        },
+        "forge_open_issues": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Forge Open Issues"
+        },
+        "forge_created": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Forge Created"
+        },
+        "forge_pushed": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Forge Pushed"
+        }
+      },
+      "title": "RepoDetails",
       "type": "object"
     },
     "Severity": {

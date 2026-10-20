@@ -5,6 +5,13 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 ## [Nevydáno]
 
 ### Přidáno
+- **Detaily repa v kartě (#36):** hlavička karty ukazuje navíc
+  - KÓD: jazyky (podíl podle velikosti), počet souborů, velikost a `.git`, licenci,
+  - ZÁVISLOSTI: ekosystém, správce balíčků, přímé / všechny závislosti,
+  - HISTORIE: první commit, počet commitů, aktivitu za 30 dní a rok, autory, větve, poslední tag,
+  - NA HOSTINGU: popis, témata, hvězdy, forky, issues, kdy repo vzniklo a poslední push.
+
+  Vše kromě hostingu se počítá offline. Detaily jsou i v JSON reportu (`repos[].details`).
 - **Doinstalace volitelných nástrojů (#24):** `repo-doctor tools [--install] [--yes]`
   a sekce **Nastavení › Volitelné nástroje** ukážou stav `gitleaks`, `wl-clipboard`,
   `xdg-utils`, `libnotify` i klíčenky. Po potvrzení doinstalují chybějící: systémové balíčky
