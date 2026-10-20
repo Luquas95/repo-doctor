@@ -196,7 +196,7 @@ class RepoDoctorApp(App[int]):
         self.call_from_thread(
             self.notify,
             "Sken tajemství bude rychlejší a přesnější s gitleaks – "
-            "doinstaluješ ho v Nastavení › Volitelné nástroje.",
+            f"doinstaluješ ho na obrazovce Nástroje (klávesa {self.key('screen_tools')}).",
             title="Tip",
             timeout=12,
         )
@@ -445,6 +445,7 @@ class RepoDoctorApp(App[int]):
             remote,
             settings,
             sync,
+            tools,
         )
 
         factories: dict[str, Callable[[], Any]] = {
@@ -455,6 +456,7 @@ class RepoDoctorApp(App[int]):
             "export": export.ExportScreen,
             "cleanup": cleanup.CleanupScreen,
             "sync": sync.SyncScreen,
+            "tools": tools.ToolsScreen,
         }
         if self.go_home():
             self.push_screen(factories[name]())

@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import contextlib
 from typing import TYPE_CHECKING, Any
 
 from rich.style import Style
 from rich.text import Text
 from textual import on, work
-from textual.app import ComposeResult, SuspendNotSupported
+from textual.app import ComposeResult
 from textual.containers import Horizontal, VerticalScroll
 from textual.widgets import Button, DataTable, Input, Label, Select, SelectionList, Static
 from textual.widgets.selection_list import Selection
@@ -161,9 +160,12 @@ class SettingsScreen(BaseScreen):
                 id="allow_http_hosts",
             )
             yield Label("Volitelné nástroje")
-            yield Static("zjišťuji stav…", id="tools-status", classes="hint")
-            with Horizontal(classes="row"):
-                yield Button("Nainstalovat chybějící", id="tools-install", compact=True)
+            yield Static(
+                f"gitleaks, schránka, prohlížeč a upozornění spravuješ na obrazovce Nástroje "
+                f"(klávesa {self.rd.key('screen_tools')}).",
+                classes="hint",
+                id="tools-hint",
+            )
             yield Label("Allowlist nálezů (d odebere vybraný)")
             yield DataTable(id="allowlist", cursor_type="row")
             yield Static("", classes="error", id="settings-error")
@@ -291,98 +293,11 @@ class SettingsScreen(BaseScreen):
         self.app.call_from_thread(self.notify, message, severity=severity, timeout=12)
         self.refresh_schedule()
 
-    # ------------------------------------------------------------------ nástroje
-    @work(thread=True, exclusive=True, group="tools-status")
-    def refresh_tools(self) -> None:
-        backend = self.rd.tools_backend
-        lines = [
-            f"{'✓' if st.installed else '✗'} {st.tool.id} · {st.tool.purpose}"
-            for st in backend.status()
-        ]
-        ok, detail = backend.keyring_status()
-        lines.append(f"{'✓' if ok else '✗'} klíčenka · {detail}")
-        self.app.call_from_thread(self.query_one("#tools-status", Static).update, "\n".join(lines))
-
-    @on(Button.Pressed, "#tools-install")
-    def _tools_install(self) -> None:
-        self.prepare_tools()
-
-    @work(thread=True, exclusive=True, group="tools-plan")
-    def prepare_tools(self) -> None:
-        backend = self.rd.tools_backend
-        missing = backend.missing()
-        if not missing:
-            self.app.call_from_thread(self.notify, "Všechny volitelné nástroje jsou nainstalované.")
-            return
-        plan = backend.plan(missing, backend.detect_manager())
-        self.app.call_from_thread(self._confirm_tools, plan)
-
-    def _confirm_tools(self, plan: Any) -> None:
-        lines = self.rd.tools_backend.describe(plan)
-        if not plan.command and not plan.downloads:
-            self.notify("\n".join(lines), severity="warning", timeout=15)
-            return
-        body = Text("\n" + "\n".join(lines) + "\n")
-        if plan.command:
-            body.append(
-                "\nTUI se na chvíli pozastaví a správce balíčků se v terminálu zeptá "
-                "na heslo (sudo) a potvrzení.\n"
-            )
-
-        def done(ok: bool | None) -> None:
-            if not ok:
-                return
-            if plan.downloads:
-                self.download_tools(plan)
-            else:
-                self._run_tools_command(plan)
-
-        self.app.push_screen(
-            ConfirmDialog("Nainstalovat nástroje", body, confirm_label="Nainstalovat"), done
-        )
-
-    @work(thread=True, exclusive=True, group="tools-download")
-    def download_tools(self, plan: Any) -> None:
-        backend = self.rd.tools_backend
-        for d in plan.downloads:
-            try:
-                path = backend.install_download(d)
-            except backend.ToolsError as err:
-                self.app.call_from_thread(self.notify, str(err), severity="error", timeout=15)
-                return
-            self.app.call_from_thread(self.notify, f"{d.name} {d.version} nainstalován do {path}.")
-        self.app.call_from_thread(self._run_tools_command, plan)
-
-    def _run_tools_command(self, plan: Any) -> None:
-        backend = self.rd.tools_backend
-        if plan.command:
-            try:
-                with self.app.suspend():
-                    print(f"\n$ {' '.join(plan.command)}", flush=True)
-                    code = backend.run_command(plan)
-                    with contextlib.suppress(EOFError, OSError):
-                        input("\nStiskni Enter pro návrat do repo-doctoru…")
-            except backend.ToolsError as err:
-                self.notify(str(err), severity="error", timeout=15)
-            except SuspendNotSupported:
-                self.notify(
-                    f"Terminál nejde pozastavit – spusť ručně: {' '.join(plan.command)}",
-                    severity="warning",
-                    timeout=20,
-                )
-            else:
-                if code == 0:
-                    self.notify("Nástroje jsou nainstalované.")
-                else:
-                    self.notify(f"Správce balíčků skončil s kódem {code}.", severity="warning")
-        self.refresh_tools()
-
     def on_mount(self) -> None:
         table = self.query_one("#allowlist", DataTable)
         table.add_columns("hash", "kontrola", "repo", "důvod")
         self._fill_allowlist()
         self.refresh_schedule()
-        self.refresh_tools()
         self.query_one("#theme", Select).focus()
 
     def _fill_allowlist(self) -> None:

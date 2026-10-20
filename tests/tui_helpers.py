@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+import html
+import re
 import subprocess
 from collections.abc import Callable
 from pathlib import Path
@@ -42,22 +44,52 @@ class FakeTools:
 
     ToolsError = tools.ToolsError
 
-    def __init__(self, *, missing: tuple[str, ...] = (), manager: str | None = "apt") -> None:
+    def __init__(
+        self,
+        *,
+        missing: tuple[str, ...] = (),
+        manager: str | None = "apt",
+        downloaded: dict[str, str | None] | None = None,  # id → verze stažené binárky
+    ) -> None:
         self.missing_ids = set(missing)
         self.manager = manager
+        self.downloaded = dict(downloaded or {})
         self.commands: list[list[str]] = []
         self.downloads: list[str] = []
+        self.removed: list[str] = []
         self.code = 0
 
     def find(self, binary: str) -> str | None:
         tool = next((t for t in tools.TOOLS if t.binary == binary), None)
-        return None if tool and tool.id in self.missing_ids else f"/usr/bin/{binary}"
+        if tool and tool.id in self.missing_ids:
+            return None
+        if tool and tool.id in self.downloaded:
+            return f"/home/u/.local/share/repo-doctor/tools/{binary}"
+        return f"/usr/bin/{binary}"
 
     def status(self) -> list[tools.ToolStatus]:
-        return [tools.ToolStatus(t, self.find(t.binary)) for t in tools.TOOLS]
+        return [
+            tools.ToolStatus(
+                t, self.find(t.binary), t.id in self.downloaded, self.downloaded.get(t.id)
+            )
+            for t in tools.TOOLS
+        ]
 
     def missing(self) -> list[tools.Tool]:
         return [s.tool for s in self.status() if not s.installed]
+
+    def outdated(self) -> list[tools.Tool]:
+        return [s.tool for s in self.status() if s.outdated]
+
+    update_plan = staticmethod(tools.update_plan)
+
+    def remove_download(self, tool: tools.Tool) -> Path:
+        if tool.id not in self.downloaded:
+            raise tools.ToolsError(f"{tool.id} není stažený – odinstaluj ho správcem balíčků.")
+        del self.downloaded[tool.id]
+        self.missing_ids.add(tool.id)
+        self.removed.append(tool.id)
+        return Path("/tmp/tools") / tool.binary
 
     def keyring_status(self) -> tuple[bool, str]:
         return True, "SecretService Keyring"
@@ -82,6 +114,7 @@ class FakeTools:
     def install_download(self, d: tools.Download) -> Path:
         self.downloads.append(d.name)
         self.missing_ids.discard(d.name)
+        self.downloaded[d.name] = d.version
         return Path("/tmp/tools") / d.name
 
 
@@ -154,3 +187,10 @@ def fake_factory(
         return FakeScanner(repos, on_event, delay)
 
     return factory
+
+
+def screen_text(app: RepoDoctorApp) -> str:
+    """Viditelný text obrazovky (z SVG screenshotu, bez značek)."""
+    svg = app.export_screenshot()
+    parts = re.findall(r"<text[^>]*>(.*?)</text>", svg, flags=re.DOTALL)
+    return html.unescape("\n".join(parts)).replace("\xa0", " ")

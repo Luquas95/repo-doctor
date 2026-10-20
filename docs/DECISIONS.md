@@ -353,6 +353,16 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - **Popisek hostingu u IP adresy** (remote bez nastaveného hostingu) je celá adresa, ne
   první oktet (`100` u Tailscale adres `100.x.x.x`).
 
+## Správa nástrojů (#31)
+
+- **Vlastní obrazovka místo sekce v Nastavení:** sekce byla až na konci dlouhého formuláře
+  a uživatel ji nenašel. Nástroje mají klávesu `8`, v Nastavení zůstal jen odkaz.
+- **Spravujeme jen to, co repo-doctor sám stáhl:** stažená binárka má vedle sebe značku
+  `<název>.version`, podle ní se pozná zastaralá verze (i binárka bez značky, tedy stažená
+  dřív, se nabídne k aktualizaci). Odebrání maže jen soubory ve složce repo-doctoru.
+  Systémové balíčky aktualizuje a odinstaluje správce balíčků. Odinstalace přes `sudo` by
+  mohla odebrat i závislosti jiných programů.
+
 ## Repo a proces
 
 - **Branch:** zadání chtělo `feat/initial-implementation`, prostředí ale vyžaduje vývoj na

@@ -14,7 +14,7 @@ import respx
 
 from repo_doctor import cli, paths, secrets_scan, tools
 from repo_doctor.tools import Download, InstallPlan, PackageManager, ToolsError
-from tests.tui_helpers import FakeTools, make_app
+from tests.tui_helpers import FakeTools, make_app, screen_text
 
 APT_HAS = "repo:\n  Installed: (none)\n  Candidate: 8.16.0-1\n"
 APT_NONE = "repo:\n  Installed: (none)\n  Candidate: (none)\n"
@@ -50,6 +50,49 @@ def test_status_and_missing(monkeypatch: pytest.MonkeyPatch) -> None:
     assert [t.id for t in tools.missing()] == ["gitleaks", "wl-clipboard"]
     by_id = {s.tool.id: s for s in tools.status()}
     assert by_id["xdg-utils"].installed and not by_id["gitleaks"].installed
+
+
+def _downloaded_gitleaks(version: str | None) -> Path:
+    local = tools.tools_dir() / "gitleaks"
+    local.parent.mkdir(parents=True, exist_ok=True)
+    local.write_text("#!/bin/sh\n")
+    local.chmod(0o755)
+    if version is not None:
+        (local.parent / "gitleaks.version").write_text(version + "\n")
+    return local
+
+
+def test_status_source_version_and_outdated(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(shutil, "which", lambda b: None if b == "gitleaks" else f"/bin/{b}")
+    assert tools.status()[0].source == "chybí"
+    _downloaded_gitleaks("8.0.0")
+    st = tools.tool_status(tool("gitleaks"))
+    assert st.downloaded and st.version == "8.0.0" and st.outdated
+    assert st.source == "stažený 8.0.0"
+    assert [t.id for t in tools.outdated()] == ["gitleaks"]
+    (tools.tools_dir() / "gitleaks.version").write_text(tools.GITLEAKS_VERSION)
+    assert not tools.tool_status(tool("gitleaks")).outdated and not tools.outdated()
+    (tools.tools_dir() / "gitleaks.version").unlink()  # stažený dřív, než se verze zapisovala
+    st = tools.tool_status(tool("gitleaks"))
+    assert st.outdated and st.source == "stažený (neznámá verze)"
+    xdg = tools.tool_status(tool("xdg-utils"))
+    assert xdg.source == "systém" and not xdg.downloaded and not xdg.outdated
+
+
+def test_update_plan_only_downloads() -> None:
+    p = tools.update_plan([tool("gitleaks"), tool("xdg-utils")])
+    assert p.downloads == [tools.GITLEAKS] and p.command is None and not p.manual
+
+
+def test_remove_download(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(shutil, "which", lambda b: None if b == "gitleaks" else f"/bin/{b}")
+    local = _downloaded_gitleaks("8.0.0")
+    assert tools.remove_download(tool("gitleaks")) == local
+    assert not local.exists() and not (local.parent / "gitleaks.version").exists()
+    with pytest.raises(ToolsError, match="správcem balíčků"):
+        tools.remove_download(tool("xdg-utils"))  # ze systému se nemaže
+    with pytest.raises(ToolsError):
+        tools.remove_download(tool("gitleaks"))  # už není
 
 
 def test_gitleaks_download_is_pinned() -> None:
@@ -245,7 +288,9 @@ def test_install_download(tmp_path: Path) -> None:
     respx.get("https://example.invalid/gl.tar.gz").respond(content=blob)
     path = tools.install_download(_dl(blob), target=tmp_path / "tools")
     assert path.read_bytes() == b"#!binary\n" and os.access(path, os.X_OK)
-    assert sorted(p.name for p in path.parent.iterdir()) == ["gitleaks"]  # jen binárka
+    # jen binárka a značka verze (archiv ani dočasné soubory nezůstanou)
+    assert sorted(p.name for p in path.parent.iterdir()) == ["gitleaks", "gitleaks.version"]
+    assert (path.parent / "gitleaks.version").read_text() == "1.0\n"
 
 
 @respx.mock
@@ -275,7 +320,14 @@ def test_install_download_http_error(tmp_path: Path) -> None:
 
 # ---------------------------------------------------------------------- CLI
 def _fake_module(monkeypatch: pytest.MonkeyPatch, fake: FakeTools) -> None:
-    for name in ("status", "missing", "keyring_status", "detect_manager", "install_download"):
+    for name in (
+        "status",
+        "missing",
+        "keyring_status",
+        "detect_manager",
+        "install_download",
+        "remove_download",
+    ):
         monkeypatch.setattr(tools, name, getattr(fake, name))
     monkeypatch.setattr(tools, "run_command", fake.run_command)
 
@@ -346,23 +398,62 @@ def test_cli_tools_unknown_distro(
     assert "ručně" in capsys.readouterr().out
 
 
-# ---------------------------------------------------------------------- TUI
-async def _open_settings(app: object, pilot: object) -> None:
-    from repo_doctor.tui.screens.settings import SettingsScreen
+def test_cli_tools_update(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    fake = FakeTools(downloaded={"gitleaks": "8.0.0"})
+    _fake_module(monkeypatch, fake)
+    assert cli.main(["tools"]) == 0
+    out = capsys.readouterr().out
+    assert "↑ gitleaks" in out and "[stažený 8.0.0]" in out and "tools --update" in out
+    assert cli.main(["tools", "--update", "--yes"]) == 0
+    assert fake.downloads == ["gitleaks"]
+    assert cli.main(["tools", "--update"]) == 0
+    assert "aktuální" in capsys.readouterr().out
 
-    await app.push_screen(SettingsScreen())  # type: ignore[attr-defined]
+
+def test_cli_tools_remove(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    fake = FakeTools(downloaded={"gitleaks": "8.0.0"})
+    _fake_module(monkeypatch, fake)
+    assert cli.main(["tools", "--remove", "nic"]) == 2
+    assert cli.main(["tools", "--remove", "xdg-utils"]) == 1
+    assert "správcem balíčků" in capsys.readouterr().err
+    assert cli.main(["tools", "--remove", "gitleaks"]) == 0
+    assert fake.removed == ["gitleaks"]
+
+
+# ---------------------------------------------------------------------- TUI
+async def _open_tools(app: object, pilot: object) -> None:
+    await pilot.press("8")  # type: ignore[attr-defined]
     await app.workers.wait_for_complete()  # type: ignore[attr-defined]
     await pilot.pause()  # type: ignore[attr-defined]
 
 
-async def test_tui_settings_shows_tools(tmp_path: Path) -> None:
+async def test_tui_tools_screen_shows_status(tmp_path: Path) -> None:
+    from repo_doctor.tui.screens.tools import ToolsScreen
+
+    fake = FakeTools(missing=("wl-clipboard",), downloaded={"gitleaks": "8.0.0"})
+    app = make_app(tmp_path, tools_backend=fake)
+    async with app.run_test(size=(140, 40)) as pilot:
+        await _open_tools(app, pilot)
+        assert isinstance(app.screen, ToolsScreen)
+        text = screen_text(app)
+        assert "nástroje" in text and "klíčenka" in text
+        assert f"stažený 8.0.0 → {tools.GITLEAKS_VERSION}" in text
+        assert "systém" in text and "chybí" in text
+
+
+async def test_tui_settings_points_to_tools_screen(tmp_path: Path) -> None:
     from textual.widgets import Static
 
-    app = make_app(tmp_path, tools_backend=FakeTools(missing=("gitleaks",)))
+    app = make_app(tmp_path)
     async with app.run_test(size=(120, 40)) as pilot:
-        await _open_settings(app, pilot)
-        text = str(app.screen.query_one("#tools-status", Static).render())
-        assert "✗ gitleaks" in text and "✓ libnotify" in text and "klíčenka" in text
+        await pilot.press("4")
+        await pilot.pause()
+        hint = app.screen.query_one("#tools-hint", Static)
+        assert "obrazovce Nástroje (klávesa 8)" in str(hint.render())
 
 
 async def test_tui_install_tools(tmp_path: Path) -> None:
@@ -371,8 +462,8 @@ async def test_tui_install_tools(tmp_path: Path) -> None:
     fake = FakeTools(missing=("gitleaks", "wl-clipboard"))
     app = make_app(tmp_path, tools_backend=fake)
     async with app.run_test(size=(120, 40)) as pilot:
-        await _open_settings(app, pilot)
-        app.screen.prepare_tools()  # type: ignore[attr-defined]
+        await _open_tools(app, pilot)
+        await pilot.press("i")
         await app.workers.wait_for_complete()
         await pilot.pause()
         assert isinstance(app.screen, ConfirmDialog)
@@ -388,8 +479,8 @@ async def test_tui_install_tools(tmp_path: Path) -> None:
 async def test_tui_install_nothing_missing(tmp_path: Path) -> None:
     app = make_app(tmp_path, tools_backend=FakeTools())
     async with app.run_test(size=(120, 40)) as pilot:
-        await _open_settings(app, pilot)
-        app.screen.prepare_tools()  # type: ignore[attr-defined]
+        await _open_tools(app, pilot)
+        await pilot.press("i")
         await app.workers.wait_for_complete()
         await pilot.pause()
         assert any("Všechny" in str(n.message) for n in app._notifications)
@@ -400,12 +491,58 @@ async def test_tui_install_unknown_distro_only_advises(tmp_path: Path) -> None:
 
     app = make_app(tmp_path, tools_backend=FakeTools(missing=("xdg-utils",), manager=None))
     async with app.run_test(size=(120, 40)) as pilot:
-        await _open_settings(app, pilot)
-        app.screen.prepare_tools()  # type: ignore[attr-defined]
+        await _open_tools(app, pilot)
+        await pilot.press("i")
         await app.workers.wait_for_complete()
         await pilot.pause()
         assert not isinstance(app.screen, ConfirmDialog)
         assert any("ručně" in str(n.message) for n in app._notifications)
+
+
+async def test_tui_update_downloaded_tool(tmp_path: Path) -> None:
+    from repo_doctor.tui.screens.dialogs import ConfirmDialog
+
+    fake = FakeTools(downloaded={"gitleaks": "8.0.0"})
+    app = make_app(tmp_path, tools_backend=fake)
+    async with app.run_test(size=(140, 40)) as pilot:
+        await _open_tools(app, pilot)
+        await pilot.press("u")
+        await pilot.pause()
+        assert isinstance(app.screen, ConfirmDialog)
+        app.screen.dismiss(True)
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        assert fake.downloads == ["gitleaks"]
+        assert fake.downloaded["gitleaks"] == tools.GITLEAKS_VERSION
+        await pilot.press("u")  # už aktuální
+        await pilot.pause()
+        assert any("aktuální" in str(n.message) for n in app._notifications)
+
+
+async def test_tui_remove_only_downloaded(tmp_path: Path) -> None:
+    from repo_doctor.tui.screens.dialogs import ConfirmDialog
+
+    fake = FakeTools(downloaded={"gitleaks": tools.GITLEAKS_VERSION})
+    app = make_app(tmp_path, tools_backend=fake)
+    async with app.run_test(size=(140, 40)) as pilot:
+        await _open_tools(app, pilot)
+        await pilot.press("j", "d")  # wl-clipboard je ze systému
+        await pilot.pause()
+        assert not isinstance(app.screen, ConfirmDialog)
+        assert any("správcem balíčků" in str(n.message) for n in app._notifications)
+        await pilot.press("k", "d")  # gitleaks je stažený
+        await pilot.pause()
+        assert isinstance(app.screen, ConfirmDialog)
+        await pilot.press("enter")  # výchozí je Zrušit
+        await pilot.pause()
+        assert fake.removed == []
+        await pilot.press("d")
+        await pilot.pause()
+        app.screen.dismiss(True)
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        assert fake.removed == ["gitleaks"]
+        assert "chybí" in screen_text(app)
 
 
 async def test_tui_gitleaks_hint_once(tmp_path: Path) -> None:

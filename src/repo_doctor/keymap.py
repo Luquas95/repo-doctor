@@ -20,6 +20,7 @@ CONTEXTS: dict[str, str] = {
     "forges": "Hostingy",
     "remote": "Vzdálená repa",
     "settings": "Nastavení",
+    "tools": "Nástroje",
     "export": "Export",
     "cleanup": "Úklid",
     "sync": "Synchronizace",
@@ -74,6 +75,7 @@ ACTIONS: tuple[KeyAction, ...] = (
     _a("screen_export", "5", "global", "export", "open_screen('export')", show=False),
     _a("screen_cleanup", "6", "global", "úklid místa", "open_screen('cleanup')", show=False),
     _a("screen_sync", "7", "global", "synchronizace", "open_screen('sync')", show=False),
+    _a("screen_tools", "8", "global", "nástroje", "open_screen('tools')", show=False),
     _a("search", "slash", "global", "hledat", label="/"),
     _a("scan_all", "R", "global", "sken"),
     _a("scan_repo", "r", "global", "sken repa", show=False),
@@ -145,6 +147,10 @@ ACTIONS: tuple[KeyAction, ...] = (
     _a("remote_refresh", "ctrl+r", "remote", "načíst znovu", show=False),
     # nastavení
     _a("settings_allow_remove", "d", "settings", "odebrat z allowlistu", show=False),
+    # nástroje
+    _a("tools_install", "i", "tools", "doinstalovat chybějící"),
+    _a("tools_update", "u", "tools", "aktualizovat stažené"),
+    _a("tools_remove", "d", "tools", "odebrat stažený"),
     # export
     _a("export", "e", "export", "exportovat"),
     # průvodce prvním spuštěním

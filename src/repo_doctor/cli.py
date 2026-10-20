@@ -514,23 +514,59 @@ def tools_cmd(
         bool, typer.Option("--install", help="Doinstaluje chybějící nástroje (po potvrzení).")
     ] = False,
     yes: Annotated[bool, typer.Option("--yes", "-y", help="Bez dotazu na potvrzení.")] = False,
+    update: Annotated[
+        bool,
+        typer.Option(
+            "--update", help="Aktualizuje stažené nástroje na verzi připnutou v repo-doctoru."
+        ),
+    ] = False,
+    remove: Annotated[
+        str | None,
+        typer.Option(
+            "--remove",
+            help="Odebere nástroj stažený repo-doctorem (např. gitleaks).",
+            metavar="NÁSTROJ",
+        ),
+    ] = None,
 ) -> None:
     """Volitelné nástroje (gitleaks, wl-clipboard, xdg-utils, libnotify) a klíčenka."""
     from repo_doctor import tools
 
-    for st in tools.status():
-        mark = "✓" if st.installed else "✗"
-        where = f"  ({st.path})" if st.path else ""
+    if remove is not None:
+        tool = next((t for t in tools.TOOLS if t.id == remove), None)
+        if tool is None:
+            _err(f"Neznámý nástroj {remove!r} (platné: {', '.join(t.id for t in tools.TOOLS)}).")
+            raise typer.Exit(2)
+        try:
+            path = tools.remove_download(tool)
+        except tools.ToolsError as err:
+            _err(str(err))
+            raise typer.Exit(1) from None
+        typer.echo(f"✓ {tool.id} odebrán ({path})")
+        return
+    statuses = tools.status()
+    for st in statuses:
+        mark = "✗" if not st.installed else "↑" if st.outdated else "✓"
+        where = f"  [{st.source}] {st.path}" if st.path else ""
         typer.echo(f"{mark} {st.tool.id:<13} {st.tool.purpose}{where}")
     ok, detail = tools.keyring_status()
     typer.echo(f"{'✓' if ok else '✗'} {'klíčenka':<13} {detail}")
-    missing = tools.missing()
-    if not missing:
-        return
-    if not install:
-        typer.echo("\nChybějící nástroje doinstaluješ: repo-doctor tools --install")
-        return
-    p = tools.plan(missing, tools.detect_manager())
+    if update:
+        outdated = [st.tool for st in statuses if st.outdated]
+        if not outdated:
+            typer.echo("\nStažené nástroje jsou aktuální.")
+            return
+        p = tools.update_plan(outdated)
+    else:
+        missing = [st.tool for st in statuses if not st.installed]
+        if not missing:
+            if any(st.outdated for st in statuses):
+                typer.echo("\nNovější verzi stažených nástrojů získáš: repo-doctor tools --update")
+            return
+        if not install:
+            typer.echo("\nChybějící nástroje doinstaluješ: repo-doctor tools --install")
+            return
+        p = tools.plan(missing, tools.detect_manager())
     p.assume_yes = yes
     typer.echo("")
     for line in tools.describe(p):
