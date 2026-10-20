@@ -102,22 +102,68 @@ def find(binary: str) -> str | None:
     return str(local) if local.is_file() and os.access(local, os.X_OK) else None
 
 
+def downloaded_version(name: str) -> str | None:
+    """Verze binárky stažené repo-doctorem (značka vedle ní), jinak None."""
+    try:
+        return (tools_dir() / f"{name}.version").read_text("utf-8").strip() or None
+    except OSError:
+        return None
+
+
 @dataclass(frozen=True)
 class ToolStatus:
     tool: Tool
     path: str | None
+    downloaded: bool = False  # binárka ze složky repo-doctoru, ne ze systému
+    version: str | None = None  # jen u stažené binárky
 
     @property
     def installed(self) -> bool:
         return self.path is not None
 
+    @property
+    def outdated(self) -> bool:
+        """Stažená binárka je jiná než verze připnutá v repo-doctoru (nebo neznámá)."""
+        d = self.tool.download
+        return self.downloaded and d is not None and self.version != d.version
+
+    @property
+    def source(self) -> str:
+        if self.path is None:
+            return "chybí"
+        if self.downloaded:
+            return f"stažený {self.version or '(neznámá verze)'}"
+        return "systém"
+
+
+def tool_status(t: Tool) -> ToolStatus:
+    path = find(t.binary)
+    downloaded = path is not None and Path(path).parent == tools_dir()
+    version = downloaded_version(t.binary) if downloaded else None
+    return ToolStatus(t, path, downloaded, version)
+
 
 def status() -> list[ToolStatus]:
-    return [ToolStatus(t, find(t.binary)) for t in TOOLS]
+    return [tool_status(t) for t in TOOLS]
 
 
 def missing() -> list[Tool]:
     return [s.tool for s in status() if not s.installed]
+
+
+def outdated() -> list[Tool]:
+    return [s.tool for s in status() if s.outdated]
+
+
+def remove_download(tool: Tool) -> Path:
+    """Smaže binárku staženou repo-doctorem. Systémové balíčky nechává správci balíčků."""
+    st = tool_status(tool)
+    if not st.downloaded or st.path is None:
+        raise ToolsError(f"{tool.id} není stažený repo-doctorem – odinstaluj ho správcem balíčků.")
+    target = Path(st.path)
+    target.unlink(missing_ok=True)
+    (tools_dir() / f"{tool.binary}.version").unlink(missing_ok=True)
+    return target
 
 
 def keyring_status() -> tuple[bool, str]:
@@ -258,6 +304,11 @@ def plan(tools: list[Tool], manager: PackageManager | None) -> InstallPlan:
     return result
 
 
+def update_plan(tools: list[Tool]) -> InstallPlan:
+    """Znovu stáhne zastaralé binárky repo-doctoru na připnutou verzi (bez správce balíčků)."""
+    return InstallPlan(None, downloads=[t.download for t in tools if t.download is not None])
+
+
 def describe(p: InstallPlan) -> list[str]:
     """Řádky pro náhled před potvrzením (TUI i CLI)."""
     lines: list[str] = []
@@ -317,6 +368,7 @@ def install_download(
             staged.chmod(0o755)
             final = target / d.name
             staged.replace(final)
+            (target / f"{d.name}.version").write_text(d.version + "\n", "utf-8")
     except httpx.HTTPError as err:
         raise ToolsError(f"Stažení {d.name} selhalo: {type(err).__name__}") from None
     except UpdateError as err:  # HTTP chyba nebo překročená velikost z _download

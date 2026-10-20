@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-import html
 import json
-import re
 from pathlib import Path
 from typing import Any
 
@@ -25,19 +23,12 @@ from repo_doctor.tui.screens.wizard import WizardScreen
 from repo_doctor.tui.theme import LIGHT_NAME
 from tests import factory as fx
 from tests.sample import sample_result
-from tests.tui_helpers import CONFIG, fake_factory, make_app
+from tests.tui_helpers import CONFIG, fake_factory, make_app, screen_text
 
 
 def dash(app: RepoDoctorApp) -> DashboardScreen:
     assert isinstance(app.screen, DashboardScreen)
     return app.screen
-
-
-def screen_text(app: RepoDoctorApp) -> str:
-    """Viditelný text obrazovky (z SVG screenshotu, bez značek)."""
-    svg = app.export_screenshot()
-    parts = re.findall(r"<text[^>]*>(.*?)</text>", svg, flags=re.DOTALL)
-    return html.unescape("\n".join(parts)).replace("\xa0", " ")
 
 
 async def test_dashboard_navigation(tmp_path: Path) -> None:

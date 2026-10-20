@@ -12,6 +12,10 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
   v terminálu přes `sudo`), `gitleaks` tam, kde ho distribuce nemá, stažením do
   `~/.local/share/repo-doctor/tools` s ověřením připnutého SHA-256 (8.30.1).
 - Sken tajemství používá i `gitleaks` stažený repo-doctorem.
+- **Obrazovka Nástroje (`8`, #31):** volitelné nástroje se spravují na vlastní obrazovce
+  místo sekce na konci Nastavení. Ukáže původ (systém / stažený repo-doctorem i s verzí),
+  `i` doinstaluje chybějící, `u` aktualizuje stažený `gitleaks` na připnutou verzi a `d` ho
+  odebere. V CLI totéž: `repo-doctor tools --update` a `--remove NÁSTROJ`.
 - TUI jednou upozorní, že sken tajemství by byl s `gitleaks` přesnější.
 
 ### Změněno

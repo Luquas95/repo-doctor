@@ -67,9 +67,10 @@ Pak pokračuj [Rychlým startem](#rychlý-start).
 
 ### Volitelné nástroje
 
-Bez nich všechno funguje, jen se příslušná funkce vypne. Stav a co chybí ukáže
-`repo-doctor tools` nebo **Nastavení › Volitelné nástroje** v TUI. `repo-doctor tools --install`
-(nebo tlačítko „Nainstalovat chybějící“) je po potvrzení doinstaluje:
+Bez nich všechno funguje, jen se příslušná funkce vypne. Spravuješ je na obrazovce
+**Nástroje** (klávesa `8`) nebo příkazem `repo-doctor tools`: uvidíš stav, odkud nástroj je
+(systém, nebo stažený repo-doctorem i s verzí) a co chybí. `i` v TUI (`repo-doctor tools
+--install`) je po potvrzení doinstaluje:
 
 - systémové balíčky přes správce balíčků distribuce (`apt-get`, `dnf`, `pacman`, `zypper`).
   TUI se na chvíli pozastaví a příkaz poběží viditelně v terminálu přes `sudo`. repo-doctor
@@ -77,6 +78,9 @@ Bez nich všechno funguje, jen se příslušná funkce vypne. Stav a co chybí u
 - `gitleaks` tam, kde ho distribuce nemá (Debian 12, Ubuntu 22.04): stáhne se oficiální
   binárka do `~/.local/share/repo-doctor/tools` a ověří se proti SHA-256 zapsanému
   v repo-doctoru.
+
+Staženou binárku `u` (`--update`) aktualizuje na verzi připnutou v repo-doctoru a `d`
+(`--remove gitleaks`) ji smaže. Systémové balíčky aktualizuje a odinstaluje správce balíčků.
 
 | nástroj | k čemu |
 |---|---|
@@ -227,6 +231,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | `5` | export |
 | `6` | úklid místa |
 | `7` | synchronizace |
+| `8` | nástroje |
 | `/` | hledat |
 | `R` | sken |
 | `r` | sken repa |
@@ -316,6 +321,14 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | Klávesa | Akce |
 |---|---|
 | `d` | odebrat z allowlistu |
+
+**Nástroje**
+
+| Klávesa | Akce |
+|---|---|
+| `i` | doinstalovat chybějící |
+| `u` | aktualizovat stažené |
+| `d` | odebrat stažený |
 
 **Export**
 
@@ -581,6 +594,7 @@ repo-doctor forges test [NAME]      # token nikdy nevypíše
 repo-doctor config path|validate
 repo-doctor update [--check]        # nová verze; instalaci z tarballu i aktualizuje
 repo-doctor tools [--install] [--yes] # volitelné nástroje: stav a doinstalace
+repo-doctor tools --update | --remove NÁSTROJ  # stažené nástroje: aktualizace / odebrání
 ```
 
 Exit kódy: `0` = bez nálezů nad prahem, `1` = nálezy nad prahem, `2` = chyba. Bez TTY
