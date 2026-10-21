@@ -13,6 +13,7 @@ from repo_doctor.config import Config
 from repo_doctor.discovery import matches_any
 from repo_doctor.ecosystem import Ecosystem, detect
 from repo_doctor.gitwrap import Git, StatusSummary
+from repo_doctor.i18n import _
 from repo_doctor.models import Category, Finding, Location, Patch, RemoteInfo, Severity, Visibility
 
 if TYPE_CHECKING:
@@ -144,7 +145,7 @@ class Check:
             check_id=self.id,
             severity=severity or self.severity,
             category=self.category,
-            title=title or self.title,
+            title=title or _(self.title),
             message=message,
             location=Location(path=path, line=line, commit=commit, commit_date=commit_date),
             snippet=snippet,
@@ -160,7 +161,7 @@ class Check:
             check_id=INCOMPLETE_ID,
             severity=Severity.LOW,
             category=Category.MAINTENANCE,
-            title="Nekompletní sken",
+            title=_("Nekompletní sken"),
             message=f"{self.id}: {what}",
             key=self.id,
         )
@@ -175,7 +176,7 @@ REGISTRY: dict[str, type[Check]] = {}
 
 def register[C: type[Check]](cls: C) -> C:
     if cls.id in REGISTRY and REGISTRY[cls.id] is not cls:
-        raise ValueError(f"duplicitní id kontroly: {cls.id}")
+        raise ValueError(_("duplicitní id kontroly: {id}").format(id=cls.id))
     REGISTRY[cls.id] = cls
     return cls
 

@@ -6,13 +6,14 @@ from datetime import UTC, datetime, timedelta
 
 from repo_doctor.checks.base import Check, RepoContext, register
 from repo_doctor.cleanup import MB, find_candidates, human
+from repo_doctor.i18n import N_, _
 from repo_doctor.models import Category, Finding, Severity
 
 
 @register
 class DiskUsage(Check):
     id = "disk-usage"
-    title = "Velké regenerovatelné složky v neaktivním repu"
+    title = N_("Velké regenerovatelné složky v neaktivním repu")
     severity = Severity.LOW
     category = Category.MAINTENANCE
 
@@ -29,9 +30,13 @@ class DiskUsage(Check):
         biggest = sorted(candidates, key=lambda c: -c.size)[:5]
         return [
             self.finding(
-                f"{human(total)} v regenerovatelných složkách "
-                f"({', '.join(f'{c.rel} {human(c.size)}' for c in biggest)}); "
-                f"repo je neaktivní {cfg.inactive_days}+ dní – uvolníš na obrazovce Úklid",
+                _(
+                    "{human} v regenerovatelných složkách ({join}); repo je neaktivní {inactive_days}+ dní – uvolníš na obrazovce Úklid"
+                ).format(
+                    human=human(total),
+                    join=", ".join(f"{c.rel} {human(c.size)}" for c in biggest),
+                    inactive_days=cfg.inactive_days,
+                ),
                 key="disk-usage",
                 bytes=total,
                 dirs=[c.rel for c in candidates],

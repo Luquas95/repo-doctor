@@ -13,6 +13,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from repo_doctor.checks.base import Check, RepoContext, register
+from repo_doctor.i18n import N_, _
 from repo_doctor.models import Category, Finding, RepoResult, ScanResult, Severity
 
 DUPLICATE_ID = "duplicate-clone"
@@ -50,10 +51,15 @@ def _activity(repo: RepoResult) -> datetime:
 
 def describe(repo: RepoResult) -> str:
     s = repo.state
-    last = s.last_commit.strftime("%Y-%m-%d") if s.last_commit else "bez commitu"
-    return (
-        f"{repo.path} · větev {s.branch or '—'} · poslední commit {last} · "
-        f"necommitnuté {s.uncommitted} · nepushnuté {s.unpushed}"
+    last = s.last_commit.strftime("%Y-%m-%d") if s.last_commit else _("bez commitu")
+    return _(
+        "{path} · větev {branch} · poslední commit {last} · necommitnuté {uncommitted} · nepushnuté {unpushed}"
+    ).format(
+        path=repo.path,
+        branch=s.branch or "—",
+        last=last,
+        uncommitted=s.uncommitted,
+        unpushed=s.unpushed,
     )
 
 
@@ -91,20 +97,30 @@ def add_duplicate_findings(result: ScanResult) -> set[str]:
     for group in duplicate_groups(result):
         main = group[0]
         key = remote_key(main)
-        what = f"stejný remote {key}" if key else "stejný kořenový commit (bez remote)"
+        what = (
+            _("stejný remote {key}").format(key=key)
+            if key
+            else _("stejný kořenový commit (bez remote)")
+        )
         for repo in group:
             others = [r for r in group if r is not repo]
             if repo is main:
-                advice = "hlavní klon (nejnovější aktivita)"
+                advice = _("hlavní klon (nejnovější aktivita)")
             elif is_safe_to_remove(repo):
-                advice = f"po kontrole ho lze smazat (hlavní je {main.path})"
+                advice = _("po kontrole ho lze smazat (hlavní je {path})").format(path=main.path)
             elif not repo.remotes:
-                advice = f"bez remote – porovnej historii s {main.path}, než ho smažeš ručně"
+                advice = _("bez remote – porovnej historii s {path}, než ho smažeš ručně").format(
+                    path=main.path
+                )
             else:
-                advice = f"má necommitnuté nebo nepushnuté změny – nejdřív je přenes do {main.path}"
+                advice = _(
+                    "má necommitnuté nebo nepushnuté změny – nejdřív je přenes do {path}"
+                ).format(path=main.path)
             repo.findings.append(
                 check.finding(
-                    f"duplicitní klon: {what} má i {', '.join(o.path for o in others)} · {advice}",
+                    _("duplicitní klon: {what} má i {join} · {advice}").format(
+                        what=what, join=", ".join(o.path for o in others), advice=advice
+                    ),
                     key=f"{key or main.state.root_commit}",
                     role="main" if repo is main else "duplicate",
                     main=main.path,
@@ -120,7 +136,7 @@ def add_duplicate_findings(result: ScanResult) -> set[str]:
 @register
 class DuplicateClone(Check):
     id = DUPLICATE_ID
-    title = "Duplicitní klon"
+    title = N_("Duplicitní klon")
     severity = Severity.LOW
     category = Category.GIT
 

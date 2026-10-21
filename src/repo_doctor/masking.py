@@ -12,6 +12,9 @@ import re
 import threading
 from collections.abc import Iterable
 
+from repo_doctor import czech
+from repo_doctor.i18n import _
+
 VISIBLE_PREFIX = 4
 ELLIPSIS = "…"
 
@@ -23,7 +26,7 @@ def mask(secret: str, *, prefix: int = VISIBLE_PREFIX) -> str:
     """
     length = len(secret)
     shown = secret[:prefix] if length > 2 * prefix else ""
-    return f"{shown}{ELLIPSIS}({length} znaků)"
+    return f"{shown}{ELLIPSIS}({czech.count(length, _('znak'), _('znaky'), _('znaků'))})"
 
 
 def mask_email(email: str) -> str:

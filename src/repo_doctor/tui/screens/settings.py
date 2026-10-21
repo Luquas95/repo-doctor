@@ -171,7 +171,7 @@ class SettingsScreen(BaseScreen):
             yield Label(_("Aktivní kontroly (space přepne)"))
             yield SelectionList[str](
                 *[
-                    Selection(f"{c.id}  · {c.title}", c.id, c.id not in cfg.checks.disabled)
+                    Selection(f"{c.id}  · {_(c.title)}", c.id, c.id not in cfg.checks.disabled)
                     for c in all_checks()
                 ],
                 id="checks",

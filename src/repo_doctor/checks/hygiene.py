@@ -8,6 +8,7 @@ from repo_doctor import templates
 from repo_doctor.checks.base import Check, RepoContext, register
 from repo_doctor.ecosystem import Ecosystem
 from repo_doctor.gitwrap import GitTimeout
+from repo_doctor.i18n import N_, _
 from repo_doctor.models import Category, FileChange, Finding, Patch, Severity
 
 
@@ -29,7 +30,7 @@ def _top_level_names(repo: RepoContext) -> set[str]:
 @register
 class ReadmeMissing(Check):
     id = "readme-missing"
-    title = "Chybí README"
+    title = N_("Chybí README")
     severity = Severity.LOW
     category = Category.MAINTENANCE
     fixable = True
@@ -38,7 +39,7 @@ class ReadmeMissing(Check):
         names = _top_level_names(repo)
         if any(n.startswith("readme") for n in names):
             return []
-        return [self.finding("V kořeni repozitáře není README.", key="readme")]
+        return [self.finding(_("V kořeni repozitáře není README."), key="readme")]
 
     def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
         eco = _primary_ecosystem(repo)
@@ -53,8 +54,8 @@ class ReadmeMissing(Check):
         )
         return Patch(
             check_id=self.id,
-            title="Kostra README",
-            summary=f"README.md pro {repo.name}",
+            title=_("Kostra README"),
+            summary=_("README.md pro {name}").format(name=repo.name),
             changes=[_create(repo, "README.md", content)],
         )
 
@@ -62,7 +63,7 @@ class ReadmeMissing(Check):
 @register
 class LicenseMissing(Check):
     id = "license-missing"
-    title = "Chybí licence"
+    title = N_("Chybí licence")
     severity = Severity.LOW
     category = Category.MAINTENANCE
     fixable = True
@@ -71,7 +72,7 @@ class LicenseMissing(Check):
         names = _top_level_names(repo)
         if any(n.startswith(("license", "licence", "copying", "unlicense")) for n in names):
             return []
-        return [self.finding("V kořeni repozitáře není LICENSE (ani COPYING).", key="license")]
+        return [self.finding(_("V kořeni repozitáře není LICENSE (ani COPYING)."), key="license")]
 
     def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
         lic = repo.config.license
@@ -95,7 +96,7 @@ class LicenseMissing(Check):
 @register
 class CiMissing(Check):
     id = "ci-missing"
-    title = "Chybí CI"
+    title = N_("Chybí CI")
     severity = Severity.LOW
     category = Category.MAINTENANCE
     fixable = True
@@ -122,7 +123,9 @@ class CiMissing(Check):
                 return []
         return [
             self.finding(
-                "Nenalezena konfigurace CI (.github/workflows, .gitlab-ci.yml, .forgejo/workflows…).",
+                _(
+                    "Nenalezena konfigurace CI (.github/workflows, .gitlab-ci.yml, .forgejo/workflows…)."
+                ),
                 key="ci",
             )
         ]
@@ -134,7 +137,7 @@ class CiMissing(Check):
         return Patch(
             check_id=self.id,
             title="GitHub Actions CI",
-            summary=f"lint + testy ({key})",
+            summary=_("lint + testy ({key})").format(key=key),
             changes=[_create(repo, ".github/workflows/ci.yml", content)],
         )
 
@@ -142,7 +145,7 @@ class CiMissing(Check):
 @register
 class PrecommitMissing(Check):
     id = "precommit-missing"
-    title = "Chybí pre-commit"
+    title = N_("Chybí pre-commit")
     severity = Severity.LOW
     category = Category.MAINTENANCE
     fixable = True
@@ -155,14 +158,14 @@ class PrecommitMissing(Check):
             return []
         return [
             self.finding(
-                "Chybí .pre-commit-config.yaml (kontrola tajemství a formátu před commitem).",
+                _("Chybí .pre-commit-config.yaml (kontrola tajemství a formátu před commitem)."),
                 key="precommit",
             )
         ]
 
     def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
         default = templates.PRECOMMIT_BASE
-        extras = ["gitleaks", "trailing whitespace", "velké soubory"]
+        extras = ["gitleaks", "trailing whitespace", _("velké soubory")]
         if Ecosystem.PYTHON in repo.ecosystems:
             default += templates.PRECOMMIT_PYTHON
             extras.append("ruff")
@@ -172,10 +175,10 @@ class PrecommitMissing(Check):
         content = templates.render("pre-commit-config.yaml", default, repo.config.templates_dir)
         return Patch(
             check_id=self.id,
-            title="Základní pre-commit",
+            title=_("Základní pre-commit"),
             summary=", ".join(extras),
             changes=[_create(repo, ".pre-commit-config.yaml", content)],
-            notes=["Po checkoutu větve spusť `pre-commit install`."],
+            notes=[_("Po checkoutu větve spusť `pre-commit install`.")],
         )
 
 
@@ -204,14 +207,14 @@ def required_ignores(repo: RepoContext) -> list[tuple[str, str]]:
 
 def missing_ignores(repo: RepoContext) -> list[str]:
     required = required_ignores(repo)
-    ignored = repo.git.check_ignore([probe for _, probe in required])
+    ignored = repo.git.check_ignore([probe for _entry, probe in required])
     return [entry for entry, probe in required if probe not in ignored]
 
 
 @register
 class GitignoreMissing(Check):
     id = "gitignore-missing"
-    title = "Chybí .gitignore"
+    title = N_("Chybí .gitignore")
     severity = Severity.MEDIUM
     category = Category.MAINTENANCE
     fixable = True
@@ -219,15 +222,23 @@ class GitignoreMissing(Check):
     def run(self, repo: RepoContext) -> list[Finding]:
         if repo.exists(".gitignore"):
             return []
-        eco = ", ".join(sorted(repo.ecosystems)) or "obecný"
-        return [self.finding(f"Repozitář nemá .gitignore (ekosystém: {eco}).", key="gitignore")]
+        eco = ", ".join(sorted(repo.ecosystems)) or _("obecný")
+        return [
+            self.finding(
+                _("Repozitář nemá .gitignore (ekosystém: {eco}).").format(eco=eco), key="gitignore"
+            )
+        ]
 
     def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
         entries = [entry for entry, _ in required_ignores(repo)]
-        content = f"# repo-doctor: vytvořeno {repo.now:%Y-%m-%d}\n" + "\n".join(entries) + "\n"
+        content = (
+            _("# repo-doctor: vytvořeno {now:%Y-%m-%d}\n").format(now=repo.now)
+            + "\n".join(entries)
+            + "\n"
+        )
         return Patch(
             check_id=self.id,
-            title="Nový .gitignore",
+            title=_("Nový .gitignore"),
             summary="+ " + ", ".join(entries),
             changes=[_create(repo, ".gitignore", content)],
         )
@@ -236,7 +247,7 @@ class GitignoreMissing(Check):
 @register
 class GitignoreIncomplete(Check):
     id = "gitignore-incomplete"
-    title = "Neúplný .gitignore"
+    title = N_("Neúplný .gitignore")
     severity = Severity.MEDIUM
     category = Category.MAINTENANCE
     fixable = True
@@ -250,7 +261,7 @@ class GitignoreIncomplete(Check):
         severity = Severity.MEDIUM if any(m.startswith(".env") for m in missing) else Severity.LOW
         return [
             self.finding(
-                f"chybí {', '.join(missing)}",
+                _("chybí {join}").format(join=", ".join(missing)),
                 severity=severity,
                 path=".gitignore",
                 key="gitignore-incomplete",
@@ -270,12 +281,12 @@ class GitignoreIncomplete(Check):
             path=".gitignore",
             action="append",
             content="\n".join(missing),
-            header=f"# repo-doctor: doplněno {repo.now:%Y-%m-%d}",
+            header=_("# repo-doctor: doplněno {now:%Y-%m-%d}").format(now=repo.now),
             old=repo.read_text(".gitignore"),
         )
         return Patch(
             check_id=self.id,
-            title="Doplnit .gitignore",
+            title=_("Doplnit .gitignore"),
             summary="+ " + ", ".join(missing),
             changes=[change],
         )
@@ -291,7 +302,7 @@ BINARY_EXT = re.compile(
 @register
 class LargeFiles(Check):
     id = "large-files"
-    title = "Velké soubory mimo Git LFS"
+    title = N_("Velké soubory mimo Git LFS")
     severity = Severity.MEDIUM
     category = Category.MAINTENANCE
 
@@ -312,11 +323,11 @@ class LargeFiles(Check):
         for e in sorted(candidates, key=lambda e: -e.size):
             if lfs.get(e.path) == "lfs":
                 continue
-            kind = "binárka" if BINARY_EXT.search(e.path) else "soubor"
+            kind = _("binárka") if BINARY_EXT.search(e.path) else _("soubor")
             sev = Severity.MEDIUM if e.size > limit else Severity.LOW
             findings.append(
                 self.finding(
-                    f"{kind} {_human(e.size)} v aktuálním stromu",
+                    _("{kind} {human} v aktuálním stromu").format(kind=kind, human=_human(e.size)),
                     severity=sev,
                     path=e.path,
                     key=f"tree:{e.path}",
@@ -345,7 +356,7 @@ class LargeFiles(Check):
         except GitTimeout:
             return [
                 self.incomplete(
-                    "historie je příliš velká, velké soubory v ní nebyly prověřeny celé"
+                    _("historie je příliš velká, velké soubory v ní nebyly prověřeny celé")
                 )
             ]
         if not omitted:
@@ -366,7 +377,9 @@ class LargeFiles(Check):
             path = names.get(sha) or f"blob {sha[:7]}"
             findings.append(
                 self.finding(
-                    f"{_human(size)} v historii (už není v aktuálním stromu, ale zvětšuje každý klon)",
+                    _(
+                        "{human} v historii (už není v aktuálním stromu, ale zvětšuje každý klon)"
+                    ).format(human=_human(size)),
                     path=path,
                     key=f"history:{sha}",
                     size=size,
@@ -381,7 +394,7 @@ class LargeFiles(Check):
             for line in repo.git.stream_lines(
                 "rev-list", "--objects", "--all", timeout=repo.config.limits.history_timeout_s
             ):
-                sha, _, path = line.partition(" ")
+                sha, _sep, path = line.partition(" ")
                 if sha in shas and path:
                     names.setdefault(sha, path)
                     if len(names) == len(shas):

@@ -9,6 +9,7 @@ from pathlib import PurePosixPath
 
 from repo_doctor.checks.base import Check, RepoContext, register
 from repo_doctor.gitwrap import GitError, GitTimeout
+from repo_doctor.i18n import N_, _
 from repo_doctor.models import Category, FileChange, Finding, Patch, Severity
 from repo_doctor.secrets_scan import (
     SecretMatch,
@@ -22,9 +23,11 @@ from repo_doctor.secrets_scan import (
 def _to_finding(check: Check, m: SecretMatch, *, history: bool) -> Finding:
     when = datetime.fromtimestamp(m.commit_ts, UTC) if m.commit_ts else None
     if history and m.commit:
-        msg = f"{m.kind} v commitu {m.commit[:7]} · {m.path}"
+        msg = _("{kind} v commitu {commit} · {path}").format(
+            kind=m.kind, commit=m.commit[:7], path=m.path
+        )
     else:
-        msg = f"{m.kind} v souboru {m.path}"
+        msg = _("{kind} v souboru {path}").format(kind=m.kind, path=m.path)
     return check.finding(
         msg,
         path=m.path,
@@ -41,7 +44,7 @@ def _to_finding(check: Check, m: SecretMatch, *, history: bool) -> Finding:
 @register
 class SecretsTree(Check):
     id = "secrets-tree"
-    title = "Tajemství v aktuálních souborech"
+    title = N_("Tajemství v aktuálních souborech")
     severity = Severity.HIGH
     category = Category.SECURITY
 
@@ -52,7 +55,7 @@ class SecretsTree(Check):
                     repo.path, history=False, timeout=repo.config.limits.history_timeout_s
                 )
             except subprocess.TimeoutExpired:
-                return [self.incomplete("gitleaks nestihl proběhnout v časovém limitu")]
+                return [self.incomplete(_("gitleaks nestihl proběhnout v časovém limitu"))]
             allowed = set(repo.all_files)
             matches = [m for m in matches if m.path in allowed]
         else:
@@ -74,7 +77,7 @@ class SecretsTree(Check):
 @register
 class SecretsHistory(Check):
     id = "secrets-history"
-    title = "Tajemství v historii commitů"
+    title = N_("Tajemství v historii commitů")
     severity = Severity.HIGH
     category = Category.SECURITY
 
@@ -87,7 +90,7 @@ class SecretsHistory(Check):
             try:
                 matches = run_gitleaks(repo.path, history=True, timeout=timeout)
             except subprocess.TimeoutExpired:
-                return [self.incomplete("gitleaks nestihl projít historii v časovém limitu")]
+                return [self.incomplete(_("gitleaks nestihl projít historii v časovém limitu"))]
         else:
             matches = []
             try:
@@ -114,7 +117,11 @@ class SecretsHistory(Check):
             by_fp[m.fingerprint] = m
         findings = [_to_finding(self, m, history=True) for m in by_fp.values()]
         if not complete:
-            findings.append(self.incomplete(f"historie neprošla celá za {timeout:g} s"))
+            findings.append(
+                self.incomplete(
+                    _("historie neprošla celá za {timeout:g} s").format(timeout=timeout)
+                )
+            )
         return findings
 
 
@@ -164,7 +171,7 @@ def is_sensitive_file(path: str) -> bool:
 @register
 class EnvCommitted(Check):
     id = "env-committed"
-    title = "Commitnutý citlivý soubor"
+    title = N_("Commitnutý citlivý soubor")
     severity = Severity.HIGH
     category = Category.SECURITY
     fixable = True
@@ -172,7 +179,7 @@ class EnvCommitted(Check):
     def run(self, repo: RepoContext) -> list[Finding]:
         return [
             self.finding(
-                f"{path} je v gitu – soubor s tajemstvími nemá být verzovaný",
+                _("{path} je v gitu – soubor s tajemstvími nemá být verzovaný").format(path=path),
                 path=path,
                 key=path,
             )
@@ -189,17 +196,19 @@ class EnvCommitted(Check):
                 path=".gitignore",
                 action="append",
                 content="\n".join("/" + p for p in paths),
-                header=f"# repo-doctor: citlivé soubory ({repo.now:%Y-%m-%d})",
+                header=_("# repo-doctor: citlivé soubory ({now:%Y-%m-%d})").format(now=repo.now),
                 old=repo.read_text(".gitignore"),
             )
         ]
         changes += [FileChange(path=p, action="untrack", old=None) for p in paths]
         return Patch(
             check_id=self.id,
-            title="Přestat verzovat citlivé soubory",
-            summary="git rm --cached " + " ".join(paths) + " (soubory na disku zůstanou)",
+            title=_("Přestat verzovat citlivé soubory"),
+            summary="git rm --cached " + " ".join(paths) + _(" (soubory na disku zůstanou)"),
             changes=changes,
             notes=[
-                "Tajemství z těchto souborů zůstávají v historii – považuj je za prozrazená a rotuj je.",
+                _(
+                    "Tajemství z těchto souborů zůstávají v historii – považuj je za prozrazená a rotuj je."
+                ),
             ],
         )

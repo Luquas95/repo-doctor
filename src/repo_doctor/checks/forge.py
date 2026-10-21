@@ -4,17 +4,19 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
+from repo_doctor import czech
 from repo_doctor.checks.base import Check, RepoContext, SkipCheck, register
 from repo_doctor.forges.base import ForgeSnapshot, is_stale
+from repo_doctor.i18n import N_, _
 from repo_doctor.models import Category, Finding, Severity
 
 
 def _snapshot(repo: RepoContext, *, need_repo: bool = True) -> ForgeSnapshot:
     snap = repo.forge_snapshot
     if snap is None:
-        raise SkipCheck(repo.forge_status or "remote nepatří k připojenému hostingu")
+        raise SkipCheck(repo.forge_status or _("remote nepatří k připojenému hostingu"))
     if need_repo and snap.repo is None:
-        raise SkipCheck(snap.missing_reason or "repo na hostingu nenalezeno")
+        raise SkipCheck(snap.missing_reason or _("repo na hostingu nenalezeno"))
     return snap
 
 
@@ -26,7 +28,7 @@ class ForgeCheck(Check):
 @register
 class ForgeUnknownRemote(ForgeCheck):
     id = "forge-unknown-remote"
-    title = "Remote ukazuje na neznámé repo"
+    title = N_("Remote ukazuje na neznámé repo")
     severity = Severity.MEDIUM
 
     def run(self, repo: RepoContext) -> list[Finding]:
@@ -35,7 +37,7 @@ class ForgeUnknownRemote(ForgeCheck):
             return []
         return [
             self.finding(
-                f"{snap.forge}:{snap.owner_path} – {snap.missing_reason or 'repo nenalezeno'}",
+                f"{snap.forge}:{snap.owner_path} – {snap.missing_reason or _('repo nenalezeno')}",
                 key=snap.owner_path,
             )
         ]
@@ -44,7 +46,7 @@ class ForgeUnknownRemote(ForgeCheck):
 @register
 class ForgeMirrorDrift(ForgeCheck):
     id = "forge-mirror-drift"
-    title = "Lokální výchozí branche se liší od hostingu"
+    title = N_("Lokální výchozí branche se liší od hostingu")
     severity = Severity.LOW
 
     def run(self, repo: RepoContext) -> list[Finding]:
@@ -56,7 +58,9 @@ class ForgeMirrorDrift(ForgeCheck):
         if remote_default and local_default and remote_default != local_default:
             findings.append(
                 self.finding(
-                    f"výchozí branche: lokálně {local_default}, na hostingu {remote_default}",
+                    _(
+                        "výchozí branche: lokálně {local_default}, na hostingu {remote_default}"
+                    ).format(local_default=local_default, remote_default=remote_default),
                     key="name",
                 )
             )
@@ -68,14 +72,21 @@ class ForgeMirrorDrift(ForgeCheck):
             if local_sha != snap.default_branch_sha:
                 if repo.git.ref_exists(snap.default_branch_sha):
                     ahead, behind = repo.git.ahead_behind(local_sha, snap.default_branch_sha)
-                    detail = f"lokálně +{ahead} / −{behind} commitů"
+                    detail = _("lokálně +{ahead} / −{behind} commitů").format(
+                        ahead=ahead, behind=behind
+                    )
                     if ahead and not behind:
                         return findings  # jen nepushnuté commity – hlásí `unpushed`
                 else:
-                    detail = "hosting má commity, které lokálně nejsou (chybí fetch)"
+                    detail = _("hosting má commity, které lokálně nejsou (chybí fetch)")
                 findings.append(
                     self.finding(
-                        f"{branch}: lokálně {local_sha[:7]}, na hostingu {snap.default_branch_sha[:7]} – {detail}",
+                        _("{branch}: lokálně {local}, na hostingu {remote} – {detail}").format(
+                            branch=branch,
+                            local=local_sha[:7],
+                            remote=snap.default_branch_sha[:7],
+                            detail=detail,
+                        ),
                         key="sha",
                     )
                 )
@@ -85,19 +96,21 @@ class ForgeMirrorDrift(ForgeCheck):
 @register
 class ForgeCiFailing(ForgeCheck):
     id = "forge-ci-failing"
-    title = "CI na výchozí branchi selhává"
+    title = N_("CI na výchozí branchi selhává")
     severity = Severity.MEDIUM
 
     def run(self, repo: RepoContext) -> list[Finding]:
         snap = _snapshot(repo)
         if snap.ci is None or snap.ci.state == "unknown":
-            raise SkipCheck("stav CI se nepodařilo zjistit")
+            raise SkipCheck(_("stav CI se nepodařilo zjistit"))
         if snap.ci.state != "failure":
             return []
         number = f" (#{snap.ci.number})" if snap.ci.number else ""
         return [
             self.finding(
-                f"poslední běh CI na {snap.ci.ref or 'výchozí branchi'} selhal{number}",
+                _("poslední běh CI na {ref} selhal{number}").format(
+                    ref=snap.ci.ref or _("výchozí branchi"), number=number
+                ),
                 key="ci",
                 url=snap.ci.url,
             )
@@ -107,19 +120,22 @@ class ForgeCiFailing(ForgeCheck):
 @register
 class ForgeNoBranchProtection(ForgeCheck):
     id = "forge-no-branch-protection"
-    title = "Výchozí branche bez ochrany"
+    title = N_("Výchozí branche bez ochrany")
     severity = Severity.LOW
 
     def run(self, repo: RepoContext) -> list[Finding]:
         snap = _snapshot(repo)
         if snap.protected is None:
-            raise SkipCheck("API hostingu ochranu větve nezjistí")
+            raise SkipCheck(_("API hostingu ochranu větve nezjistí"))
         if snap.protected or (snap.repo and snap.repo.archived):
             return []
         branch = snap.repo.default_branch if snap.repo else "?"
         return [
             self.finding(
-                f"výchozí branche {branch} nemá ochranu (force push, mazání)", key="protection"
+                _("výchozí branche {branch} nemá ochranu (force push, mazání)").format(
+                    branch=branch
+                ),
+                key="protection",
             )
         ]
 
@@ -127,14 +143,14 @@ class ForgeNoBranchProtection(ForgeCheck):
 @register
 class ForgeSecurityAlerts(ForgeCheck):
     id = "forge-security-alerts"
-    title = "Otevřené bezpečnostní alerty"
+    title = N_("Otevřené bezpečnostní alerty")
     severity = Severity.HIGH
 
     def run(self, repo: RepoContext) -> list[Finding]:
         snap = _snapshot(repo)
         if snap.alerts is None:
             raise SkipCheck(
-                "alerty nejsou dostupné (hosting je nepodporuje nebo token nemá oprávnění)"
+                _("alerty nejsou dostupné (hosting je nepodporuje nebo token nemá oprávnění)")
             )
         labels = {
             "dependabot": "Dependabot",
@@ -147,7 +163,15 @@ class ForgeSecurityAlerts(ForgeCheck):
                 sev = Severity.HIGH if kind == "secret_scanning" else Severity.MEDIUM
                 findings.append(
                     self.finding(
-                        f"{count} otevřených alertů ({labels.get(kind, kind)})",
+                        _("{count} ({kind})").format(
+                            count=czech.count(
+                                count,
+                                _("otevřený alert"),
+                                _("otevřené alerty"),
+                                _("otevřených alertů"),
+                            ),
+                            kind=labels.get(kind, kind),
+                        ),
                         severity=sev,
                         key=kind,
                         count=count,
@@ -159,7 +183,7 @@ class ForgeSecurityAlerts(ForgeCheck):
 @register
 class ForgeStalePrs(ForgeCheck):
     id = "forge-stale-prs"
-    title = "Neaktivní pull requesty a issues"
+    title = N_("Neaktivní pull requesty a issues")
     severity = Severity.LOW
 
     def run(self, repo: RepoContext) -> list[Finding]:
@@ -172,12 +196,14 @@ class ForgeStalePrs(ForgeCheck):
         issues = [i for i in stale if i.kind == "issue"]
         parts = []
         if prs:
-            parts.append(f"{len(prs)} otevřené PR")
+            parts.append(
+                czech.count(len(prs), _("otevřený PR"), _("otevřené PR"), _("otevřených PR"))
+            )
         if issues:
-            parts.append(f"{len(issues)} issues")
+            parts.append(czech.count(len(issues), _("issue"), _("issues"), _("issues")))
         return [
             self.finding(
-                f"{' a '.join(parts)} bez aktivity {days}+ dní",
+                _("{join} bez aktivity {days}+ dní").format(join=_(" a ").join(parts), days=days),
                 key="stale",
                 items=[f"#{i.number} {i.title[:60]}" for i in stale[:10]],
             )
@@ -187,7 +213,7 @@ class ForgeStalePrs(ForgeCheck):
 @register
 class ForgeArchivedActive(ForgeCheck):
     id = "forge-archived-active"
-    title = "Archivované repo s lokální aktivitou"
+    title = N_("Archivované repo s lokální aktivitou")
     severity = Severity.MEDIUM
 
     def run(self, repo: RepoContext) -> list[Finding]:
@@ -205,7 +231,7 @@ class ForgeArchivedActive(ForgeCheck):
             return []
         return [
             self.finding(
-                "repo je na hostingu archivované (jen pro čtení), ale lokálně má nové commity",
+                _("repo je na hostingu archivované (jen pro čtení), ale lokálně má nové commity"),
                 key="archived",
             )
         ]

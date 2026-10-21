@@ -18,6 +18,7 @@ from functools import lru_cache
 from pathlib import Path, PurePosixPath
 
 from repo_doctor.gitwrap import Git, git_env, run_process
+from repo_doctor.i18n import N_, _
 from repo_doctor.masking import mask
 
 
@@ -87,14 +88,14 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "anthropic-key",
-        "Anthropic API klíč",
+        N_("Anthropic API klíč"),
         _r(r"\b(sk-ant-[A-Za-z0-9]+-[A-Za-z0-9_\-]{32,})"),
         1,
         keywords=("sk-ant-",),
     ),
     Rule(
         "openai-key",
-        "OpenAI API klíč",
+        N_("OpenAI API klíč"),
         _r(r"\b(sk-(?:proj-|svcacct-|admin-)?(?!ant-)[A-Za-z0-9_\-]{32,})"),
         1,
         3.0,
@@ -102,7 +103,7 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "private-key",
-        "Privátní klíč",
+        N_("Privátní klíč"),
         _r(r"(-----BEGIN (?:RSA |DSA |EC |OPENSSH |ENCRYPTED |PGP )?PRIVATE KEY(?: BLOCK)?-----)"),
         1,
         keywords=("PRIVATE KEY",),
@@ -116,7 +117,7 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "connection-string",
-        "Connection string s heslem",
+        N_("Connection string s heslem"),
         _r(
             r"\b(?:postgres(?:ql)?|mysql|mariadb|mongodb(?:\+srv)?|redis|rediss|amqps?|mssql|sqlserver)://[^:/\s@\"']+:([^@\s\"'/]{4,})@"
         ),
@@ -125,7 +126,7 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "generic-secret",
-        "Obecné tajemství",
+        N_("Obecné tajemství"),
         _r(
             r"(?i)(?<![A-Za-z0-9])(?:api[_-]?key|apikey|secret[_-]?key|client[_-]?secret|access[_-]?token|"
             r"auth[_-]?token|private[_-]?token|password|passwd|secret|token)\b[\"']?\s*[:=]\s*[\"']([^\"'\s]{12,200})[\"']"
@@ -136,7 +137,7 @@ RULES: tuple[Rule, ...] = (
     ),
     Rule(
         "generic-secret",
-        "Obecné tajemství",
+        N_("Obecné tajemství"),
         _r(
             r"(?i)^\s*(?:export\s+)?[\"']?[A-Za-z0-9_.-]*(?:api[_-]?key|apikey|secret|token|password|passwd)"
             r"[\"']?\s*[:=]\s*([^\"'\s#]{12,200})\s*(?:#.*)?$"
@@ -278,7 +279,7 @@ def scan_line(line: str, path: str, lineno: int) -> Iterator[SecretMatch]:
         if value is not None:
             yield SecretMatch(
                 rule=rule.id,
-                kind=rule.kind,
+                kind=_(rule.kind),
                 masked=mask(value),
                 fingerprint=fingerprint(value),
                 path=path,
@@ -413,7 +414,7 @@ def run_gitleaks(repo: Path, *, history: bool, timeout: float) -> list[SecretMat
         matches.append(
             SecretMatch(
                 rule=str(item.get("RuleID", "gitleaks")),
-                kind=str(item.get("Description") or item.get("RuleID") or "tajemství"),
+                kind=str(item.get("Description") or item.get("RuleID") or _("tajemství")),
                 masked=mask(secret),
                 fingerprint=fingerprint(secret),
                 path=file,

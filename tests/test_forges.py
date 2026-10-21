@@ -519,7 +519,7 @@ def test_forge_checks(tmp_path: Path) -> None:
     alerts = {f.key: f for f in run("forge-security-alerts", rb.path, forge_snapshot=bad)}
     assert set(alerts) == {"dependabot", "secret_scanning"}
     (stale,) = run("forge-stale-prs", rb.path, forge_snapshot=bad)
-    assert "1 otevřené PR a 1 issues" in stale.message
+    assert "1 otevřený PR a 1 issue" in stale.message
     with pytest.raises(SkipCheck):
         run("forge-security-alerts", rb.path, forge_snapshot=snap_for(repo=repo))
     with pytest.raises(SkipCheck):

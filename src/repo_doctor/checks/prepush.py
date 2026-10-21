@@ -10,6 +10,7 @@ import yaml
 
 from repo_doctor.checks.base import Check, RepoContext, register
 from repo_doctor.guard import HOOK_SCRIPT
+from repo_doctor.i18n import N_, _
 from repo_doctor.models import Category, FileChange, Finding, LocalAction, Patch, Severity
 
 SECRET_TOOLS = ("gitleaks", "repo-doctor", "detect-secrets", "trufflehog", "ggshield", "secretlint")
@@ -17,13 +18,17 @@ PRECOMMIT_BLOCK = """\
   - repo: local
     hooks:
       - id: repo-doctor-guard
-        name: repo-doctor guard (tajemství před pushem)
+        name: repo-doctor guard ({name})
         entry: repo-doctor guard
         language: system
         pass_filenames: false
         always_run: true
         stages: [pre-push]
 """
+
+
+def _precommit_block() -> str:
+    return PRECOMMIT_BLOCK.format(name=_("tajemství před pushem"))
 
 
 def precommit_protects(text: str) -> bool:
@@ -58,7 +63,7 @@ def _hook_ok(path: Path) -> bool:
 @register
 class PrepushGuard(Check):
     id = "prepush-guard"
-    title = "Chybí ochrana proti pushnutí tajemství"
+    title = N_("Chybí ochrana proti pushnutí tajemství")
     severity = Severity.LOW
     category = Category.SECURITY
     fixable = True
@@ -79,8 +84,10 @@ class PrepushGuard(Check):
                     return []
         return [
             self.finding(
-                "repo nemá hook pre-push, který by zastavil push s tajemstvím "
-                "(ani gitleaks / repo-doctor guard v pre-commitu pro stage pre-push)",
+                _(
+                    "repo nemá hook pre-push, který by zastavil push s tajemstvím "
+                    "(ani gitleaks / repo-doctor guard v pre-commitu pro stage pre-push)"
+                ),
                 key="prepush",
             )
         ]
@@ -98,23 +105,27 @@ class PrepushGuard(Check):
         text = repo.read_text(name) if name else None
         new: str | None = None
         if text is None and name is None:
-            new = "repos:\n" + PRECOMMIT_BLOCK
+            new = "repos:\n" + _precommit_block()
             change = FileChange(path=".pre-commit-config.yaml", action="create", content=new)
         elif text is not None and _repos_is_last_top_level(text):
-            new = text + ("" if text.endswith("\n") else "\n") + PRECOMMIT_BLOCK
+            new = text + ("" if text.endswith("\n") else "\n") + _precommit_block()
             change = FileChange(path=str(name), action="replace", content=new, old=text)
         if new is not None:
             patches.append(
                 Patch(
                     check_id=self.id,
                     variant="precommit",
-                    title="do repa přes pre-commit",
-                    summary="hook repo-doctor guard pro stage pre-push v .pre-commit-config.yaml "
-                    "(sdílené s ostatními, commit do větve oprav)",
+                    title=_("do repa přes pre-commit"),
+                    summary=_(
+                        "hook repo-doctor guard pro stage pre-push v .pre-commit-config.yaml "
+                        "(sdílené s ostatními, commit do větve oprav)"
+                    ),
                     changes=[change],
                     notes=[
-                        "Aktivace u každého: pre-commit install --hook-type pre-push "
-                        "(hook potřebuje repo-doctor v PATH).",
+                        _(
+                            "Aktivace u každého: pre-commit install --hook-type pre-push "
+                            "(hook potřebuje repo-doctor v PATH)."
+                        ),
                     ],
                 )
             )
@@ -123,9 +134,11 @@ class PrepushGuard(Check):
                 Patch(
                     check_id=self.id,
                     variant="local",
-                    title="jen lokálně (.git/hooks)",
-                    summary="nainstaluje .git/hooks/pre-push, který spustí repo-doctor guard "
-                    "(jen tvůj klon, nic se necommituje)",
+                    title=_("jen lokálně (.git/hooks)"),
+                    summary=_(
+                        "nainstaluje .git/hooks/pre-push, který spustí repo-doctor guard "
+                        "(jen tvůj klon, nic se necommituje)"
+                    ),
                     local=[
                         LocalAction(
                             kind="hook",
@@ -134,7 +147,7 @@ class PrepushGuard(Check):
                             description="hook .git/hooks/pre-push → repo-doctor guard",
                         )
                     ],
-                    notes=["Jednorázové obejití: git push --no-verify. Odinstalace: smaž hook."],
+                    notes=[_("Jednorázové obejití: git push --no-verify. Odinstalace: smaž hook.")],
                 )
             )
         return patches
