@@ -19,6 +19,7 @@ from textual.containers import Vertical
 from textual.widgets import DataTable, Static
 
 from repo_doctor import czech
+from repo_doctor.i18n import _
 from repo_doctor.sync import STATE_LABELS, SyncResult, SyncStatus, fast_forward, status
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import BaseScreen
@@ -59,25 +60,25 @@ class SyncScreen(BaseScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="page panel") as page:
-            page.border_title = " synchronizace "
+            page.border_title = _(" synchronizace ")
             yield Static(id="sync-note", classes="page-header")
             table: DataTable[str | Text] = DataTable(id="sync", cursor_type="row")
             yield table
             yield Static(id="sync-summary")
-        yield KeyBar(["sync_fetch", "sync_toggle", "sync_apply", ("esc", "zpět"), "help"])
+        yield KeyBar(["sync_fetch", "sync_toggle", "sync_apply", ("esc", _("zpět")), "help"])
 
     def on_mount(self) -> None:
         p = self.rd.palette
         self.query_one("#sync-note", Static).update(
             Text(
-                "Rychle dohnat = jen fast-forward (git merge --ff-only) u čistých rep na sledované "
-                "větvi, která jsou pozadu. Nikdy merge commit, rebase, reset ani push. "
-                f"{self.rd.key('sync_fetch')} nejdřív stáhne novinky.",
+                _(
+                    "Rychle dohnat = jen fast-forward (git merge --ff-only) u čistých rep na sledované větvi, která jsou pozadu. Nikdy merge commit, rebase, reset ani push. {key} nejdřív stáhne novinky."
+                ).format(key=self.rd.key("sync_fetch")),
                 style=Style(color=p.muted),
             )
         )
         self.query_one("#sync-summary", Static).update(
-            Text("Zjišťuji stav…", style=Style(color=p.muted))
+            Text(_("Zjišťuji stav…"), style=Style(color=p.muted))
         )
         self.load(fetch=False)
         self.query_one(DataTable).focus()
@@ -95,7 +96,9 @@ class SyncScreen(BaseScreen):
         if fetch and self.rd.offline:
             self.app.call_from_thread(
                 self.notify,
-                f"Fetch potřebuje síť – vypni offline režim ({self.rd.key('toggle_offline')}).",
+                _("Fetch potřebuje síť – vypni offline režim ({key}).").format(
+                    key=self.rd.key("toggle_offline")
+                ),
                 severity="warning",
             )
             fetch = False
@@ -120,8 +123,12 @@ class SyncScreen(BaseScreen):
         failed = [s.name for s in statuses if s.fetch_error]
         if fetched and failed:
             self.notify(
-                f"Fetch selhal u {len(failed)} {czech.plural(len(failed), 'repa', 'rep', 'rep')} "
-                f"({', '.join(failed[:3])}{'…' if len(failed) > 3 else ''}) – důvod je ve sloupci stav.",
+                _("Fetch selhal u {len} {plural} ({join}{v}) – důvod je ve sloupci stav.").format(
+                    len=len(failed),
+                    plural=czech.plural(len(failed), _("repa"), _("rep"), _("rep")),
+                    join=", ".join(failed[:3]),
+                    v="…" if len(failed) > 3 else "",
+                ),
                 severity="warning",
             )
 
@@ -130,7 +137,7 @@ class SyncScreen(BaseScreen):
         table = self.query_one(DataTable)
         row_i = table.cursor_row
         table.clear(columns=True)
-        table.add_columns(" ", "repo", "větev", "↓ ↑", "stav")
+        table.add_columns(" ", "repo", _("větev"), "↓ ↑", _("stav"))
         colors = {"behind": p.accent, "diverged": p.high, "ahead": p.med, "clean": p.ok}
         for row in self.rows:
             s = row.status
@@ -151,7 +158,10 @@ class SyncScreen(BaseScreen):
             elif s.reason and s.state != "clean":
                 state.append(f" · {s.reason}", style=Style(color=p.muted))
             if s.fetch_error:
-                state.append(f" · fetch: {s.fetch_error}", style=Style(color=p.high))
+                state.append(
+                    _(" · fetch: {fetch_error}").format(fetch_error=s.fetch_error),
+                    style=Style(color=p.high),
+                )
             table.add_row(
                 mark,
                 s.name,
@@ -162,16 +172,22 @@ class SyncScreen(BaseScreen):
             )
         if not self.rows and self.loaded:
             table.add_row(
-                "", Text("žádná repa ve výsledcích skenu", style=Style(color=p.muted)), "", "", ""
+                "",
+                Text(_("žádná repa ve výsledcích skenu"), style=Style(color=p.muted)),
+                "",
+                "",
+                "",
             )
         if table.row_count:
             table.move_cursor(row=min(row_i, table.row_count - 1))
         chosen = self.chosen()
         self.query_one("#sync-summary", Static).update(
             Text(
-                f"vybráno {czech.repos(len(chosen))} · dožene se "
-                f"{czech.commits(sum(s.behind for s in chosen))} "
-                f"· {czech.files(sum(len(s.files) for s in chosen))}",
+                _("vybráno {repos} · dožene se {commits} · {files}").format(
+                    repos=czech.repos(len(chosen)),
+                    commits=czech.commits(sum(s.behind for s in chosen)),
+                    files=czech.files(sum(len(s.files) for s in chosen)),
+                ),
                 style=Style(color=p.text),
             )
         )
@@ -181,7 +197,7 @@ class SyncScreen(BaseScreen):
 
     def action_sync_fetch(self) -> None:
         self.query_one("#sync-summary", Static).update(
-            Text("Stahuji (git fetch)…", style=Style(color=self.rd.palette.muted))
+            Text(_("Stahuji (git fetch)…"), style=Style(color=self.rd.palette.muted))
         )
         self.load(fetch=True)
 
@@ -191,7 +207,9 @@ class SyncScreen(BaseScreen):
             return
         row = self.rows[min(table.cursor_row, len(self.rows) - 1)]
         if not row.status.can_fast_forward:
-            self.notify(row.status.reason or "Toto repo nejde rychle dohnat.", severity="warning")
+            self.notify(
+                row.status.reason or _("Toto repo nejde rychle dohnat."), severity="warning"
+            )
             return
         row.selected = not row.selected
         self.refresh_table()
@@ -199,10 +217,10 @@ class SyncScreen(BaseScreen):
     def action_sync_apply(self) -> None:
         chosen = self.chosen()
         if not chosen:
-            self.notify("Žádné repo k dohnání není vybrané.", severity="warning")
+            self.notify(_("Žádné repo k dohnání není vybrané."), severity="warning")
             return
         p = self.rd.palette
-        body = Text("\nFast-forward (git merge --ff-only) změní pracovní strom:\n")
+        body = Text(_("\nFast-forward (git merge --ff-only) změní pracovní strom:\n"))
         for s in chosen[:8]:
             body.append(
                 f"  • {s.name}: {s.branch} ← {s.upstream} · {czech.commits(s.behind)}, "
@@ -212,7 +230,7 @@ class SyncScreen(BaseScreen):
         if len(chosen) > 8:
             body.append(f"  {czech.more(len(chosen) - 8)}\n", style=Style(color=p.muted))
         body.append(
-            "\nŽádný merge commit, rebase, reset ani push. Hooky se nespouští.\n",
+            _("\nŽádný merge commit, rebase, reset ani push. Hooky se nespouští.\n"),
             style=Style(color=p.muted),
         )
 
@@ -220,9 +238,11 @@ class SyncScreen(BaseScreen):
             if ok:
                 self.do_apply([s.path for s in chosen])
             else:
-                self.notify("Synchronizace zrušena – nic se nezměnilo.")
+                self.notify(_("Synchronizace zrušena – nic se nezměnilo."))
 
-        self.app.push_screen(ConfirmDialog("Rychle dohnat", body, confirm_label="Dohnat"), done)
+        self.app.push_screen(
+            ConfirmDialog(_("Rychle dohnat"), body, confirm_label=_("Dohnat")), done
+        )
 
     @work(thread=True, exclusive=True, group="sync-apply")
     def do_apply(self, paths: list[Path]) -> None:
@@ -230,15 +250,15 @@ class SyncScreen(BaseScreen):
         self.app.call_from_thread(self._applied, result)
 
     def _applied(self, result: SyncResult) -> None:
-        msg = (
-            f"Dohnáno: {czech.repos(len(result.updated))} "
-            f"({czech.commits(sum(n for _, n in result.updated))}). Nic se nepushnulo."
+        msg = _("Dohnáno: {repos} ({commits}). Nic se nepushnulo.").format(
+            repos=czech.repos(len(result.updated)),
+            commits=czech.commits(sum(n for _, n in result.updated)),
         )
         for path, reason in result.skipped[:5]:
             msg += f"\n! {path.name}: {reason}"
         self.notify(
             msg,
-            title="Synchronizace",
+            title=_("Synchronizace"),
             timeout=12,
             severity="warning" if result.skipped else "information",
         )

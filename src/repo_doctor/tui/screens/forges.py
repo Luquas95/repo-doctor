@@ -22,6 +22,7 @@ from repo_doctor.forges.tokens import (
     resolve_token,
     store_in_keyring,
 )
+from repo_doctor.i18n import _
 from repo_doctor.masking import redact
 from repo_doctor.sshhelp import forge_ssh_warning
 from repo_doctor.tui.bindings import bindings
@@ -33,7 +34,12 @@ from repo_doctor.tui.widgets.keybar import KeyBar
 if TYPE_CHECKING:
     from repo_doctor.tui.app import RepoDoctorApp
 
-SOURCE_LABELS = {"keyring": "klíčenka", "env": "proměnná", "cmd": "příkaz", "none": "bez tokenu"}
+SOURCE_LABELS = {
+    "keyring": _("klíčenka"),
+    "env": _("proměnná"),
+    "cmd": _("příkaz"),
+    "none": _("bez tokenu"),
+}
 
 
 async def test_forge(
@@ -81,7 +87,7 @@ class ForgesScreen(BaseScreen):
             yield DataTable(id="forges", cursor_type="row")
             yield Static(id="forge-detail", classes="page-header")
         yield KeyBar(
-            ["forge_add", "forge_edit", "forge_delete", "forge_test", ("esc", "zpět"), "help"]
+            ["forge_add", "forge_edit", "forge_delete", "forge_test", ("esc", _("zpět")), "help"]
         )
 
     def on_mount(self) -> None:
@@ -94,35 +100,42 @@ class ForgesScreen(BaseScreen):
     def refresh_table(self) -> None:
         p = self.rd.palette
         note = Text(
-            "Připojení je volitelné a jen pro čtení – na hostingu repo-doctor nic nemění.",
+            _("Připojení je volitelné a jen pro čtení – na hostingu repo-doctor nic nemění."),
             style=Style(color=p.muted),
         )
         self.query_one("#forges-note", Static).update(note)
         table = self.query_one(DataTable)
         row = table.cursor_row
         table.clear(columns=True)
-        table.add_columns("název", "připojení", "typ", "TLS", "token", "URL", "uživatel / org")
+        table.add_columns(
+            _("název"), _("připojení"), _("typ"), "TLS", "token", "URL", _("uživatel / org")
+        )
         for i, f in enumerate(self.rd.config.forges):
-            tls = Text("ověřeno", style=Style(color=p.ok))
+            tls = Text(_("ověřeno"), style=Style(color=p.ok))
             if f.ca_bundle:
-                tls = Text("vlastní CA", style=Style(color=p.ok))
+                tls = Text(_("vlastní CA"), style=Style(color=p.ok))
             elif not f.verify_tls:
-                tls = Text("⚠ vypnuto", style=Style(color=p.high))
+                tls = Text(_("⚠ vypnuto"), style=Style(color=p.high))
             if netpolicy.is_http(f.base_url):
                 tls = (
-                    Text("⚠ http (povoleno)", style=Style(color=p.med))
+                    Text(_("⚠ http (povoleno)"), style=Style(color=p.med))
                     if insecure_reason(f) is None
-                    else Text("✗ http", style=Style(color=p.high))
+                    else Text(_("✗ http"), style=Style(color=p.high))
                 )
             rep = self.reports.get(f.name, None)
             if f.name in self.reports and rep is None:
-                status = Text("testuji…", style=Style(color=p.muted))
+                status = Text(_("testuji…"), style=Style(color=p.muted))
             elif rep is None:
-                status = Text("neotestováno (T)", style=Style(color=p.dim))
+                status = Text(_("neotestováno (T)"), style=Style(color=p.dim))
             elif rep.ok:
-                status = Text(f"✓ {rep.user or ''} · {rep.repo_count} rep", style=Style(color=p.ok))
+                status = Text(
+                    _("✓ {v} · {repo_count} rep").format(
+                        v=rep.user or "", repo_count=rep.repo_count
+                    ),
+                    style=Style(color=p.ok),
+                )
             else:
-                status = Text("✗ chyba", style=Style(color=p.high))
+                status = Text(_("✗ chyba"), style=Style(color=p.high))
             table.add_row(
                 f.name,
                 status,
@@ -137,7 +150,7 @@ class ForgesScreen(BaseScreen):
         if not self.rd.config.forges:
             table.add_row(
                 "—",
-                Text("žádný hosting – n přidá (volitelné)", style=Style(color=p.muted)),
+                Text(_("žádný hosting – n přidá (volitelné)"), style=Style(color=p.muted)),
                 "",
                 "",
                 "",
@@ -190,11 +203,15 @@ class ForgesScreen(BaseScreen):
                 store_in_keyring(result.config.name, result.token)
             except TokenError as err:
                 self.notify(
-                    f"{err}. Použij raději token_env nebo token_cmd.", severity="error", timeout=10
+                    _("{err}. Použij raději token_env nebo token_cmd.").format(err=err),
+                    severity="error",
+                    timeout=10,
                 )
         self.reports.pop(result.config.name, None)
         self.rd.config_changed(config)
-        self.notify(f"Hosting {result.config.name} uložen. T otestuje připojení.")
+        self.notify(
+            _("Hosting {name} uložen. T otestuje připojení.").format(name=result.config.name)
+        )
 
     def action_forge_add(self) -> None:
         names = {f.name for f in self.rd.config.forges}
@@ -234,16 +251,20 @@ class ForgesScreen(BaseScreen):
             if forge.token_source == "keyring":
                 delete_from_keyring(forge.name)
             self.rd.config_changed(config)
-            self.notify(f"Hosting {forge.name} odebrán.")
+            self.notify(_("Hosting {name} odebrán.").format(name=forge.name))
 
         extra = (
-            "\nToken v systémové klíčence se také smaže." if forge.token_source == "keyring" else ""
+            _("\nToken v systémové klíčence se také smaže.")
+            if forge.token_source == "keyring"
+            else ""
         )
         self.app.push_screen(
             ConfirmDialog(
-                "Odebrat hosting",
-                f"\nOdebrat hosting {forge.name} ({forge.type})?\nNa hostingu se nic nezmění.{extra}\n",
-                confirm_label="Odebrat",
+                _("Odebrat hosting"),
+                _(
+                    "\nOdebrat hosting {name} ({type})?\nNa hostingu se nic nezmění.{extra}\n"
+                ).format(name=forge.name, type=forge.type, extra=extra),
+                confirm_label=_("Odebrat"),
                 danger=True,
             ),
             done,
@@ -265,12 +286,14 @@ class ForgesScreen(BaseScreen):
         self.refresh_table()
         if report.ok:
             self.notify(
-                f"{forge.name}: připojeno jako {report.user}, vidí {report.repo_count} repozitářů."
+                _("{name}: připojeno jako {user}, vidí {repo_count} repozitářů.").format(
+                    name=forge.name, user=report.user, repo_count=report.repo_count
+                )
             )
             for w in report.warnings:
                 if w.startswith("SSH: "):
                     self.notify(f"{forge.name}: {w}", severity="warning", timeout=15)
         else:
             self.notify(
-                f"{forge.name}: {redact(report.error or 'chyba')}", severity="error", timeout=10
+                f"{forge.name}: {redact(report.error or _('chyba'))}", severity="error", timeout=10
             )

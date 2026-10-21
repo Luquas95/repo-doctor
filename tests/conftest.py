@@ -7,8 +7,16 @@ from pathlib import Path
 
 import pytest
 
-from repo_doctor import netpolicy
-from repo_doctor.gitwrap import _allow_protocols, configure_ssh, reset_abort, reset_ssh_cache
+# testy počítají s českými texty; musí být nastavené dřív, než se importuje repo_doctor
+os.environ["REPO_DOCTOR_LANG"] = "cs"
+
+from repo_doctor import i18n, netpolicy
+from repo_doctor.gitwrap import (
+    _allow_protocols,
+    configure_ssh,
+    reset_abort,
+    reset_ssh_cache,
+)
 from repo_doctor.masking import REGISTRY
 
 os.environ["TZ"] = "UTC"  # deterministické časy ve snapshotech
@@ -46,6 +54,7 @@ def _isolated_env(
     yield
     REGISTRY.clear()
     reset_abort()
+    i18n.set_language("cs")
     configure_ssh(batch_mode=True)
     _allow_protocols()
     netpolicy.configure([])

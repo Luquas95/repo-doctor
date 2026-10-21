@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from rich.style import Style
 from rich.text import Text
 
+from repo_doctor.czech import more
+from repo_doctor.i18n import _
 from repo_doctor.models import RepoResult, Severity
 from repo_doctor.scoring import Band, gauge, score_label, sparkline
 from repo_doctor.tui.theme import Palette
@@ -38,9 +40,9 @@ class Columns:
 def header_text(cols: Columns, p: Palette) -> Text:
     style = Style(color=p.muted, bold=True)
     t = Text(" " * 2, style=style)
-    t.append(pad("SKÓRE", 9))
+    t.append(pad(_("SKÓRE"), 9))
     t.append("  ")
-    t.append(pad("REPOZITÁŘ", cols.name_w, style))
+    t.append(pad(_("REPOZITÁŘ"), cols.name_w, style))
     t.append(" ")
     for sev in Severity:
         t.append(f"{sev.symbol:>2}", style=Style(color=p.severity(sev), bold=True))
@@ -53,7 +55,7 @@ def header_text(cols: Columns, p: Palette) -> Text:
         t.append(pad("HOSTING", HOST_W, style))
     if cols.show_pulse:
         t.append(" ")
-        t.append(pad("TEP · 30 DNÍ", PULSE_W, style))
+        t.append(pad(_("TEP · 30 DNÍ"), PULSE_W, style))
     t.stylize(style, 0, 11)
     return t
 
@@ -78,8 +80,8 @@ def repo_row(repo: RepoResult, cols: Columns, p: Palette) -> Text:
     state = git_state(repo)
     state_style = (
         Style(color=p.muted)
-        if state in ("čisté", "archiv")
-        else Style(color=p.med if "bez remote" not in state else p.high)
+        if state in (_("čisté"), _("archiv"))
+        else Style(color=p.med if _("bez remote") not in state else p.high)
     )
     t.append(pad(state, GIT_W, state_style))
     if cols.show_host:
@@ -122,7 +124,7 @@ def group_header(group: Group, width: int, p: Palette, *, collapsed: bool, toggl
     if group.note:
         label += f" {group.note}"
     if collapsed:
-        label += f" sbaleno · {toggle_key} rozbalí"
+        label += _(" sbaleno · {toggle_key} rozbalí").format(toggle_key=toggle_key)
     label += " "
     t = Text(label, style=Style(color=color, bold=True))
     t.append("─" * max(0, width - len(label) - 1), style=Style(color=p.border))
@@ -130,15 +132,15 @@ def group_header(group: Group, width: int, p: Palette, *, collapsed: bool, toggl
 
 
 def preview_text(repo: RepoResult | None, width: int, p: Palette, limit: int = 4) -> Text:
-    title = f"── NÁHLED · {repo.name} " if repo else "── NÁHLED "
+    title = _("── NÁHLED · {name} ").format(name=repo.name) if repo else _("── NÁHLED ")
     t = Text(title, style=Style(color=p.accent, bold=True))
     t.append("─" * max(0, width - len(title)), style=Style(color=p.border))
     if repo is None:
-        t.append("\n  vyber repo (j/k)", style=Style(color=p.muted))
+        t.append(_("\n  vyber repo (j/k)"), style=Style(color=p.muted))
         return t
     findings = sorted(repo.findings, key=lambda f: (-f.severity.rank, f.check_id))
     if not findings:
-        t.append("\n  ✓ bez nálezů", style=Style(color=p.ok))
+        t.append(_("\n  ✓ bez nálezů"), style=Style(color=p.ok))
         return t
     id_w = min(24, max(len(f.check_id) for f in findings[:limit]) + 1)
     for f in findings[:limit]:
@@ -148,12 +150,12 @@ def preview_text(repo: RepoResult | None, width: int, p: Palette, limit: int = 4
         line.append(" ")
         msg = Text(f.message, style=Style(color=p.muted))
         if f.fixable:
-            msg.append("   ✓ opravitelné", style=Style(color=p.ok))
+            msg.append(_("   ✓ opravitelné"), style=Style(color=p.ok))
         line.append(pad(msg, max(4, width - id_w - 6)))
         t.append(line)
     if len(findings) > limit:
         t.append(
-            f"\n    … a {len(findings) - limit} {'další' if len(findings) - limit < 5 else 'dalších'}",
+            "\n    " + more(len(findings) - limit),
             style=Style(color=p.muted),
         )
     return t

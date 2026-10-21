@@ -10,18 +10,25 @@ from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.screen import ModalScreen
 from textual.widgets import Button, Input, Label, Static
 
+from repo_doctor.i18n import _
+
 
 class ConfirmDialog(ModalScreen[bool]):
     """Ano/ne dialog. Esc i výchozí tlačítko = Zrušit."""
 
     BINDINGS = [
-        Binding("escape", "cancel", "zrušit", key_display="esc"),
+        Binding("escape", "cancel", _("zrušit"), key_display="esc"),
         Binding("left,h", "focus_previous", show=False),
         Binding("right,l", "focus_next", show=False),
     ]
 
     def __init__(
-        self, title: str, body: str | Text, *, confirm_label: str = "Potvrdit", danger: bool = False
+        self,
+        title: str,
+        body: str | Text,
+        *,
+        confirm_label: str = _("Potvrdit"),
+        danger: bool = False,
     ) -> None:
         super().__init__()
         self.title_text = title
@@ -35,11 +42,11 @@ class ConfirmDialog(ModalScreen[bool]):
             with VerticalScroll(id="confirm-scroll"):
                 yield Static(self.body, id="confirm-body")  # dlouhý seznam se posouvá
             with Horizontal(classes="buttons"):
-                yield Button("Zrušit", id="cancel")
+                yield Button(_("Zrušit"), id="cancel")
                 yield Button(
                     self.confirm_label, id="ok", variant="error" if self.danger else "primary"
                 )
-            yield Static("tab přepnout · enter = zvolené tlačítko · esc zrušit", classes="hint")
+            yield Static(_("tab přepnout · enter = zvolené tlačítko · esc zrušit"), classes="hint")
 
     def on_mount(self) -> None:
         self.query_one("#cancel", Button).focus()
@@ -59,7 +66,7 @@ class ConfirmDialog(ModalScreen[bool]):
 class InputDialog(ModalScreen[str | None]):
     """Dotaz na text (např. důvod pro allowlist). Prázdná hodnota se nepřijme."""
 
-    BINDINGS = [Binding("escape", "cancel", "zrušit", key_display="esc")]
+    BINDINGS = [Binding("escape", "cancel", _("zrušit"), key_display="esc")]
 
     def __init__(
         self,
@@ -68,7 +75,7 @@ class InputDialog(ModalScreen[str | None]):
         *,
         placeholder: str = "",
         value: str = "",
-        confirm_label: str = "Uložit",
+        confirm_label: str = _("Uložit"),
     ) -> None:
         super().__init__()
         self.title_text = title
@@ -84,9 +91,9 @@ class InputDialog(ModalScreen[str | None]):
             yield Input(compact=True, value=self.value, placeholder=self.placeholder, id="value")
             yield Static("", classes="error", id="error")
             with Horizontal(classes="buttons"):
-                yield Button("Zrušit", id="cancel")
+                yield Button(_("Zrušit"), id="cancel")
                 yield Button(self.confirm_label, id="ok", variant="primary")
-            yield Static("enter uložit · esc zrušit", classes="hint")
+            yield Static(_("enter uložit · esc zrušit"), classes="hint")
 
     def on_mount(self) -> None:
         self.query_one(Input).focus()
@@ -94,7 +101,7 @@ class InputDialog(ModalScreen[str | None]):
     def _submit(self) -> None:
         value = self.query_one(Input).value.strip()
         if not value:
-            self.query_one("#error", Static).update("Vyplň hodnotu.")
+            self.query_one("#error", Static).update(_("Vyplň hodnotu."))
             return
         self.dismiss(value)
 

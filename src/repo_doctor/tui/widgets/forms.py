@@ -10,6 +10,7 @@ from textual.suggester import Suggester
 from textual.validation import ValidationResult, Validator
 from textual.widgets import Input
 
+from repo_doctor.i18n import _
 from repo_doctor.paths import expand_path
 
 
@@ -46,7 +47,7 @@ class PathSuggester(Suggester):
 class PathInput(Input):
     """Vstup cesty: Tab přijme návrh (pokud je), jinak přejde na další pole."""
 
-    BINDINGS = [Binding("tab", "accept_or_next", "doplnit", show=False)]
+    BINDINGS = [Binding("tab", "accept_or_next", _("doplnit"), show=False)]
 
     def action_accept_or_next(self) -> None:
         suggestion = getattr(self, "_suggestion", "")
@@ -60,12 +61,12 @@ class PathInput(Input):
 class ExistingDir(Validator):
     def validate(self, value: str) -> ValidationResult:
         if not value.strip():
-            return self.failure("zadej cestu")
+            return self.failure(_("zadej cestu"))
         path = expand_path(value.strip())
         if not path.exists():
-            return self.failure(f"{path} neexistuje")
+            return self.failure(_("{path} neexistuje").format(path=path))
         if not path.is_dir():
-            return self.failure(f"{path} není složka")
+            return self.failure(_("{path} není složka").format(path=path))
         return self.success()
 
 
@@ -78,9 +79,9 @@ class IntRange(Validator):
         try:
             n = int(value)
         except ValueError:
-            return self.failure("musí být celé číslo")
+            return self.failure(_("musí být celé číslo"))
         if not self.low <= n <= self.high:
-            return self.failure(f"rozsah {self.low}–{self.high}")
+            return self.failure(_("rozsah {low}–{high}").format(low=self.low, high=self.high))
         return self.success()
 
 
@@ -89,8 +90,8 @@ class PositiveNumber(Validator):
         try:
             n = float(value)
         except ValueError:
-            return self.failure("musí být číslo")
-        return self.success() if n > 0 else self.failure("musí být větší než 0")
+            return self.failure(_("musí být číslo"))
+        return self.success() if n > 0 else self.failure(_("musí být větší než 0"))
 
 
 def split_list(value: str) -> list[str]:

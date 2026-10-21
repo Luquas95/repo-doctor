@@ -10,22 +10,24 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from repo_doctor.i18n import _
+
 CONTEXTS: dict[str, str] = {
-    "global": "Globální",
-    "nav": "Pohyb",
-    "dashboard": "Přehled (triáž)",
-    "detail": "Karta repa",
-    "fix": "Léčba",
-    "folders": "Složky",
-    "forges": "Hostingy",
-    "remote": "Vzdálená repa",
-    "settings": "Nastavení",
-    "tools": "Nástroje",
-    "export": "Export",
-    "cleanup": "Úklid",
-    "sync": "Synchronizace",
-    "wizard": "Průvodce prvním spuštěním",
-    "dialog": "Formulářové dialogy",
+    "global": _("Globální"),
+    "nav": _("Pohyb"),
+    "dashboard": _("Přehled (triáž)"),
+    "detail": _("Karta repa"),
+    "fix": _("Léčba"),
+    "folders": _("Složky"),
+    "forges": _("Hostingy"),
+    "remote": _("Vzdálená repa"),
+    "settings": _("Nastavení"),
+    "tools": _("Nástroje"),
+    "export": _("Export"),
+    "cleanup": _("Úklid"),
+    "sync": _("Synchronizace"),
+    "wizard": _("Průvodce prvním spuštěním"),
+    "dialog": _("Formulářové dialogy"),
 }
 
 
@@ -65,99 +67,99 @@ def _a(
 
 ACTIONS: tuple[KeyAction, ...] = (
     # globální
-    _a("help", "question_mark", "global", "nápověda", label="?"),
-    _a("command_palette", "ctrl+p", "global", "příkazová paleta", show=False),
+    _a("help", "question_mark", "global", _("nápověda"), label="?"),
+    _a("command_palette", "ctrl+p", "global", _("příkazová paleta"), show=False),
     # přehled, karta repa a léčba nemají číslo: ⏎ a f na přehledu, zpět q / esc (#32)
-    _a("screen_folders", "1", "global", "složky s repy", "open_screen('folders')"),
-    _a("screen_forges", "2", "global", "hostingy (GitHub, Forgejo…)", "open_screen('forges')"),
-    _a("screen_remote", "3", "global", "vzdálená repa", "open_screen('remote')", show=False),
-    _a("screen_settings", "4", "global", "nastavení", "open_screen('settings')", show=False),
+    _a("screen_folders", "1", "global", _("složky s repy"), "open_screen('folders')"),
+    _a("screen_forges", "2", "global", _("hostingy (GitHub, Forgejo…)"), "open_screen('forges')"),
+    _a("screen_remote", "3", "global", _("vzdálená repa"), "open_screen('remote')", show=False),
+    _a("screen_settings", "4", "global", _("nastavení"), "open_screen('settings')", show=False),
     _a("screen_export", "5", "global", "export", "open_screen('export')", show=False),
-    _a("screen_cleanup", "6", "global", "úklid místa", "open_screen('cleanup')", show=False),
-    _a("screen_sync", "7", "global", "synchronizace", "open_screen('sync')", show=False),
-    _a("screen_tools", "8", "global", "nástroje", "open_screen('tools')", show=False),
-    _a("search", "slash", "global", "hledat repo", label="/"),
-    _a("scan_all", "R", "global", "skenovat všechna repa"),
-    _a("scan_repo", "r", "global", "skenovat vybrané repo"),
-    _a("scan_fetch", "F", "global", "skenovat vše + git fetch (novinky z remote)", show=False),
-    _a("cancel_scan", "x", "global", "zrušit běžící sken", show=False),
-    _a("toggle_offline", "O", "global", "offline režim (bez síťových kontrol)", show=False),
-    _a("toggle_theme", "t", "global", "světlé / tmavé téma", show=False),
-    _a("back", "q", "global", "zpět", "go_back"),
-    _a("quit", "ctrl+q", "global", "konec (zastaví i běžící sken)"),
+    _a("screen_cleanup", "6", "global", _("úklid místa"), "open_screen('cleanup')", show=False),
+    _a("screen_sync", "7", "global", _("synchronizace"), "open_screen('sync')", show=False),
+    _a("screen_tools", "8", "global", _("nástroje"), "open_screen('tools')", show=False),
+    _a("search", "slash", "global", _("hledat repo"), label="/"),
+    _a("scan_all", "R", "global", _("skenovat všechna repa")),
+    _a("scan_repo", "r", "global", _("skenovat vybrané repo")),
+    _a("scan_fetch", "F", "global", _("skenovat vše + git fetch (novinky z remote)"), show=False),
+    _a("cancel_scan", "x", "global", _("zrušit běžící sken"), show=False),
+    _a("toggle_offline", "O", "global", _("offline režim (bez síťových kontrol)"), show=False),
+    _a("toggle_theme", "t", "global", _("světlé / tmavé téma"), show=False),
+    _a("back", "q", "global", _("zpět"), "go_back"),
+    _a("quit", "ctrl+q", "global", _("konec (zastaví i běžící sken)")),
     # pohyb (platí ve všech seznamech)
-    _a("cursor_down", "j", "nav", "dolů", show=False),
-    _a("cursor_up", "k", "nav", "nahoru", show=False),
-    _a("cursor_top", "g", "nav", "začátek seznamu", show=False),
-    _a("cursor_bottom", "G", "nav", "konec seznamu", show=False),
-    _a("half_page_down", "ctrl+d", "nav", "půl stránky dolů", show=False),
-    _a("half_page_up", "ctrl+u", "nav", "půl stránky nahoru", show=False),
-    _a("focus_next", "tab", "nav", "další panel", show=False),
-    _a("focus_previous", "shift+tab", "nav", "předchozí panel", show=False),
+    _a("cursor_down", "j", "nav", _("dolů"), show=False),
+    _a("cursor_up", "k", "nav", _("nahoru"), show=False),
+    _a("cursor_top", "g", "nav", _("začátek seznamu"), show=False),
+    _a("cursor_bottom", "G", "nav", _("konec seznamu"), show=False),
+    _a("half_page_down", "ctrl+d", "nav", _("půl stránky dolů"), show=False),
+    _a("half_page_up", "ctrl+u", "nav", _("půl stránky nahoru"), show=False),
+    _a("focus_next", "tab", "nav", _("další panel"), show=False),
+    _a("focus_previous", "shift+tab", "nav", _("předchozí panel"), show=False),
     # přehled
-    _a("open_card", "enter", "dashboard", "karta repa", label="⏎"),
-    _a("open_fix", "f", "dashboard", "léčba (opravy)", also=("detail",)),
-    _a("collapse_band", "z", "dashboard", "sbalit / rozbalit skupinu"),
-    _a("sort_cycle", "S", "dashboard", "řadit podle sloupce", show=False),
-    _a("sort_reverse", "s", "dashboard", "obrátit řazení", show=False),
-    _a("filter_high", "alt+1", "dashboard", "filtr ▲ HIGH", show=False),
-    _a("filter_medium", "alt+2", "dashboard", "filtr ◆ MED", show=False),
-    _a("filter_low", "alt+3", "dashboard", "filtr ● LOW", show=False),
-    _a("problems_only", "p", "dashboard", "jen problémová repa", show=False),
+    _a("open_card", "enter", "dashboard", _("karta repa"), label="⏎"),
+    _a("open_fix", "f", "dashboard", _("léčba (opravy)"), also=("detail",)),
+    _a("collapse_band", "z", "dashboard", _("sbalit / rozbalit skupinu")),
+    _a("sort_cycle", "S", "dashboard", _("řadit podle sloupce"), show=False),
+    _a("sort_reverse", "s", "dashboard", _("obrátit řazení"), show=False),
+    _a("filter_high", "alt+1", "dashboard", _("filtr ▲ HIGH"), show=False),
+    _a("filter_medium", "alt+2", "dashboard", _("filtr ◆ MED"), show=False),
+    _a("filter_low", "alt+3", "dashboard", _("filtr ● LOW"), show=False),
+    _a("problems_only", "p", "dashboard", _("jen problémová repa"), show=False),
     _a(
         "group_cycle",
         "alt+g",
         "dashboard",
-        "seskupit: triáž / složka / hosting / remote",
+        _("seskupit: triáž / složka / hosting / remote"),
         show=False,
     ),
-    _a("toggle_sidebar", "b", "dashboard", "skrýt / ukázat levý panel", show=False),
+    _a("toggle_sidebar", "b", "dashboard", _("skrýt / ukázat levý panel"), show=False),
     # karta repa
-    _a("allowlist", "a", "detail", "skrýt nález (allowlist)"),
-    _a("open_editor", "o", "detail", "otevřít v editoru"),
-    _a("open_web", "w", "detail", "otevřít na webu"),
-    _a("copy_path", "y", "detail", "kopírovat cestu"),
-    _a("export_sbom", "b", "detail", "export SBOM (CycloneDX)", show=False),
+    _a("allowlist", "a", "detail", _("skrýt nález (allowlist)")),
+    _a("open_editor", "o", "detail", _("otevřít v editoru")),
+    _a("open_web", "w", "detail", _("otevřít na webu")),
+    _a("copy_path", "y", "detail", _("kopírovat cestu")),
+    _a("export_sbom", "b", "detail", _("export SBOM (CycloneDX)"), show=False),
     # léčba
-    _a("toggle_fix", "space", "fix", "vybrat opravu", label="space"),
-    _a("select_all", "A", "fix", "vybrat vše"),
-    _a("confirm_fix", "enter", "fix", "provést vybrané", label="⏎"),
+    _a("toggle_fix", "space", "fix", _("vybrat opravu"), label="space"),
+    _a("select_all", "A", "fix", _("vybrat vše")),
+    _a("confirm_fix", "enter", "fix", _("provést vybrané"), label="⏎"),
     # úklid
-    _a("cleanup_toggle", "space", "cleanup", "vybrat repo", label="space"),
-    _a("cleanup_all", "A", "cleanup", "vybrat vše / nic"),
-    _a("cleanup_apply", "enter", "cleanup", "přesunout do koše", label="⏎"),
-    _a("cleanup_permanent", "D", "cleanup", "trvale smazat", show=False),
+    _a("cleanup_toggle", "space", "cleanup", _("vybrat repo"), label="space"),
+    _a("cleanup_all", "A", "cleanup", _("vybrat vše / nic")),
+    _a("cleanup_apply", "enter", "cleanup", _("přesunout do koše"), label="⏎"),
+    _a("cleanup_permanent", "D", "cleanup", _("trvale smazat"), show=False),
     # synchronizace
-    _a("sync_fetch", "f", "sync", "stáhnout novinky (fetch)"),
-    _a("sync_toggle", "space", "sync", "vybrat repo", label="space"),
-    _a("sync_apply", "enter", "sync", "dohnat vybrané (fast-forward)", label="⏎"),
+    _a("sync_fetch", "f", "sync", _("stáhnout novinky (fetch)")),
+    _a("sync_toggle", "space", "sync", _("vybrat repo"), label="space"),
+    _a("sync_apply", "enter", "sync", _("dohnat vybrané (fast-forward)"), label="⏎"),
     # složky
-    _a("folder_add", "n", "folders", "přidat složku"),
-    _a("folder_edit", "e", "folders", "upravit složku"),
-    _a("folder_delete", "d", "folders", "odebrat složku"),
-    _a("folder_toggle", "space", "folders", "zapnout / vypnout", label="space"),
+    _a("folder_add", "n", "folders", _("přidat složku")),
+    _a("folder_edit", "e", "folders", _("upravit složku")),
+    _a("folder_delete", "d", "folders", _("odebrat složku")),
+    _a("folder_toggle", "space", "folders", _("zapnout / vypnout"), label="space"),
     # hostingy
-    _a("forge_add", "n", "forges", "přidat hosting"),
-    _a("forge_edit", "e", "forges", "upravit hosting"),
-    _a("forge_delete", "d", "forges", "odebrat hosting"),
-    _a("forge_test", "T", "forges", "otestovat připojení"),
+    _a("forge_add", "n", "forges", _("přidat hosting")),
+    _a("forge_edit", "e", "forges", _("upravit hosting")),
+    _a("forge_delete", "d", "forges", _("odebrat hosting")),
+    _a("forge_test", "T", "forges", _("otestovat připojení")),
     # vzdálená repa
-    _a("clone", "c", "remote", "naklonovat repo"),
-    _a("remote_view", "v", "remote", "přepnout: chybí lokálně ↔ jen lokálně"),
-    _a("remote_refresh", "ctrl+r", "remote", "načíst znovu", show=False),
+    _a("clone", "c", "remote", _("naklonovat repo")),
+    _a("remote_view", "v", "remote", _("přepnout: chybí lokálně ↔ jen lokálně")),
+    _a("remote_refresh", "ctrl+r", "remote", _("načíst znovu"), show=False),
     # nastavení
-    _a("settings_allow_remove", "d", "settings", "odebrat z allowlistu", show=False),
+    _a("settings_allow_remove", "d", "settings", _("odebrat z allowlistu"), show=False),
     # nástroje
-    _a("tools_install", "i", "tools", "doinstalovat chybějící"),
-    _a("tools_update", "u", "tools", "aktualizovat stažené"),
-    _a("tools_remove", "d", "tools", "odebrat stažený"),
+    _a("tools_install", "i", "tools", _("doinstalovat chybějící")),
+    _a("tools_update", "u", "tools", _("aktualizovat stažené")),
+    _a("tools_remove", "d", "tools", _("odebrat stažený")),
     # export
-    _a("export", "e", "export", "exportovat report"),
+    _a("export", "e", "export", _("exportovat report")),
     # průvodce prvním spuštěním
-    _a("wizard_finish", "ctrl+s", "wizard", "uložit a skenovat", "finish"),
-    _a("wizard_add_forge", "ctrl+n", "wizard", "přidat hosting", "add_forge"),
+    _a("wizard_finish", "ctrl+s", "wizard", _("uložit a skenovat"), "finish"),
+    _a("wizard_add_forge", "ctrl+n", "wizard", _("přidat hosting"), "add_forge"),
     # formulářové dialogy (složka, hosting, klon)
-    _a("dialog_save", "ctrl+s", "dialog", "uložit / potvrdit formulář", "save"),
+    _a("dialog_save", "ctrl+s", "dialog", _("uložit / potvrdit formulář"), "save"),
 )
 
 BY_ID: dict[str, KeyAction] = {a.id: a for a in ACTIONS}
@@ -287,13 +289,23 @@ def build_keymap(overrides: Mapping[str, str]) -> dict[str, str]:
     result = {a.id: a.key for a in ACTIONS}
     for action_id, key in migrate_overrides(overrides).items():
         if action_id not in BY_ID:
-            problems.append(f"neznámá akce `{action_id}` (platné: {', '.join(sorted(BY_ID))})")
+            problems.append(
+                _("neznámá akce `{action_id}` (platné: {join})").format(
+                    action_id=action_id, join=", ".join(sorted(BY_ID))
+                )
+            )
             continue
         if not isinstance(key, str) or not is_valid_key(key):
-            problems.append(f"`{action_id}`: neplatná klávesa {key!r}")
+            problems.append(
+                _("`{action_id}`: neplatná klávesa {key!r}").format(action_id=action_id, key=key)
+            )
             continue
         if normalize_key(key) in RESERVED:
-            problems.append(f"`{action_id}`: klávesa {key!r} je vyhrazená (Esc = zpět)")
+            problems.append(
+                _("`{action_id}`: klávesa {key!r} je vyhrazená (Esc = zpět)").format(
+                    action_id=action_id, key=key
+                )
+            )
             continue
         result[action_id] = normalize_key(key)
     seen: dict[str, list[KeyAction]] = {}
@@ -304,12 +316,19 @@ def build_keymap(overrides: Mapping[str, str]) -> dict[str, str]:
             for second in actions[i + 1 :]:
                 if any(_conflicts(a, b) for a in first.contexts for b in second.contexts):
                     problems.append(
-                        f"kolize: klávesa {display_key(key)!r} je přiřazena akcím `{first.id}` "
-                        f"({CONTEXTS[first.context]}) a `{second.id}` ({CONTEXTS[second.context]})"
+                        _(
+                            "kolize: klávesa {display_key!r} je přiřazena akcím `{id}` ({v}) a `{id2}` ({v2})"
+                        ).format(
+                            display_key=display_key(key),
+                            id=first.id,
+                            v=CONTEXTS[first.context],
+                            id2=second.id,
+                            v2=CONTEXTS[second.context],
+                        )
                     )
     if problems:
         raise KeymapError(
-            "Neplatné mapování kláves v [keys]:\n" + "\n".join(f"  • {p}" for p in problems)
+            _("Neplatné mapování kláves v [keys]:\n") + "\n".join(f"  • {p}" for p in problems)
         )
     return result
 

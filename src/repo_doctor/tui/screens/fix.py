@@ -19,8 +19,10 @@ from textual.widgets.option_list import Option
 
 from repo_doctor.checks.base import RepoContext
 from repo_doctor.config import ConfigError, effective_for_repo, load_repo_overrides
+from repo_doctor.czech import count
 from repo_doctor.fixes import ApplyResult, FixRefused, apply, branch_name, plan
 from repo_doctor.gitwrap import Git, GitError
+from repo_doctor.i18n import _
 from repo_doctor.models import Patch, RepoResult
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import BaseScreen
@@ -52,7 +54,7 @@ def diff_text(diff: str, p: Palette, width: int) -> Text:
 
 
 def commits_word(n: int) -> str:
-    return "commit" if n == 1 else "commity" if 1 < n < 5 else "commitů"
+    return _("commit") if n == 1 else _("commity") if 1 < n < 5 else _("commitů")
 
 
 class FixScreen(BaseScreen):
@@ -60,7 +62,7 @@ class FixScreen(BaseScreen):
         *BaseScreen.BINDINGS,
         *[b for b in bindings("fix") if b.id != "confirm_fix"],
         Binding(
-            "enter", "confirm_fix", "potvrdit", key_display="⏎", priority=True, id="confirm_fix"
+            "enter", "confirm_fix", _("potvrdit"), key_display="⏎", priority=True, id="confirm_fix"
         ),
     ]
 
@@ -92,13 +94,20 @@ class FixScreen(BaseScreen):
             with VerticalScroll(id="diff-panel"):
                 yield Static(id="diff")
         yield KeyBar(
-            ["toggle_fix", "select_all", ("j/k", "pohyb"), "confirm_fix", ("esc", "zpět"), "help"]
+            [
+                "toggle_fix",
+                "select_all",
+                ("j/k", _("pohyb")),
+                "confirm_fix",
+                ("esc", _("zpět")),
+                "help",
+            ]
         )
 
     def on_mount(self) -> None:
-        self.query_one("#rx-panel").border_title = " PŘEDPIS "
-        self.query_one("#diff-panel").border_title = " NÁHLED ZMĚN "
-        self._header("připravuji opravy…")
+        self.query_one("#rx-panel").border_title = _(" PŘEDPIS ")
+        self.query_one("#diff-panel").border_title = _(" NÁHLED ZMĚN ")
+        self._header(_("připravuji opravy…"))
         self.prepare()
 
     def on_resize(self, event: Resize) -> None:
@@ -112,8 +121,12 @@ class FixScreen(BaseScreen):
         repo = self.repo
         header = self.query_one("#fix-header", Static)
         n = len(self.patches)
-        right = f"{n} {'opravitelný nález' if n == 1 else 'opravitelné nálezy' if 1 < n < 5 else 'opravitelných nálezů'}"
-        split_title(header, f"léčba · {repo.name if repo else '?'}", right if self.ready else "")
+        right = count(n, _("opravitelný nález"), _("opravitelné nálezy"), _("opravitelných nálezů"))
+        split_title(
+            header,
+            _("léčba · {v}").format(v=repo.name if repo else "?"),
+            right if self.ready else "",
+        )
         header.update(message)
 
     def _repo_context(self, repo: RepoResult) -> RepoContext:
@@ -134,7 +147,7 @@ class FixScreen(BaseScreen):
     def prepare(self) -> None:
         repo = self.repo
         if repo is None:
-            self.app.call_from_thread(self._header, "Repo už není ve výsledcích skenu.")
+            self.app.call_from_thread(self._header, _("Repo už není ve výsledcích skenu."))
             return
         try:
             ctx = self._repo_context(repo)
@@ -144,7 +157,10 @@ class FixScreen(BaseScreen):
         except (GitError, OSError) as err:
             self.app.call_from_thread(
                 self._header,
-                Text(f"Opravy nejde připravit: {err}", style=Style(color=self.rd.palette.high)),
+                Text(
+                    _("Opravy nejde připravit: {err}").format(err=err),
+                    style=Style(color=self.rd.palette.high),
+                ),
             )
             return
         self.app.call_from_thread(self._prepared, patches, dirty, branch)
@@ -154,25 +170,28 @@ class FixScreen(BaseScreen):
         p = self.rd.palette
         if not patches:
             self._header(
-                Text("Žádné automaticky opravitelné nálezy. Esc zpět.", style=Style(color=p.muted))
+                Text(
+                    _("Žádné automaticky opravitelné nálezy. Esc zpět."), style=Style(color=p.muted)
+                )
             )
         elif dirty:
             local = (
-                " Jen lokální úpravy (.git/) jde provést i tak."
+                _(" Jen lokální úpravy (.git/) jde provést i tak.")
                 if any(pt.local_only for pt in patches)
                 else ""
             )
             self._header(
                 Text(
-                    f"Repo má necommitnuté změny (~{dirty}) – opravy souborů se nespustí, repo-doctor "
-                    f"na ně nesahá. Commitni je nebo ulož do stashe.{local}",
+                    _(
+                        "Repo má necommitnuté změny (~{dirty}) – opravy souborů se nespustí, repo-doctor na ně nesahá. Commitni je nebo ulož do stashe.{local}"
+                    ).format(dirty=dirty, local=local),
                     style=Style(color=p.med),
                 )
             )
         else:
             self._header(
                 Text(
-                    "Vyber, co opravit. Změny vzniknou v nové větvi, nic se nepushne.",
+                    _("Vyber, co opravit. Změny vzniknou v nové větvi, nic se nepushne."),
                     style=Style(color=p.text),
                 )
             )
@@ -215,16 +234,19 @@ class FixScreen(BaseScreen):
         self._summary()
         self._render_diff()
         bar = self.query_one(KeyBar)
-        keys: list[str | tuple[str, str]] = ["toggle_fix", "select_all", ("j/k", "pohyb")]
+        keys: list[str | tuple[str, str]] = ["toggle_fix", "select_all", ("j/k", _("pohyb"))]
         if self.patches and (not self.dirty or any(pt.local_only for pt in self.patches)):
             keys.append("confirm_fix")
-        bar.set_items([*keys, ("esc", "zpět"), "help"])
+        bar.set_items([*keys, ("esc", _("zpět")), "help"])
 
     def _summary(self) -> None:
         p = self.rd.palette
         n = len(self.selected or ())
-        t = Text(f"vybráno {n} · {n} {commits_word(n)}\n", style=Style(color=p.text))
-        t.append(f"větev {self.branch}", style=Style(color=p.accent))
+        t = Text(
+            _("vybráno {n} · {n} {commits_word}\n").format(n=n, commits_word=commits_word(n)),
+            style=Style(color=p.text),
+        )
+        t.append(_("větev {branch}").format(branch=self.branch), style=Style(color=p.accent))
         self.query_one("#rx-summary", Static).update(t)
 
     def _render_diff(self) -> None:
@@ -242,7 +264,7 @@ class FixScreen(BaseScreen):
                 for a in patch.local
             ]
         )
-        panel.border_title = f" NÁHLED ZMĚN · {files} "
+        panel.border_title = _(" NÁHLED ZMĚN · {files} ").format(files=files)
         width = max(20, panel.size.width - 4)
         text = diff_text(patch.diff(), self.rd.palette, width)
         if patch.notes:
@@ -290,12 +312,14 @@ class FixScreen(BaseScreen):
         chosen = [pt for pt in self.patches if pt.key in (self.selected or set())]
         if self.dirty and any(pt.changes for pt in chosen):
             self.notify(
-                "Repo má necommitnuté změny – opravy souborů se nespustí.", severity="error"
+                _("Repo má necommitnuté změny – opravy souborů se nespustí."), severity="error"
             )
             return
         if not chosen:
             self.notify(
-                f"Nic není vybráno ({self.rd.key('toggle_fix')} vybere, {self.rd.key('select_all')} vše).",
+                _("Nic není vybráno ({key} vybere, {key2} vše).").format(
+                    key=self.rd.key("toggle_fix"), key2=self.rd.key("select_all")
+                ),
                 severity="warning",
             )
             return
@@ -304,15 +328,16 @@ class FixScreen(BaseScreen):
         n = len([pt for pt in chosen if pt.changes])
         body = Text()
         if n:
-            body.append("\nVznikne nová větev\n  ")
+            body.append(_("\nVznikne nová větev\n  "))
             body.append(self.branch, style=Style(color=self.rd.palette.accent, bold=True))
             body.append(
-                f"\nse {n} {commits_word(n)}. Nic se nepushne, {default} zůstane\n"
-                "beze změny a necommitnuté soubory nedotčené.\n"
+                _(
+                    "\nse {n} {commits_word}. Nic se nepushne, {default} zůstane\nbeze změny a necommitnuté soubory nedotčené.\n"
+                ).format(n=n, commits_word=commits_word(n), default=default)
             )
         local = [a.description for pt in chosen for a in pt.local]
         if local:
-            body.append("\nJen lokálně v .git/ (nic se necommituje):\n")
+            body.append(_("\nJen lokálně v .git/ (nic se necommituje):\n"))
             for desc in local:
                 body.append(f"  • {desc}\n")
 
@@ -320,10 +345,10 @@ class FixScreen(BaseScreen):
             if ok:
                 self.do_apply(chosen)
             else:
-                self.notify("Léčba zrušena – nic se nezměnilo.")
+                self.notify(_("Léčba zrušena – nic se nezměnilo."))
 
         self.app.push_screen(
-            ConfirmDialog("Potvrdit léčbu", body, confirm_label="Aplikovat"), decided
+            ConfirmDialog(_("Potvrdit léčbu"), body, confirm_label=_("Aplikovat")), decided
         )
 
     @work(thread=True, exclusive=True, group="fix-apply")
@@ -340,7 +365,7 @@ class FixScreen(BaseScreen):
         except (FixRefused, GitError) as err:
             message = str(err) if isinstance(err, FixRefused) else f"git selhal: {err.stderr}"
             self.app.call_from_thread(
-                self.notify, message, title="Léčba se nepovedla", severity="error", timeout=10
+                self.notify, message, title=_("Léčba se nepovedla"), severity="error", timeout=10
             )
             return
         self.app.call_from_thread(self._applied, result)
@@ -350,12 +375,13 @@ class FixScreen(BaseScreen):
         parts = []
         if result.branch:
             parts.append(
-                f"Vytvořena větev {result.branch} s {n} {commits_word(n)}. Nic se nepushnulo – "
-                f"zkontroluj ji: git log {result.branch}"
+                _(
+                    "Vytvořena větev {branch} s {n} {commits_word}. Nic se nepushnulo – zkontroluj ji: git log {branch}"
+                ).format(branch=result.branch, n=n, commits_word=commits_word(n))
             )
         parts.extend(f"✓ {desc}" for desc in result.local)
         msg = "\n".join(parts)
         for note in result.notes:
             msg += f"\n! {note}"
-        self.notify(msg, title="Léčba hotová", timeout=15)
+        self.notify(msg, title=_("Léčba hotová"), timeout=15)
         self.app.pop_screen()

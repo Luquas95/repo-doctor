@@ -147,6 +147,8 @@ class UIConfig(_Model):
     show_sidebar: bool = True
     # true = TUI po spuštění rovnou skenuje (jinak ukáže poslední uložený výsledek)
     scan_on_start: bool = False
+    # jazyk rozhraní: auto = podle LANG / LC_ALL (cs_* → čeština, jinak angličtina)
+    language: Literal["auto", "cs", "en"] = "auto"
 
 
 class CIConfig(_Model):

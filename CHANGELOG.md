@@ -5,6 +5,11 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 ## [Nevydáno]
 
 ### Přidáno
+- **Angličtina (#33, fáze 1):** TUI, CLI a zkratky jsou i anglicky. Jazyk se volí podle
+  systému (`LANG`/`LC_ALL`: cs_* → čeština, jinak angličtina), v Nastavení / `[ui] language`
+  (`auto` | `cs` | `en`), přepínačem `--lang` nebo proměnnou `REPO_DOCTOR_LANG`. Změna
+  v Nastavení platí po restartu. Zprávy kontrol, jejich dokumentace a reporty budou přeložené
+  v dalších fázích.
 - **Detaily repa v kartě (#36):** hlavička karty ukazuje navíc
   - KÓD: jazyky (podíl podle velikosti), počet souborů, velikost a `.git`, licenci,
   - ZÁVISLOSTI: ekosystém, správce balíčků, přímé / všechny závislosti,
@@ -46,6 +51,7 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 - **Konec je `ctrl+q` (#35):** `q` už aplikaci nezavírá, jen vrací o obrazovku zpět.
 
 ### Opraveno
+- Hlášky odkazovaly na stará čísla obrazovek (Složky „4“, Hostingy „5“) z doby před #32.
 - Grafický editor (gedit, Kate, VS Code…) se spouští na pozadí. Dřív TUI zamrzlo, dokud
   se okno editoru nezavřelo. gedit a Kate otevírají soubor nálezu na správném řádku.
 - **Skóre už nespadne na 0 (#37):** pod 30 body se jen blíží nule, takže repa s mnoha

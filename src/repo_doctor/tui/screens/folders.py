@@ -13,6 +13,7 @@ from textual.widgets import DataTable, Static
 
 from repo_doctor.config import ConfigError, RootConfig
 from repo_doctor.discovery import discover
+from repo_doctor.i18n import _
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import BaseScreen
 from repo_doctor.tui.screens.dialogs import ConfirmDialog
@@ -37,7 +38,7 @@ class FoldersScreen(BaseScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="page panel") as page:
-            page.border_title = " složky "
+            page.border_title = _(" složky ")
             yield Static(id="folders-note", classes="page-header")
             table: DataTable[str | Text] = DataTable(
                 id="roots", cursor_type="row", zebra_stripes=False
@@ -50,7 +51,7 @@ class FoldersScreen(BaseScreen):
                 "folder_delete",
                 "folder_toggle",
                 "scan_all",
-                ("esc", "zpět"),
+                ("esc", _("zpět")),
                 "help",
             ]
         )
@@ -66,11 +67,11 @@ class FoldersScreen(BaseScreen):
     def refresh_table(self) -> None:
         app = self.rd
         p = app.palette
-        note = Text("Sledované složky se ukládají do ", style=Style(color=p.muted))
+        note = Text(_("Sledované složky se ukládají do "), style=Style(color=p.muted))
         note.append(home_path(str(app.store.path)), style=Style(color=p.text))
         if app.roots_override:
             note.append(
-                "\nTento běh používá složky z příkazové řádky (nic se neukládá): ",
+                _("\nTento běh používá složky z příkazové řádky (nic se neukládá): "),
                 style=Style(color=p.med),
             )
             note.append(", ".join(app.roots_override), style=Style(color=p.text))
@@ -78,32 +79,39 @@ class FoldersScreen(BaseScreen):
         table = self.query_one(DataTable)
         row = table.cursor_row
         table.clear(columns=True)
-        table.add_columns("stav", "cesta", "hloubka", "vylučující vzory", "symlinky", "repozitářů")
+        table.add_columns(
+            _("stav"),
+            _("cesta"),
+            _("hloubka"),
+            _("vylučující vzory"),
+            _("symlinky"),
+            _("repozitářů"),
+        )
         for i, root in enumerate(app.config.roots):
             exists = root.expanded.is_dir()
             state = Text(
-                "● zap." if root.enabled else "○ vyp.",
+                _("● zap.") if root.enabled else _("○ vyp."),
                 style=Style(color=p.ok if root.enabled else p.dim),
             )
             path = Text(root.path, style=Style(color=p.text if exists else p.high))
             if not exists:
-                path.append("  (neexistuje)", style=Style(color=p.high))
+                path.append(_("  (neexistuje)"), style=Style(color=p.high))
             count = self.counts.get(root.path)
             table.add_row(
                 state,
                 path,
                 str(root.depth),
                 ", ".join(root.exclude) or "—",
-                "ano" if root.follow_symlinks else "ne",
+                _("ano") if root.follow_symlinks else _("ne"),
                 "…"
                 if count is None and root.enabled
-                else ("vyp." if not root.enabled else str(count)),
+                else (_("vyp.") if not root.enabled else str(count)),
                 key=str(i),
             )
         if not app.config.roots:
             table.add_row(
                 Text("—", style=Style(color=p.dim)),
-                Text("žádné složky – n přidá první", style=Style(color=p.muted)),
+                Text(_("žádné složky – n přidá první"), style=Style(color=p.muted)),
                 "",
                 "",
                 "",
@@ -144,13 +152,13 @@ class FoldersScreen(BaseScreen):
             return
         self.rd.config_changed(config)
         self.count_repos()
-        self.notify("Uloženo do config.toml.")
+        self.notify(_("Uloženo do config.toml."))
 
     def action_folder_add(self) -> None:
         def done(root: RootConfig | None) -> None:
             if root is not None:
                 if any(r.path == root.path for r in self.rd.config.roots):
-                    self.notify("Tahle složka už je sledovaná.", severity="warning")
+                    self.notify(_("Tahle složka už je sledovaná."), severity="warning")
                     return
                 self._save("upsert", root)
 
@@ -179,9 +187,11 @@ class FoldersScreen(BaseScreen):
 
         self.app.push_screen(
             ConfirmDialog(
-                "Odebrat složku",
-                f"\nPřestat sledovat {home_path(str(root.expanded))}?\n\nNa disku se nic nesmaže – jen se odebere z config.toml.\n",
-                confirm_label="Odebrat",
+                _("Odebrat složku"),
+                _(
+                    "\nPřestat sledovat {home_path}?\n\nNa disku se nic nesmaže – jen se odebere z config.toml.\n"
+                ).format(home_path=home_path(str(root.expanded))),
+                confirm_label=_("Odebrat"),
                 danger=True,
             ),
             done,

@@ -17,6 +17,7 @@ from textual.app import ComposeResult, SuspendNotSupported
 from textual.containers import Vertical
 from textual.widgets import DataTable, Static
 
+from repo_doctor.i18n import _
 from repo_doctor.tui.bindings import bindings
 from repo_doctor.tui.screens.base import BaseScreen
 from repo_doctor.tui.screens.dialogs import ConfirmDialog
@@ -41,23 +42,25 @@ class ToolsScreen(BaseScreen):
 
     def compose(self) -> ComposeResult:
         with Vertical(classes="page panel") as page:
-            page.border_title = " nástroje "
+            page.border_title = _(" nástroje ")
             yield Static(id="tools-note", classes="page-header")
             yield DataTable(id="tools", cursor_type="row")
             yield Static(id="tools-keyring", classes="page-header")
-        yield KeyBar(["tools_install", "tools_update", "tools_remove", ("esc", "zpět"), "help"])
+        yield KeyBar(["tools_install", "tools_update", "tools_remove", ("esc", _("zpět")), "help"])
 
     def on_mount(self) -> None:
         p = self.rd.palette
         self.query_one("#tools-note", Static).update(
             Text(
-                "Volitelné – repo-doctor funguje i bez nich, s nimi umí víc. "
-                "Systémové balíčky odinstaluješ správcem balíčků.",
+                _(
+                    "Volitelné – repo-doctor funguje i bez nich, s nimi umí víc. "
+                    "Systémové balíčky odinstaluješ správcem balíčků."
+                ),
                 style=Style(color=p.muted),
             )
         )
         table = self.query_one(DataTable)
-        table.add_columns("", "nástroj", "k čemu", "původ", "cesta")
+        table.add_columns("", _("nástroj"), _("k čemu"), _("původ"), _("cesta"))
         table.focus()
         self.refresh_tools()
 
@@ -97,8 +100,12 @@ class ToolsScreen(BaseScreen):
         ok, detail = keyring
         self.query_one("#tools-keyring", Static).update(
             Text(
-                f"{'✓' if ok else '✗'} klíčenka · {detail}"
-                + ("" if ok else "\nKlíčenka se neinstaluje – Secret Service musí běžet v relaci."),
+                _("{v} klíčenka · {detail}").format(v="✓" if ok else "✗", detail=detail)
+                + (
+                    ""
+                    if ok
+                    else _("\nKlíčenka se neinstaluje – Secret Service musí běžet v relaci.")
+                ),
                 style=Style(color=p.ok if ok else p.muted),
             )
         )
@@ -118,18 +125,22 @@ class ToolsScreen(BaseScreen):
         backend = self.rd.tools_backend
         missing = backend.missing()
         if not missing:
-            self.app.call_from_thread(self.notify, "Všechny volitelné nástroje jsou nainstalované.")
+            self.app.call_from_thread(
+                self.notify, _("Všechny volitelné nástroje jsou nainstalované.")
+            )
             return
         plan = backend.plan(missing, backend.detect_manager())
-        self.app.call_from_thread(self._confirm, plan, "Nainstalovat nástroje", "Nainstalovat")
+        self.app.call_from_thread(
+            self._confirm, plan, _("Nainstalovat nástroje"), _("Nainstalovat")
+        )
 
     def action_tools_update(self) -> None:
         backend = self.rd.tools_backend
         outdated = backend.outdated()
         if not outdated:
-            self.notify("Stažené nástroje jsou aktuální. Systémové aktualizuje správce balíčků.")
+            self.notify(_("Stažené nástroje jsou aktuální. Systémové aktualizuje správce balíčků."))
             return
-        self._confirm(backend.update_plan(outdated), "Aktualizovat nástroje", "Aktualizovat")
+        self._confirm(backend.update_plan(outdated), _("Aktualizovat nástroje"), _("Aktualizovat"))
 
     def _confirm(self, plan: Any, title: str, label: str) -> None:
         lines = self.rd.tools_backend.describe(plan)
@@ -139,8 +150,10 @@ class ToolsScreen(BaseScreen):
         body = Text("\n" + "\n".join(lines) + "\n")
         if plan.command:
             body.append(
-                "\nTUI se na chvíli pozastaví a správce balíčků se v terminálu zeptá "
-                "na heslo (sudo) a potvrzení.\n"
+                _(
+                    "\nTUI se na chvíli pozastaví a správce balíčků se v terminálu zeptá "
+                    "na heslo (sudo) a potvrzení.\n"
+                )
             )
 
         def done(ok: bool | None) -> None:
@@ -163,7 +176,12 @@ class ToolsScreen(BaseScreen):
                 self.app.call_from_thread(self.notify, str(err), severity="error", timeout=15)
                 self.refresh_tools()
                 return
-            self.app.call_from_thread(self.notify, f"{d.name} {d.version} nainstalován do {path}.")
+            self.app.call_from_thread(
+                self.notify,
+                _("{name} {version} nainstalován do {path}.").format(
+                    name=d.name, version=d.version, path=path
+                ),
+            )
         self.app.call_from_thread(self._run_command, plan)
 
     def _run_command(self, plan: Any) -> None:
@@ -174,21 +192,25 @@ class ToolsScreen(BaseScreen):
                     print(f"\n$ {' '.join(plan.command)}", flush=True)
                     code = backend.run_command(plan)
                     with contextlib.suppress(EOFError, OSError):
-                        input("\nStiskni Enter pro návrat do repo-doctoru…")
+                        input(_("\nStiskni Enter pro návrat do repo-doctoru…"))
             except backend.ToolsError as err:
                 self.notify(str(err), severity="error", timeout=15)
             except SuspendNotSupported:
                 self.notify(
-                    f"Terminál nejde pozastavit – spusť ručně: {' '.join(plan.command)}",
+                    _("Terminál nejde pozastavit – spusť ručně: {join}").format(
+                        join=" ".join(plan.command)
+                    ),
                     severity="warning",
                     timeout=20,
                 )
             else:
                 if code == 0:
-                    self.notify("Nástroje jsou nainstalované.")
+                    self.notify(_("Nástroje jsou nainstalované."))
                 else:
                     self.notify(
-                        f"Správce balíčků skončil s kódem {code}.", severity="error", timeout=15
+                        _("Správce balíčků skončil s kódem {code}.").format(code=code),
+                        severity="error",
+                        timeout=15,
                     )
         self.refresh_tools()
 
@@ -198,16 +220,20 @@ class ToolsScreen(BaseScreen):
         if st is None:
             return
         if not st.installed:
-            self.notify(f"{st.tool.id} není nainstalovaný.", severity="warning")
+            self.notify(_("{id} není nainstalovaný.").format(id=st.tool.id), severity="warning")
             return
         if not st.downloaded:
             self.notify(
-                f"{st.tool.id} je ze systému – odinstaluj ho správcem balíčků.",
+                _("{id} je ze systému – odinstaluj ho správcem balíčků.").format(id=st.tool.id),
                 severity="warning",
             )
             return
-        body = Text(f"\nSmazat {st.tool.id} ({home_path(st.path or '')})?\n")
-        body.append("Kontroly, které ho používají, pak poběží bez něj.\n")
+        body = Text(
+            _("\nSmazat {id} ({home_path})?\n").format(
+                id=st.tool.id, home_path=home_path(st.path or "")
+            )
+        )
+        body.append(_("Kontroly, které ho používají, pak poběží bez něj.\n"))
 
         def done(ok: bool | None) -> None:
             if not ok:
@@ -218,9 +244,9 @@ class ToolsScreen(BaseScreen):
             except backend.ToolsError as err:
                 self.notify(str(err), severity="error", timeout=15)
             else:
-                self.notify(f"{st.tool.id} odebrán.")
+                self.notify(_("{id} odebrán.").format(id=st.tool.id))
             self.refresh_tools()
 
         self.app.push_screen(
-            ConfirmDialog("Odebrat nástroj", body, confirm_label="Odebrat", danger=True), done
+            ConfirmDialog(_("Odebrat nástroj"), body, confirm_label=_("Odebrat"), danger=True), done
         )
