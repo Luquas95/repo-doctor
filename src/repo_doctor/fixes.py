@@ -15,6 +15,7 @@ from datetime import date
 
 from repo_doctor.checks.base import Check, RepoContext, get_check
 from repo_doctor.gitwrap import Git, GitError
+from repo_doctor.i18n import _
 from repo_doctor.models import Finding, LocalAction, Patch
 
 BRANCH_PREFIX = "repo-doctor/fixes-"
@@ -36,13 +37,17 @@ def render_diff(patch: Patch) -> str:
     out: list[str] = []
     for action in patch.local:
         if action.kind == "git_config":
-            out.append("--- .git/config (jen lokálně, nic se necommituje)\n+++ .git/config\n")
+            out.append(_("--- .git/config (jen lokálně, nic se necommituje)\n+++ .git/config\n"))
             out.append(f"@@ [{action.key.split('.', 1)[0]}] @@\n")
             if action.display_old is not None:
                 out.append(f"-{action.key} = {action.display_old}\n")
             out.append(f"+{action.key} = {action.display_new or action.value}\n")
         else:
-            out.append(f"--- /dev/null\n+++ .git/hooks/{action.key} (jen lokálně, spustitelný)\n")
+            out.append(
+                _("--- /dev/null\n+++ .git/hooks/{key} (jen lokálně, spustitelný)\n").format(
+                    key=action.key
+                )
+            )
             lines = action.value.splitlines()
             out.append(f"@@ -0,0 +1,{len(lines)} @@\n")
             out.extend(f"+{line}\n" for line in lines)
@@ -50,7 +55,9 @@ def render_diff(patch: Patch) -> str:
         new = change.result(change.old)
         if new is None:
             out.append(
-                f"--- a/{change.path}\n+++ /dev/null\n@@ odstraněno z gitu (soubor na disku zůstává) @@\n"
+                _(
+                    "--- a/{path}\n+++ /dev/null\n@@ odstraněno z gitu (soubor na disku zůstává) @@\n"
+                ).format(path=change.path)
             )
             continue
         old_lines = (change.old or "").splitlines(keepends=True)
@@ -93,12 +100,13 @@ def preflight(git: Git) -> str:
     status = git.status()
     if status.dirty:
         raise FixRefused(
-            f"Repo má necommitnuté změny ({status.dirty} souborů). repo-doctor na ně nesahá – "
-            "commitni je nebo ulož do stashe a zkus to znovu."
+            _(
+                "Repo má necommitnuté změny ({dirty} souborů). repo-doctor na ně nesahá – commitni je nebo ulož do stashe a zkus to znovu."
+            ).format(dirty=status.dirty)
         )
     head = git.head_sha()
     if head is None:
-        raise FixRefused("Repo zatím nemá žádný commit, není z čeho vytvořit větev.")
+        raise FixRefused(_("Repo zatím nemá žádný commit, není z čeho vytvořit větev."))
     return head
 
 
@@ -112,11 +120,11 @@ def apply(git: Git, patches: list[Patch], *, today: date | None = None) -> Apply
     """Soubory: větev s jedním commitem na kontrolu (pracovní strom ani HEAD se nemění).
     Lokální akce (`user.email`, hook pre-push) se zapíší jen do `.git/` repa."""
     if not patches:
-        raise FixRefused("Nebyla vybrána žádná oprava.")
+        raise FixRefused(_("Nebyla vybrána žádná oprava."))
     if git.dubious_ownership():
-        raise FixRefused("Repo patří jinému uživateli – repo-doctor ho nikdy nemění.")
+        raise FixRefused(_("Repo patří jinému uživateli – repo-doctor ho nikdy nemění."))
     if len({p.check_id for p in patches}) != len(patches):
-        raise FixRefused("Od každé kontroly jde vybrat jen jednu variantu opravy.")
+        raise FixRefused(_("Od každé kontroly jde vybrat jen jednu variantu opravy."))
     result = ApplyResult(branch=None)
     file_patches = [p for p in patches if p.changes]
     if file_patches:
@@ -128,29 +136,34 @@ def apply(git: Git, patches: list[Patch], *, today: date | None = None) -> Apply
         if patch.local and not patch.changes:
             result.notes.extend(patch.notes)
     if not result.commits and not result.local:
-        raise FixRefused("Vybrané opravy nic nemění (už jsou nejspíš aplikované).")
+        raise FixRefused(_("Vybrané opravy nic nemění (už jsou nejspíš aplikované)."))
     return result
 
 
 def _apply_local(git: Git, action: LocalAction) -> None:
     if action.kind == "git_config":
         if action.key not in LOCAL_CONFIG_KEYS:
-            raise FixRefused(f"Lokální nastavení {action.key} léčba neumí.")
+            raise FixRefused(_("Lokální nastavení {key} léčba neumí.").format(key=action.key))
         git.run("config", "--local", "--end-of-options", action.key, action.value)
         return
     if action.key not in LOCAL_HOOKS:
-        raise FixRefused(f"Hook {action.key} léčba neinstaluje.")
+        raise FixRefused(_("Hook {key} léčba neinstaluje.").format(key=action.key))
     hooks = git.hooks_dir()
     target = hooks / action.key
     # cizí .git může hooks/ nebo hook podstrčit jako symlink (např. do ~/.local/bin)
     if hooks.is_symlink() or target.is_symlink():
-        raise FixRefused(f"{target} je symlink – repo-doctor do něj nezapisuje.")
+        raise FixRefused(
+            _("{target} je symlink – repo-doctor do něj nezapisuje.").format(target=target)
+        )
     if hasattr(os, "getuid") and hooks.parent.stat().st_uid != os.getuid():
-        raise FixRefused(f"{hooks.parent} patří jinému uživateli – hook se neinstaluje.")
+        raise FixRefused(
+            _("{parent} patří jinému uživateli – hook se neinstaluje.").format(parent=hooks.parent)
+        )
     if target.exists() and HOOK_MARKER not in target.read_text("utf-8", "replace"):
         raise FixRefused(
-            f"{target} už existuje (vlastní hook) – repo-doctor ho nepřepíše. "
-            "Doplň do něj ručně: repo-doctor guard"
+            _(
+                "{target} už existuje (vlastní hook) – repo-doctor ho nepřepíše. Doplň do něj ručně: repo-doctor guard"
+            ).format(target=target)
         )
     hooks.mkdir(exist_ok=True)
     fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_TRUNC | os.O_NOFOLLOW, 0o755)
@@ -194,4 +207,6 @@ def _apply_files(git: Git, patches: list[Patch], result: ApplyResult, today: dat
     try:
         git.create_branch(name, parent)
     except GitError as err:  # pragma: no cover - závod s jiným procesem
-        raise FixRefused(f"Branch {name} nelze vytvořit: {err.stderr}") from err
+        raise FixRefused(
+            _("Branch {name} nelze vytvořit: {stderr}").format(name=name, stderr=err.stderr)
+        ) from err

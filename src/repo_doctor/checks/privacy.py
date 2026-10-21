@@ -4,8 +4,10 @@ from __future__ import annotations
 
 from collections import Counter
 
+from repo_doctor import czech
 from repo_doctor.checks.base import Check, RepoContext, SkipCheck, register
 from repo_doctor.gitwrap import user_identity
+from repo_doctor.i18n import N_, _
 from repo_doctor.masking import REGISTRY, mask_email
 from repo_doctor.models import Category, Finding, LocalAction, Patch, Severity
 from repo_doctor.secrets_scan import fingerprint
@@ -60,7 +62,7 @@ PERSONAL_DOMAINS = frozenset(
 
 def is_noreply(email: str) -> bool:
     """`noreply` adresy hostingů (GitHub, GitLab, Gitea/Forgejo i vlastní instance)."""
-    local, _, domain = email.casefold().partition("@")
+    local, _sep, domain = email.casefold().partition("@")
     return (
         "noreply" in domain
         or "no-reply" in domain
@@ -77,7 +79,7 @@ def is_personal_domain(email: str) -> bool:
 @register
 class EmailExposure(Check):
     id = "email-exposure"
-    title = "Osobní e-mail v historii veřejného repa"
+    title = N_("Osobní e-mail v historii veřejného repa")
     severity = Severity.MEDIUM
     category = Category.SECURITY
     network = True  # viditelnost se zjišťuje z hostingu
@@ -85,14 +87,14 @@ class EmailExposure(Check):
 
     def run(self, repo: RepoContext) -> list[Finding]:
         if repo.visibility == "unknown":
-            raise SkipCheck("viditelnost repa na hostingu neznámá")
+            raise SkipCheck(_("viditelnost repa na hostingu neznámá"))
         if repo.visibility != "public":
             return []
         names, emails = user_identity()
         emails = emails | {e.strip().casefold() for e in repo.config.my_emails if e.strip()}
         if not names and not emails:
             raise SkipCheck(
-                "neznám tvůj e-mail – nastav git config --global user.email nebo my_emails"
+                _("neznám tvůj e-mail – nastav git config --global user.email nebo my_emails")
             )
         # veřejná historie = to, co je na remotu; bez remote-tracking větví aspoň HEAD
         refs = ["--remotes"] if repo.git.run("branch", "-r", check=False).strip() else ["HEAD"]
@@ -130,8 +132,9 @@ class EmailExposure(Check):
             masked = mask_email(originals[key])
             findings.append(
                 self.finding(
-                    f"veřejná historie obsahuje tvůj e-mail {masked} ({n} "
-                    f"{'commit' if n == 1 else 'commity' if n < 5 else 'commitů'})",
+                    _("veřejná historie obsahuje tvůj e-mail {masked} ({commits})").format(
+                        masked=masked, commits=czech.commits(n)
+                    ),
                     key=fingerprint(key),
                     fixable=bool(noreply),
                     email=masked,
@@ -140,7 +143,13 @@ class EmailExposure(Check):
                 )
             )
         if findings and len(lines) >= MAX_COMMITS:
-            findings.append(self.incomplete(f"prošlo se jen posledních {MAX_COMMITS} commitů"))
+            findings.append(
+                self.incomplete(
+                    _("prošlo se jen posledních {MAX_COMMITS} commitů").format(
+                        MAX_COMMITS=MAX_COMMITS
+                    )
+                )
+            )
         return findings
 
     def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
@@ -152,8 +161,10 @@ class EmailExposure(Check):
             return None
         return Patch(
             check_id=self.id,
-            title="noreply e-mail pro nové commity",
-            summary=f"user.email v tomto repu → {noreply} (jen .git/config, historie se nemění)",
+            title=_("noreply e-mail pro nové commity"),
+            summary=_(
+                "user.email v tomto repu → {noreply} (jen .git/config, historie se nemění)"
+            ).format(noreply=noreply),
             local=[
                 LocalAction(
                     kind="git_config",
@@ -165,9 +176,13 @@ class EmailExposure(Check):
                 )
             ],
             notes=[
-                "Mění se jen nové commity v tomto repu. Stará historie zůstává – přepis "
-                "(git filter-repo --mailmap) repo-doctor nedělá, viz repo-doctor explain email-exposure.",
-                "Na hostingu zapni skrývání e-mailu (GitHub: Settings → Emails → Keep my email "
-                "addresses private).",
+                _(
+                    "Mění se jen nové commity v tomto repu. Stará historie zůstává – přepis "
+                    "(git filter-repo --mailmap) repo-doctor nedělá, viz repo-doctor explain email-exposure."
+                ),
+                _(
+                    "Na hostingu zapni skrývání e-mailu (GitHub: Settings → Emails → Keep my email "
+                    "addresses private)."
+                ),
             ],
         )

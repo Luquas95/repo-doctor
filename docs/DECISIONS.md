@@ -397,8 +397,19 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   `LC_ALL`/`LC_MESSAGES`/`LANG`, bez locale angličtina), protože texty v konstantách modulů
   (zkratky, popisky) se překládají při importu. Proto změna v Nastavení platí po restartu.
 - **Fáze:** 1 = TUI, CLI, zkratky (+ popisky kategorií, pásem a nástrojů); 2 = zprávy
-  kontrol, opravy a jejich dokumentace; 3 = reporty a zbytek. Test fáze 1 hlídá, že v jejích
+  kontrol, opravy a jejich dokumentace; 3 = reporty a zbytek. Test hlídá, že v už přeložených
   modulech nezůstal český text mimo `_()`.
+- **Dokumentace kontrol anglicky** leží v `docs/checks/en/<id>.md` se stejnou strukturou
+  a anglickými nadpisy sekcí („What the check looks for“, „Why it matters“, „Steps“, „Note“).
+  `checkdocs.load` bere soubor podle jazyka rozhraní, bez překladu českou verzi. Markdown
+  se nepřekládá přes `.po` – dlouhé texty s kódem jsou čitelnější jako celé soubory.
+- **Otisky nálezů nezávisí na jazyku:** otisk (allowlist, upozornění) se počítá z `key`,
+  bez něj ze zprávy. Jediný nález bez klíče (`no-remote`) proto dostal klíč rovný dřívější
+  české zprávě, aby už povolené nálezy zůstaly povolené.
+- **Názvy kontrol** jsou v atributu třídy přes `N_()` (import modulu probíhá dřív, než se
+  zpracuje `--lang`) a překládají se až při vytvoření nálezu a v Nastavení.
+- **Obsah zapisovaných souborů** (komentáře v `.gitignore`, název hooku v pre-commitu) se řídí
+  jazykem rozhraní; šablony README/CI/licencí (`templates.py`) zůstávají na fázi 3.
 - **Množné číslo:** `czech.plural(n, one, few, many)` – anglicky jen `one`/`many`.
 
 ## Repo a proces

@@ -3,16 +3,17 @@
 from __future__ import annotations
 
 from repo_doctor.checks.base import Check, RepoContext, SkipCheck, register
+from repo_doctor.i18n import N_, _
 from repo_doctor.licenses import classify, project_license
 from repo_doctor.models import Category, Finding, Severity
 
-DISCLAIMER = "nejde o právní radu"
+DISCLAIMER = N_("nejde o právní radu")
 
 
 @register
 class LicenseCompat(Check):
     id = "license-compat"
-    title = "Licence závislosti nemusí být slučitelná"
+    title = N_("Licence závislosti nemusí být slučitelná")
     severity = Severity.LOW
     category = Category.MAINTENANCE
     network = True  # licence z registrů (PyPI, npm, crates.io), cachované
@@ -20,7 +21,7 @@ class LicenseCompat(Check):
     def run(self, repo: RepoContext) -> list[Finding]:
         data = repo.deps
         if data is None or not data.network_done:
-            raise SkipCheck(repo.deps_status or "licence závislostí nejsou zjištěné (offline)")
+            raise SkipCheck(repo.deps_status or _("licence závislostí nejsou zjištěné (offline)"))
         project = project_license(repo.tracked_files, repo.read_text)
         kind, shown = classify(project)
         if kind != "permissive":
@@ -32,8 +33,11 @@ class LicenseCompat(Check):
             if dep_kind == "strong":
                 findings.append(
                     self.finding(
-                        f"{where} má silně copyleftovou licenci {dep_shown} – projekt je {shown}; "
-                        f"ověř, jestli ji smíš takto použít ({DISCLAIMER})",
+                        _(
+                            "{where} má silně copyleftovou licenci {dep_shown} – projekt je {shown}; ověř, jestli ji smíš takto použít ({DISCLAIMER})"
+                        ).format(
+                            where=where, dep_shown=dep_shown, shown=shown, DISCLAIMER=_(DISCLAIMER)
+                        ),
                         severity=Severity.MEDIUM,
                         path=dep.source,
                         key=f"{dep.ecosystem}:{dep.name}",
@@ -44,8 +48,15 @@ class LicenseCompat(Check):
             elif dep_kind == "unknown":
                 findings.append(
                     self.finding(
-                        f"{where}: licence {'chybí' if not lic else f'je neznámá ({lic[:60]})'} "
-                        f"– bez licence nemáš právo kód použít ({DISCLAIMER})",
+                        _(
+                            "{where}: licence {state} – bez licence nemáš právo kód použít ({DISCLAIMER})"
+                        ).format(
+                            where=where,
+                            state=_("chybí")
+                            if not lic
+                            else _("je neznámá ({lic})").format(lic=lic[:60]),
+                            DISCLAIMER=_(DISCLAIMER),
+                        ),
                         path=dep.source,
                         key=f"{dep.ecosystem}:{dep.name}",
                         kind="unknown",

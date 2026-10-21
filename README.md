@@ -368,6 +368,9 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 
 ## Kontroly
 
+Dokumentace každé kontroly je v `docs/checks/<id>.md`, anglicky v
+[`docs/checks/en/`](docs/checks/en/) (`repo-doctor explain <id>` ukáže tu v jazyce rozhraní).
+
 | ID | Kategorie | Severity | Automatická oprava | Síť / hosting |
 |---|---|---|---|---|
 | [`ci-security`](docs/checks/ci-security.md) | Bezpečnost | MED | ✓ |  |

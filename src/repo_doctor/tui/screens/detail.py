@@ -255,7 +255,8 @@ def diagnosis(finding: Finding | None, app: RepoDoctorApp) -> Text:
         style=Style(color=p.severity(finding.severity), bold=True),
     )
     t.append(f" · {finding.check_id}\n", style=Style(color=p.text, bold=True))
-    t.append(f"{finding.title}\n\n", style=Style(color=p.text))
+    # název kontroly je msgid – přeloží i nálezy z uloženého skenu v jiném jazyce
+    t.append(f"{_(finding.title)}\n\n", style=Style(color=p.text))
 
     def row(label: str, value: str | Text) -> None:
         t.append(f"{label:<8}", style=muted)

@@ -7,6 +7,7 @@ from pathlib import PurePosixPath
 
 from repo_doctor import templates
 from repo_doctor.checks.base import Check, RepoContext, register
+from repo_doctor.i18n import N_, _
 from repo_doctor.models import Category, FileChange, Finding, Patch, Severity
 from repo_doctor.secrets_scan import _looks_placeholder, entropy
 
@@ -47,7 +48,7 @@ def _logical_lines(text: str) -> list[tuple[int, str]]:
 @register
 class DockerHygiene(Check):
     id = "docker-hygiene"
-    title = "Hygiena Dockerfile"
+    title = N_("Hygiena Dockerfile")
     severity = Severity.MEDIUM
     category = Category.SECURITY
     fixable = True
@@ -64,7 +65,7 @@ class DockerHygiene(Check):
         if not repo.exists(".dockerignore"):
             findings.append(
                 self.finding(
-                    "chybí .dockerignore – do build contextu se dostane .git, .env a další",
+                    _("chybí .dockerignore – do build contextu se dostane .git, .env a další"),
                     severity=Severity.LOW,
                     path=".dockerignore",
                     key="dockerignore",
@@ -81,8 +82,8 @@ class DockerHygiene(Check):
         )
         return Patch(
             check_id=self.id,
-            title="Přidat .dockerignore",
-            summary=".git, .env, build výstupy",
+            title=_("Přidat .dockerignore"),
+            summary=_(".git, .env, build výstupy"),
             changes=[
                 FileChange(
                     path=".dockerignore",
@@ -92,7 +93,7 @@ class DockerHygiene(Check):
                 )
             ],
             notes=[
-                "Úpravy Dockerfile (tagy, USER, ENV) jsou jen návrh v reportu – proveď je ručně."
+                _("Úpravy Dockerfile (tagy, USER, ENV) jsou jen návrh v reportu – proveď je ručně.")
             ],
         )
 
@@ -102,7 +103,7 @@ class DockerHygiene(Check):
         final_user: str | None = None
         has_from = False
         for lineno, line in _logical_lines(text):
-            instr, _, rest = line.partition(" ")
+            instr, _sep, rest = line.partition(" ")
             instr = instr.upper()
             rest = rest.strip()
             if instr == "FROM":
@@ -123,7 +124,9 @@ class DockerHygiene(Check):
                 if tag is None or tag == "latest":
                     findings.append(
                         self.finding(
-                            f"FROM {image} – {'tag :latest' if tag else 'bez tagu'}, build není reprodukovatelný",
+                            _("FROM {image} – {tag}, build není reprodukovatelný").format(
+                                image=image, tag=_("tag :latest") if tag else _("bez tagu")
+                            ),
                             path=path,
                             line=lineno,
                             key=f"{path}:from:{image}",
@@ -144,7 +147,9 @@ class DockerHygiene(Check):
                     ):
                         findings.append(
                             self.finding(
-                                f"{instr} {name} obsahuje tajemství – zůstane ve vrstvách image",
+                                _(
+                                    "{instr} {name} obsahuje tajemství – zůstane ve vrstvách image"
+                                ).format(instr=instr, name=name),
                                 severity=Severity.HIGH,
                                 path=path,
                                 line=lineno,
@@ -154,7 +159,7 @@ class DockerHygiene(Check):
             elif instr == "ADD" and re.search(r"\bhttps?://", rest):
                 findings.append(
                     self.finding(
-                        "ADD z URL – použij RUN curl s ověřením kontrolního součtu",
+                        _("ADD z URL – použij RUN curl s ověřením kontrolního součtu"),
                         path=path,
                         line=lineno,
                         key=f"{path}:add:{lineno}",
@@ -163,7 +168,7 @@ class DockerHygiene(Check):
         if has_from and (final_user is None or final_user.split(":")[0] in {"root", "0"}):
             findings.append(
                 self.finding(
-                    "kontejner běží pod rootem (ve finální fázi chybí USER)",
+                    _("kontejner běží pod rootem (ve finální fázi chybí USER)"),
                     path=path,
                     key=f"{path}:user",
                 )

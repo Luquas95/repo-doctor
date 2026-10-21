@@ -49,6 +49,7 @@ from repo_doctor.forges.urls import (
 )
 from repo_doctor.gitwrap import Git, GitError
 from repo_doctor.httpclient import HttpClient, HttpError, ResponseCache
+from repo_doctor.i18n import _
 from repo_doctor.masking import redact, redact_url_credentials
 from repo_doctor.models import RemoteInfo, RepoDetails, RepoResult, RepoState, ScanResult
 from repo_doctor.scoring import score
@@ -187,7 +188,7 @@ class Scanner:
             self._net = NetServices.create(self.config, cache_dir=paths.http_cache_dir())
         if self._net:
             for name, reason in self._net.forges.unavailable.items():
-                msg = f"Hosting {name} je nedostupný: {reason}"
+                msg = _("Hosting {name} je nedostupný: {reason}").format(name=name, reason=reason)
                 result.warnings.append(msg)
                 self.on_event(ScanEvent("warning", message=msg))
         sem = asyncio.Semaphore(max(1, self.options.jobs))
@@ -219,7 +220,10 @@ class Scanner:
             elif isinstance(outcome, BaseException) and not isinstance(
                 outcome, asyncio.CancelledError
             ):
-                msg = f"{repo.name}: sken selhal ({type(outcome).__name__}: {redact(str(outcome))[:200]})"
+                msg = _("{name}: sken selhal ({error})").format(
+                    name=repo.name,
+                    error=f"{type(outcome).__name__}: {redact(str(outcome))[:200]}",
+                )
                 result.warnings.append(msg)
         result.cancelled = self._cancelled
         result.finished_at = datetime.now(UTC) if self.options.now is None else now
@@ -317,7 +321,7 @@ class Scanner:
             remotes=remotes,
             forge_name=forge_name,
         )
-        ctx.forge_status = None if forge_name else "remote nepatří k připojenému hostingu"
+        ctx.forge_status = None if forge_name else _("remote nepatří k připojenému hostingu")
         res.state = self._state(ctx, now)
         res.forge_info["owner_path"] = owner_path or (
             parsed_primary.path if parsed_primary else None
@@ -384,15 +388,17 @@ class Scanner:
     async def _network(self, ctx: RepoContext, res: RepoResult) -> None:
         net = self._net
         if self.options.offline or net is None:
-            ctx.forge_status = "offline režim"
-            ctx.deps_status = "offline režim"
+            ctx.forge_status = _("offline režim")
+            ctx.deps_status = _("offline režim")
             return
         ids = {c.id for c in self.checks}
         owner_path = res.forge_info.get("owner_path")
         if ctx.forge_name and self.options.use_forges and isinstance(owner_path, str):
             forge = net.forges.forges.get(ctx.forge_name)
             if forge is None:
-                ctx.forge_status = f"hosting {ctx.forge_name} nedostupný: {net.forges.unavailable.get(ctx.forge_name, '')}"
+                ctx.forge_status = _("hosting {forge_name} nedostupný: {reason}").format(
+                    forge_name=ctx.forge_name, reason=net.forges.unavailable.get(ctx.forge_name, "")
+                )
             else:
                 try:
                     snap = await forge.snapshot(owner_path)
@@ -417,9 +423,11 @@ class Scanner:
                     if "email-exposure" in ids and ctx.visibility == "public":
                         ctx.noreply_email = await forge.noreply_email()
                 except HttpError as err:
-                    ctx.forge_status = f"hosting {ctx.forge_name} nedostupný: {err}"
+                    ctx.forge_status = _("hosting {forge_name} nedostupný: {err}").format(
+                        forge_name=ctx.forge_name, err=err
+                    )
         elif not self.options.use_forges:
-            ctx.forge_status = "hostingy vypnuté (--no-forges)"
+            ctx.forge_status = _("hostingy vypnuté (--no-forges)")
         host = res.forge_info.get("host")
         if (
             ctx.visibility == "unknown"
@@ -446,7 +454,7 @@ class Scanner:
                     want_licenses="license-compat" in ids,
                 )
                 if data.errors and not data.vulns and any(e.startswith("OSV") for e in data.errors):
-                    ctx.deps_status = "OSV.dev nedostupné"
+                    ctx.deps_status = _("OSV.dev nedostupné")
                     data.network_done = False
 
     async def _resolve_actions(self, ctx: RepoContext, net: NetServices) -> None:

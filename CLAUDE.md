@@ -39,7 +39,9 @@ skutečné ani regexům odpovídající hodnoty. Testy TUI používají `tests/t
 - Zkratky jsou jen v `keymap.py` (TUI, nápověda i README se generují odtud; test hlídá tabulky v README).
 - Texty pro uživatele jsou česky v `_("…")` (`repo_doctor.i18n`), anglicky v `locale/en.po`.
   Proměnné přes `_("… {jmeno} …").format(jmeno=…)`, ne f-string; tvary podle čísla přes
-  `czech.plural`. Test hlídá úplnost překladu (fáze 1: TUI, CLI, zkratky – #33).
+  `czech.plural`. Test hlídá úplnost překladu (#33: fáze 1 TUI, CLI, zkratky; fáze 2 kontroly,
+  opravy, dokumentace kontrol). Texty v konstantách modulů a atributech tříd přes `N_()`,
+  překlad `_()` až při použití.
 
 ## Přidání nové kontroly
 
@@ -47,24 +49,27 @@ skutečné ani regexům odpovídající hodnoty. Testy TUI používají `tests/t
 
    ```python
    from repo_doctor.checks.base import Check, RepoContext, register
+   from repo_doctor.i18n import N_, _
    from repo_doctor.models import Category, Finding, Severity
 
    @register
    class MyCheck(Check):
        id = "my-check"
-       title = "Krátký název"
+       title = N_("Krátký název")
        severity = Severity.LOW
        category = Category.MAINTENANCE
        # network = True / needs_forge = True, pokud potřebuje síťová data
 
        def run(self, repo: RepoContext) -> list[Finding]:
-           return [self.finding("zpráva", path="soubor", key="stabilní-klíč")]
+           return [self.finding(_("zpráva"), path="soubor", key="stabilní-klíč")]
    ```
 
-   Nedostupná data → `raise SkipCheck("důvod")`. Tajemství nikdy do `Finding` nedávej –
+   `key` je povinný a nezávislý na jazyku (z něj je otisk pro allowlist). Nedostupná data →
+   `raise SkipCheck(_("důvod"))`. Tajemství nikdy do `Finding` nedávej –
    jen `masking.mask(...)`.
 2. Volitelně `fix(repo, findings) -> Patch` (jen vrací změny, nic nezapisuje) a `fixable = True`.
-3. Napiš `docs/checks/<id>.md` (sekce „Co kontrola hledá“, „Proč to vadí“, „Postup“) –
+3. Napiš `docs/checks/<id>.md` (sekce „Co kontrola hledá“, „Proč to vadí“, „Postup“)
+   a anglicky `docs/checks/en/<id>.md` („What the check looks for“, „Why it matters“, „Steps“) –
    test `test_every_check_is_documented` to vyžaduje.
 4. Testy: pozitivní i negativní případ přes `tests/factory.py`.
 

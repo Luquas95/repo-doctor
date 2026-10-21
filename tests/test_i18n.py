@@ -10,16 +10,26 @@ from pathlib import Path
 
 import pytest
 
-from repo_doctor import cli, czech, i18n, i18n_tools
+from repo_doctor import checkdocs, cli, czech, i18n, i18n_tools
+from repo_doctor.checks import check_ids
+from repo_doctor.checks.git_state import NO_REMOTE_KEY
 from repo_doctor.i18n import _, parse_po
+from tests.factory import RepoBuilder
+from tests.helpers import run
 
 ROOT = Path(__file__).parent.parent
 PACKAGE = ROOT / "src" / "repo_doctor"
-# moduly přeložené ve fázi 1 (#33) – žádný český text mimo `_()`
-PHASE1 = [
+# přeložené moduly (#33: fáze 1 TUI, CLI, zkratky; fáze 2 kontroly a opravy) – žádný
+# český text mimo `_()`
+TRANSLATED = [
     *sorted((PACKAGE / "tui").rglob("*.py")),
     *(PACKAGE / f"{n}.py" for n in ("cli", "keymap", "models", "scoring", "czech", "tools")),
+    *sorted((PACKAGE / "checks").glob("*.py")),
+    *(PACKAGE / f"{n}.py" for n in ("fixes", "checkdocs", "scanner", "secrets_scan", "masking")),
+    PACKAGE / "forges" / "base.py",
 ]
+# záměrně česky: název jazyka, historický klíč otisku nálezu (allowlist)
+KEEP_CZECH = {"čeština", NO_REMOTE_KEY}
 CZECH = re.compile(r"[ěščřžýáíéóůúňťďĚŠČŘŽÝÁÍÉÓŮÚŇŤĎ]")
 
 
@@ -38,9 +48,9 @@ def test_translations_keep_placeholders() -> None:
         assert fields(msgstr) <= fields(msgid), (msgid, msgstr)
 
 
-def test_phase1_modules_have_no_untranslated_czech() -> None:
+def test_translated_modules_have_no_untranslated_czech() -> None:
     offenders = []
-    for path in PHASE1:
+    for path in TRANSLATED:
         tree = ast.parse(path.read_text("utf-8"))
         docs: set[int] = set()
         wrapped: set[int] = set()
@@ -61,7 +71,7 @@ def test_phase1_modules_have_no_untranslated_czech() -> None:
                 and isinstance(node.value, str)
                 and id(node) not in docs | wrapped
                 and CZECH.search(node.value)
-                and node.value not in {"čeština"}  # název jazyka se nepřekládá
+                and node.value not in KEEP_CZECH
             ):
                 offenders.append(f"{path.relative_to(ROOT)}:{node.lineno}: {node.value!r}")
     assert offenders == []
@@ -126,6 +136,36 @@ def test_runtime_switch_and_plural() -> None:
     assert _("neexistující text") == "neexistující text"  # bez překladu zůstane originál
     assert czech.repos(1) == "1 repo" and czech.repos(3) == "3 repos"
     assert czech.more(2) == "… and 2 more"
+
+
+def test_english_findings_keep_fingerprints(tmp_path: Path) -> None:
+    rb = RepoBuilder.create(tmp_path / "r")
+    rb.write("a", "a").commit()
+    (cs,) = run("no-remote", rb.path)
+    i18n.set_language("en")
+    (en,) = run("no-remote", rb.path)
+    assert cs.title == "Repo bez remote (bez zálohy)"
+    assert en.title == "Repo without a remote (no backup)"
+    assert en.message.startswith("The repository has no remote")
+    assert en.fingerprint("r") == cs.fingerprint("r")
+
+
+def test_every_check_is_documented_in_english() -> None:
+    i18n.set_language("en")
+    for cid in check_ids():
+        doc = checkdocs.load(cid)
+        assert doc is not None and doc.text.startswith(f"# {cid} – "), cid
+        assert "**Category:**" in doc.text, cid
+        assert doc.what and doc.why and doc.steps, cid
+        assert not CZECH.search(doc.text), cid
+    i18n.set_language("cs")
+    assert "## Co kontrola hledá" in (checkdocs.load("stashes") or checkdocs.CheckDoc("", "")).text
+
+
+def test_explain_in_english(capsys: pytest.CaptureFixture[str]) -> None:
+    assert cli.main(["--lang", "en", "explain", "secrets-history"]) == 0
+    out = capsys.readouterr().out
+    assert "## Why it matters" in out and "git filter-repo" in out
 
 
 def test_cli_lang_option_is_consumed(capsys: pytest.CaptureFixture[str]) -> None:

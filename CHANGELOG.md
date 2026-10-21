@@ -8,8 +8,10 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 - **Angličtina (#33, fáze 1):** TUI, CLI a zkratky jsou i anglicky. Jazyk se volí podle
   systému (`LANG`/`LC_ALL`: cs_* → čeština, jinak angličtina), v Nastavení / `[ui] language`
   (`auto` | `cs` | `en`), přepínačem `--lang` nebo proměnnou `REPO_DOCTOR_LANG`. Změna
-  v Nastavení platí po restartu. Zprávy kontrol, jejich dokumentace a reporty budou přeložené
-  v dalších fázích.
+  v Nastavení platí po restartu.
+- **Angličtina (#33, fáze 2):** anglicky jsou i nálezy kontrol (názvy, zprávy, důvody
+  přeskočení), návrhy oprav a jejich chybová hlášení a dokumentace kontrol
+  (`docs/checks/en/`, `explain` a „proč to vadí“ v kartě). Reporty přijdou ve fázi 3.
 - **Detaily repa v kartě (#36):** hlavička karty ukazuje navíc
   - KÓD: jazyky (podíl podle velikosti), počet souborů, velikost a `.git`, licenci,
   - ZÁVISLOSTI: ekosystém, správce balíčků, přímé / všechny závislosti,

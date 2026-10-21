@@ -4,7 +4,9 @@ from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
 
+from repo_doctor import czech
 from repo_doctor.checks.base import Check, RepoContext, register
+from repo_doctor.i18n import N_, _
 from repo_doctor.models import Category, Finding, Severity
 
 
@@ -15,7 +17,7 @@ def _age_days(ts: int, now: datetime) -> int:
 @register
 class Uncommitted(Check):
     id = "uncommitted"
-    title = "Necommitnuté změny"
+    title = N_("Necommitnuté změny")
     severity = Severity.LOW
     category = Category.GIT
 
@@ -25,14 +27,14 @@ class Uncommitted(Check):
             return []
         parts = []
         if st.modified or st.staged:
-            parts.append(f"{st.modified + st.staged} změněných")
+            parts.append(_("{modified} změněných").format(modified=st.modified + st.staged))
         if st.untracked:
-            parts.append(f"{st.untracked} nesledovaných")
+            parts.append(_("{untracked} nesledovaných").format(untracked=st.untracked))
         if st.conflicted:
-            parts.append(f"{st.conflicted} v konfliktu")
+            parts.append(_("{n} v konfliktu").format(n=st.conflicted))
         return [
             self.finding(
-                f"{', '.join(parts)} souborů",
+                _("{join} souborů").format(join=", ".join(parts)),
                 key="uncommitted",
                 count=st.dirty,
                 files=list(st.paths[:20]),
@@ -40,10 +42,15 @@ class Uncommitted(Check):
         ]
 
 
+# Otisk nálezu (allowlist) dřív vznikal z české zprávy – klíč ji drží, aby se nezměnil
+# s jazykem ani pro už povolené nálezy.
+NO_REMOTE_KEY = "Repozitář nemá žádný remote – commity existují jen na tomto disku."
+
+
 @register
 class NoRemote(Check):
     id = "no-remote"
-    title = "Repo bez remote (bez zálohy)"
+    title = N_("Repo bez remote (bez zálohy)")
     severity = Severity.MEDIUM
     category = Category.GIT
 
@@ -52,13 +59,18 @@ class NoRemote(Check):
             return []
         if repo.head is None:
             return []  # prázdné repo nemá co zálohovat
-        return [self.finding("Repozitář nemá žádný remote – commity existují jen na tomto disku.")]
+        return [
+            self.finding(
+                _("Repozitář nemá žádný remote – commity existují jen na tomto disku."),
+                key=NO_REMOTE_KEY,
+            )
+        ]
 
 
 @register
 class Unpushed(Check):
     id = "unpushed"
-    title = "Nepushnuté commity"
+    title = N_("Nepushnuté commity")
     severity = Severity.MEDIUM
     category = Category.GIT
 
@@ -75,11 +87,13 @@ class Unpushed(Check):
                 where = (
                     f"oproti {b.upstream}"
                     if b.upstream and not b.upstream_gone
-                    else "na žádném remote"
+                    else _("na žádném remote")
                 )
                 findings.append(
                     self.finding(
-                        f"branch {b.name}: {count} commitů {where}",
+                        _("branch {name}: {commits} {where}").format(
+                            name=b.name, commits=czech.commits(count), where=where
+                        ),
                         key=b.name,
                         branch=b.name,
                         count=count,
@@ -91,7 +105,7 @@ class Unpushed(Check):
 @register
 class StaleBranches(Check):
     id = "stale-branches"
-    title = "Zastaralé lokální branche"
+    title = N_("Zastaralé lokální branche")
     severity = Severity.LOW
     category = Category.GIT
 
@@ -127,9 +141,9 @@ class StaleBranches(Check):
             if (
                 b.name in merged and b.sha != default_sha
             ):  # čerstvá větev bez vlastních commitů není „stará“
-                reasons.append(f"mergnutá do {default}")
+                reasons.append(_("mergnutá do {default}").format(default=default))
             if age > limit:
-                reasons.append(f"bez commitu {age} dní")
+                reasons.append(_("bez commitu {age} dní").format(age=age))
             if reasons:
                 findings.append(
                     self.finding(
@@ -142,7 +156,7 @@ class StaleBranches(Check):
 @register
 class Stashes(Check):
     id = "stashes"
-    title = "Zapomenuté stashe"
+    title = N_("Zapomenuté stashe")
     severity = Severity.LOW
     category = Category.GIT
 
@@ -154,7 +168,11 @@ class Stashes(Check):
             if age > limit:
                 findings.append(
                     self.finding(
-                        f"{s.ref} ({age} dní): {s.message[:80]}", key=s.message, age_days=age
+                        _("{ref} ({age} dní): {message}").format(
+                            ref=s.ref, age=age, message=s.message[:80]
+                        ),
+                        key=s.message,
+                        age_days=age,
                     )
                 )
         return findings
@@ -163,7 +181,7 @@ class Stashes(Check):
 @register
 class DetachedHead(Check):
     id = "detached-head"
-    title = "Detached HEAD"
+    title = N_("Detached HEAD")
     severity = Severity.LOW
     category = Category.GIT
 
@@ -172,7 +190,8 @@ class DetachedHead(Check):
             head = repo.head or ""
             return [
                 self.finding(
-                    f"HEAD ukazuje přímo na commit {head[:7]}, ne na branch.", key="detached"
+                    _("HEAD ukazuje přímo na commit {sha}, ne na branch.").format(sha=head[:7]),
+                    key="detached",
                 )
             ]
         return []
@@ -181,7 +200,7 @@ class DetachedHead(Check):
 @register
 class DefaultBranchBehind(Check):
     id = "default-branch-behind"
-    title = "Výchozí branche je pozadu za remote"
+    title = N_("Výchozí branche je pozadu za remote")
     severity = Severity.LOW
     category = Category.GIT
 
@@ -195,8 +214,13 @@ class DefaultBranchBehind(Check):
         if branch.behind:
             return [
                 self.finding(
-                    f"{default} je {branch.behind} commitů za {branch.upstream} "
-                    "(podle posledního fetch; pro aktuální stav spusť sken s --fetch).",
+                    _(
+                        "{default} je {commits} za {upstream} (podle posledního fetch; pro aktuální stav spusť sken s --fetch)."
+                    ).format(
+                        default=default,
+                        commits=czech.commits(branch.behind),
+                        upstream=branch.upstream,
+                    ),
                     key=default,
                     count=branch.behind,
                 )

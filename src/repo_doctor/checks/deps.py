@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from repo_doctor.checks.base import Check, RepoContext, SkipCheck, register
+from repo_doctor.i18n import N_, _
 from repo_doctor.models import Category, Finding, Severity
 
 if TYPE_CHECKING:
@@ -13,16 +14,16 @@ if TYPE_CHECKING:
 
 def _require_network(repo: RepoContext) -> DepsData:
     if repo.offline:
-        raise SkipCheck("offline režim")
+        raise SkipCheck(_("offline režim"))
     if repo.deps is None or not repo.deps.network_done:
-        raise SkipCheck(repo.deps_status or "síťová data nejsou k dispozici")
+        raise SkipCheck(repo.deps_status or _("síťová data nejsou k dispozici"))
     return repo.deps
 
 
 @register
 class DepsVulnerable(Check):
     id = "deps-vulnerable"
-    title = "Zranitelné závislosti"
+    title = N_("Zranitelné závislosti")
     severity = Severity.HIGH
     category = Category.SECURITY
     network = True
@@ -50,7 +51,7 @@ class DepsVulnerable(Check):
 @register
 class DepsOutdated(Check):
     id = "deps-outdated"
-    title = "Zastaralé závislosti"
+    title = N_("Zastaralé závislosti")
     severity = Severity.LOW
     category = Category.MAINTENANCE
     network = True
@@ -67,11 +68,11 @@ class DepsOutdated(Check):
             if not items:
                 continue
             listing = ", ".join(f"{o.dep.name} {o.dep.version}→{o.latest}" for o in items[:8])
-            more = f" a {len(items) - 8} další" if len(items) > 8 else ""
+            more = _(" a {count} další").format(count=len(items) - 8) if len(items) > 8 else ""
             findings.append(
                 self.finding(
                     f"{len(items)}× {level}: {listing}{more}",
-                    title=f"Zastaralé závislosti ({level})",
+                    title=_("Zastaralé závislosti ({level})").format(level=level),
                     severity=sev,
                     key=level,
                     packages=[f"{o.dep.name}=={o.dep.version}->{o.latest}" for o in items],
@@ -83,7 +84,7 @@ class DepsOutdated(Check):
 @register
 class DepsLockfileMissing(Check):
     id = "deps-lockfile-missing"
-    title = "Chybí lockfile"
+    title = N_("Chybí lockfile")
     severity = Severity.MEDIUM
     category = Category.SECURITY
 
@@ -93,7 +94,9 @@ class DepsLockfileMissing(Check):
         data = repo.deps or collect(repo.tracked_files, repo.read_text)
         return [
             self.finding(
-                f"{manifest} deklaruje závislosti, ale chybí {lock} – verze nejsou připnuté a zranitelnosti nejde ověřit",
+                _(
+                    "{manifest} deklaruje závislosti, ale chybí {lock} – verze nejsou připnuté a zranitelnosti nejde ověřit"
+                ).format(manifest=manifest, lock=lock),
                 path=manifest,
                 key=manifest,
             )

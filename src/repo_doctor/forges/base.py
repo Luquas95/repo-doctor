@@ -10,6 +10,7 @@ from typing import Literal
 
 from repo_doctor.config import ForgeConfig
 from repo_doctor.httpclient import ForbiddenError, HttpClient, HttpError, NotFoundError
+from repo_doctor.i18n import _
 
 CIState = Literal["success", "failure", "pending", "none", "unknown"]
 
@@ -170,15 +171,15 @@ class Forge(abc.ABC):
         """Načte vše potřebné pro kontroly hostingu. Chyby jednotlivých částí jen zaznamená."""
         snap = ForgeSnapshot(forge=self.name, kind=self.kind, owner_path=owner_path)
         if not valid_owner_path(owner_path):
-            snap.missing_reason = "neplatná cesta repa v URL remote"
+            snap.missing_reason = _("neplatná cesta repa v URL remote")
             return snap
         try:
             snap.repo = await self.get_repo(owner_path)
         except NotFoundError:
-            snap.missing_reason = "hosting repo nezná (smazané, přejmenované nebo bez přístupu)"
+            snap.missing_reason = _("hosting repo nezná (smazané, přejmenované nebo bez přístupu)")
             return snap
         except ForbiddenError:
-            snap.missing_reason = "k repu nemá token přístup"
+            snap.missing_reason = _("k repu nemá token přístup")
             return snap
         repo = snap.repo
         branch = repo.default_branch

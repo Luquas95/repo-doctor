@@ -7,6 +7,7 @@ import re
 from pathlib import PurePosixPath
 
 from repo_doctor.checks.base import Check, RepoContext, SkipCheck, register
+from repo_doctor.i18n import N_, _
 from repo_doctor.models import Category, Finding, Severity
 from repo_doctor.secrets_scan import LOCKFILES
 
@@ -49,9 +50,9 @@ def classify_ip(raw: str) -> str | None:
     except ValueError:
         return None
     if ip in TAILSCALE_NET:
-        return "adresy 100.x (Tailscale)"
+        return _("adresy 100.x (Tailscale)")
     if any(ip in net for net in PRIVATE_NETS):
-        return "privátní IP adresy"
+        return _("privátní IP adresy")
     return None
 
 
@@ -62,9 +63,9 @@ def scan_infra(text: str) -> set[str]:
         if kind:
             kinds.add(kind)
     if TAILSCALE_V6.search(text):
-        kinds.add("adresy fd7a:115c:a1e0:: (Tailscale)")
+        kinds.add(_("adresy fd7a:115c:a1e0:: (Tailscale)"))
     elif ULA_V6.search(text):
-        kinds.add("privátní IPv6 (ULA)")
+        kinds.add(_("privátní IPv6 (ULA)"))
     if TS_HOST.search(text):
         kinds.add("hostname *.ts.net")
     return kinds
@@ -73,14 +74,14 @@ def scan_infra(text: str) -> set[str]:
 @register
 class PublicSensitive(Check):
     id = "public-sensitive"
-    title = "Veřejné repo obsahuje konfiguraci infrastruktury"
+    title = N_("Veřejné repo obsahuje konfiguraci infrastruktury")
     severity = Severity.HIGH
     category = Category.SECURITY
     network = True  # viditelnost se zjišťuje z hostingu
 
     def run(self, repo: RepoContext) -> list[Finding]:
         if repo.visibility == "unknown":
-            raise SkipCheck("viditelnost repa na hostingu neznámá")
+            raise SkipCheck(_("viditelnost repa na hostingu neznámá"))
         if repo.visibility != "public":
             return []
         findings: list[Finding] = []
@@ -94,12 +95,14 @@ class PublicSensitive(Check):
             text = repo.read_text(path) or ""
             kinds = scan_infra(text)
             if p.name.endswith((".tfstate", ".tfstate.backup")):
-                kinds.add("stav Terraformu")
+                kinds.add(_("stav Terraformu"))
             if not kinds:
                 continue
             findings.append(
                 self.finding(
-                    f"veřejné repo obsahuje {', '.join(sorted(kinds))} · {path}",
+                    _("veřejné repo obsahuje {join} · {path}").format(
+                        join=", ".join(sorted(kinds)), path=path
+                    ),
                     path=path,
                     key=path,
                 )

@@ -14,7 +14,9 @@ from typing import Any
 
 import yaml
 
+from repo_doctor import czech
 from repo_doctor.checks.base import Check, RepoContext, register
+from repo_doctor.i18n import N_, _
 from repo_doctor.models import Category, FileChange, Finding, Patch, Severity
 
 WORKFLOW_DIRS = (".github/workflows/", ".forgejo/workflows/", ".gitea/workflows/")
@@ -147,7 +149,7 @@ def parse_uses(uses: str) -> tuple[str, str] | None:
     uses = uses.strip().strip("'\"")
     if uses.startswith(("./", "docker://")) or "@" not in uses:
         return None
-    target, _, ref = uses.rpartition("@")
+    target, _sep, ref = uses.rpartition("@")
     if "://" in target:  # Forgejo: https://code.forgejo.org/actions/checkout@v4
         target = (
             target.split("://", 1)[1].split("/", 1)[1] if "/" in target.split("://", 1)[1] else ""
@@ -161,7 +163,7 @@ def parse_uses(uses: str) -> tuple[str, str] | None:
 def action_refs(wf: Workflow) -> list[ActionRef]:
     refs: list[ActionRef] = []
     last = 0
-    for _, step in wf.steps():
+    for _job, step in wf.steps():
         uses = step.get("uses")
         if not isinstance(uses, str):
             continue
@@ -172,7 +174,7 @@ def action_refs(wf: Workflow) -> list[ActionRef]:
         last = max(last, line)
         refs.append(ActionRef(wf.path, line, uses.strip(), parsed[0], parsed[1]))
     # akce použité přímo jako job (reusable workflow) – `jobs.<id>.uses`
-    for _, job in wf.jobs():
+    for _name, job in wf.jobs():
         uses = job.get("uses")
         if isinstance(uses, str) and (parsed := parse_uses(uses)):
             refs.append(ActionRef(wf.path, wf.line_of(uses.strip()), uses.strip(), *parsed))
@@ -195,7 +197,7 @@ def trusted_owners(repo: RepoContext) -> set[str]:
 @register
 class CISecurity(Check):
     id = "ci-security"
-    title = "Rizikové nastavení CI workflow"
+    title = N_("Rizikové nastavení CI workflow")
     severity = Severity.MEDIUM
     category = Category.SECURITY
     fixable = True
@@ -218,9 +220,9 @@ class CISecurity(Check):
             sha = repo.action_shas.get(ref.key, "")
             out.append(
                 self.finding(
-                    f"akce {ref.uses} není připnutá na commit SHA"
-                    + (" (workflow pracuje s tajemstvími)" if high else ""),
-                    title="Akce nepřipnutá na commit",
+                    _("akce {uses} není připnutá na commit SHA").format(uses=ref.uses)
+                    + (_(" (workflow pracuje s tajemstvími)") if high else ""),
+                    title=_("Akce nepřipnutá na commit"),
                     severity=Severity.HIGH if high else Severity.MEDIUM,
                     path=wf.path,
                     line=ref.line,
@@ -247,8 +249,10 @@ class CISecurity(Check):
                     what = ref_value.strip() or PR_CHECKOUT_RUN.search(run_text).group(0)  # type: ignore[union-attr]
                     out.append(
                         self.finding(
-                            f"{event} spouští kód z PR (checkout {what}) s právy repa · job {job}",
-                            title="pull_request_target s kódem z PR",
+                            _(
+                                "{event} spouští kód z PR (checkout {what}) s právy repa · job {job}"
+                            ).format(event=event, what=what, job=job),
+                            title=_("pull_request_target s kódem z PR"),
                             severity=Severity.HIGH,
                             path=wf.path,
                             line=wf.line_of("ref:", wf.line_of(uses) - 1 if uses else 0)
@@ -266,9 +270,9 @@ class CISecurity(Check):
                 (with_ or {}).get("script") if "github-script" in str(step.get("uses")) else None
             )
             if isinstance(script, str) and not isinstance(run, str):
-                where, run = "script: (github-script) vkládá", script
+                where, run = _("script: (github-script) vkládá"), script
             elif isinstance(run, str):
-                where = "run: vkládá"
+                where = _("run: vkládá")
             else:
                 continue
             first = run.strip().splitlines()[0] if run.strip() else ""
@@ -277,8 +281,10 @@ class CISecurity(Check):
             if m:
                 out.append(
                     self.finding(
-                        f"{where} nedůvěryhodný vstup {m.group(0)} přímo do kódu · job {job}",
-                        title="Injekce výrazu do run:",
+                        _("{where} nedůvěryhodný vstup {expr} přímo do kódu · job {job}").format(
+                            where=where, expr=m.group(0), job=job
+                        ),
+                        title=_("Injekce výrazu do run:"),
                         severity=Severity.HIGH,
                         path=wf.path,
                         line=line,
@@ -296,8 +302,10 @@ class CISecurity(Check):
             ):
                 out.append(
                     self.finding(
-                        f"krok vypisuje tajemství do logu (echo nebo set -x) · job {job}",
-                        title="Tajemství v logu CI",
+                        _("krok vypisuje tajemství do logu (echo nebo set -x) · job {job}").format(
+                            job=job
+                        ),
+                        title=_("Tajemství v logu CI"),
                         severity=Severity.MEDIUM,
                         path=wf.path,
                         line=line,
@@ -307,12 +315,12 @@ class CISecurity(Check):
                     )
                 )
         # 4) oprávnění tokenu
-        perms = [wf.data.get("permissions")] + [j.get("permissions") for _, j in wf.jobs()]
+        perms = [wf.data.get("permissions")] + [j.get("permissions") for _name, j in wf.jobs()]
         if any(p == "write-all" for p in perms):
             out.append(
                 self.finding(
-                    "permissions: write-all – token workflow smí zapisovat úplně všude",
-                    title="Široká oprávnění tokenu",
+                    _("permissions: write-all – token workflow smí zapisovat úplně všude"),
+                    title=_("Široká oprávnění tokenu"),
                     path=wf.path,
                     line=wf.line_of("write-all"),
                     key=f"perms:{wf.path}:write-all",
@@ -323,9 +331,10 @@ class CISecurity(Check):
         elif wf.events & FOREIGN_PR_EVENTS and all(p is None for p in perms):
             out.append(
                 self.finding(
-                    f"workflow spouštěný cizími PR ({', '.join(sorted(wf.events & FOREIGN_PR_EVENTS))}) "
-                    "nemá omezená oprávnění tokenu (permissions)",
-                    title="Chybí omezení oprávnění tokenu",
+                    _(
+                        "workflow spouštěný cizími PR ({join}) nemá omezená oprávnění tokenu (permissions)"
+                    ).format(join=", ".join(sorted(wf.events & FOREIGN_PR_EVENTS))),
+                    title=_("Chybí omezení oprávnění tokenu"),
                     path=wf.path,
                     line=1,
                     key=f"perms:{wf.path}:missing",
@@ -349,9 +358,10 @@ class CISecurity(Check):
                 if any(str(lbl) == "self-hosted" for lbl in labels or []):
                     out.append(
                         self.finding(
-                            f"veřejné repo používá self-hosted runner · job {job} – cizí PR "
-                            "může spustit kód na tvém stroji",
-                            title="Self-hosted runner ve veřejném repu",
+                            _(
+                                "veřejné repo používá self-hosted runner · job {job} – cizí PR může spustit kód na tvém stroji"
+                            ).format(job=job),
+                            title=_("Self-hosted runner ve veřejném repu"),
                             severity=Severity.HIGH,
                             path=wf.path,
                             line=wf.line_of("self-hosted"),
@@ -386,12 +396,13 @@ class CISecurity(Check):
         n = sum(len(p) for p in by_file.values())
         return Patch(
             check_id=self.id,
-            title="připnutí akcí na commit SHA",
-            summary=f"připne {n} {'akci' if n == 1 else 'akce' if n < 5 else 'akcí'} na SHA "
-            "(původní tag zůstane v komentáři)",
+            title=_("připnutí akcí na commit SHA"),
+            summary=_("připne {count} na SHA (původní tag zůstane v komentáři)").format(
+                count=czech.count(n, _("akci"), _("akce"), _("akcí"))
+            ),
             changes=changes,
             notes=[
-                "Ostatní nálezy ci-security je potřeba opravit ručně – viz explain ci-security."
+                _("Ostatní nálezy ci-security je potřeba opravit ručně – viz explain ci-security.")
             ],
         )
 
@@ -405,7 +416,7 @@ def pin_actions(text: str, pins: dict[str, str]) -> str:
         )
         if not m or m.group(3) not in pins:
             continue
-        target, _, ref = m.group(3).rpartition("@")
+        target, _sep, ref = m.group(3).rpartition("@")
         nl = m.group(7) or ""
         note = (m.group(6) or "").lstrip("#").strip()
         comment = f"{ref} – {note}" if note and note != ref else ref
