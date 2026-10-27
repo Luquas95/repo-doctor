@@ -4,6 +4,8 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 
 ## [Nevydáno]
 
+## [0.3.1] – 2026-10-27
+
 ### Přidáno
 - **Odeslání oprav: push, PR/MR a merge (#39):** po léčbě jde opravnou větev
   `repo-doctor/fixes-<datum>` poslat, otevřít z ní PR/MR a mergnout, každý krok zvlášť
