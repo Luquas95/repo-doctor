@@ -401,14 +401,20 @@ Dokumentace každé kontroly je v `docs/checks/<id>.md`, anglicky v
 | [`public-sensitive`](docs/checks/public-sensitive.md) | Bezpečnost | HIGH |  | síť |
 | [`secrets-history`](docs/checks/secrets-history.md) | Bezpečnost | HIGH |  |  |
 | [`secrets-tree`](docs/checks/secrets-tree.md) | Bezpečnost | HIGH |  |  |
+| [`broken-symlinks`](docs/checks/broken-symlinks.md) | Údržba | LOW |  |  |
+| [`case-collisions`](docs/checks/case-collisions.md) | Údržba | MED |  |  |
 | [`ci-missing`](docs/checks/ci-missing.md) | Údržba | LOW | ✓ |  |
+| [`committed-artifacts`](docs/checks/committed-artifacts.md) | Údržba | MED |  |  |
+| [`conflict-markers`](docs/checks/conflict-markers.md) | Údržba | MED |  |  |
 | [`deps-outdated`](docs/checks/deps-outdated.md) | Údržba | LOW |  | síť |
 | [`disk-usage`](docs/checks/disk-usage.md) | Údržba | LOW |  |  |
 | [`gitignore-incomplete`](docs/checks/gitignore-incomplete.md) | Údržba | MED | ✓ |  |
 | [`gitignore-missing`](docs/checks/gitignore-missing.md) | Údržba | MED | ✓ |  |
 | [`large-files`](docs/checks/large-files.md) | Údržba | MED |  |  |
+| [`lfs-not-applied`](docs/checks/lfs-not-applied.md) | Údržba | MED |  |  |
 | [`license-compat`](docs/checks/license-compat.md) | Údržba | LOW |  | síť |
 | [`license-missing`](docs/checks/license-missing.md) | Údržba | LOW | ✓ |  |
+| [`line-endings`](docs/checks/line-endings.md) | Údržba | LOW |  |  |
 | [`precommit-missing`](docs/checks/precommit-missing.md) | Údržba | LOW | ✓ |  |
 | [`readme-missing`](docs/checks/readme-missing.md) | Údržba | LOW | ✓ |  |
 | [`scan-incomplete`](docs/checks/scan-incomplete.md) | Údržba | LOW |  |  |
@@ -418,6 +424,7 @@ Dokumentace každé kontroly je v `docs/checks/<id>.md`, anglicky v
 | [`no-remote`](docs/checks/no-remote.md) | Stav gitu | MED |  |  |
 | [`stale-branches`](docs/checks/stale-branches.md) | Stav gitu | LOW |  |  |
 | [`stashes`](docs/checks/stashes.md) | Stav gitu | LOW |  |  |
+| [`submodule-state`](docs/checks/submodule-state.md) | Stav gitu | MED |  |  |
 | [`uncommitted`](docs/checks/uncommitted.md) | Stav gitu | LOW |  |  |
 | [`unpushed`](docs/checks/unpushed.md) | Stav gitu | MED |  |  |
 | [`unsafe-ownership`](docs/checks/unsafe-ownership.md) | Stav gitu | LOW |  |  |
