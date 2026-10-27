@@ -28,6 +28,14 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
   v shellu, `chmod 777`, `rm -rf "$VAR"/…`, skript bez `set -e`) a `compose-risks`
   (`privileged`, `docker.sock`, `network_mode: host`, `cap_add`, databáze na všech rozhraních).
   Testy a vendorovaný kód se přeskakují, nálezů je nejvýš 50 na kontrolu.
+- **Závislosti do hloubky (#34, 4/4):** čtyři kontroly nad manifesty a lockfily: `deps-lock-drift`
+  (deklarovaná závislost chybí v `package-lock.json`, `yarn.lock`, `pnpm-lock.yaml`, `uv.lock`,
+  `poetry.lock` či `Cargo.lock`), `deps-unpinned` (`*`, `latest`, bare řádek v `requirements.txt`,
+  git závislost bez `rev`/`@ref`), `deps-install-scripts` (balíčky s `hasInstallScript`
+  v npm lockfilu, mlčí s `ignore-scripts=true`) a síťová `deps-unmaintained` (npm `deprecated`,
+  PyPI „Inactive“ a poslední vydání starší než 3 roky). Poslední jmenovaná využívá odpovědi
+  registrů, které sken stahuje i pro `deps-outdated`, takže nepřibývají žádné dotazy
+  (`DepsData.registry`, `deps.registry_info()`).
 - **Nápověda v TUI (#30):** dva druhy v jedné obrazovce se dvěma záložkami (přepíná `Tab`).
   `?` otevře nápovědu k aktuální obrazovce (k čemu slouží, jak se s ní pracuje, její zkratky,
   pohyb a globální zkratky), nová `H` (akce `help_all`, jde přemapovat) rovnou úplnou nápovědu:

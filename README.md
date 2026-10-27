@@ -393,6 +393,8 @@ Dokumentace každé kontroly je v `docs/checks/<id>.md`, anglicky v
 |---|---|---|---|---|
 | [`ci-security`](docs/checks/ci-security.md) | Bezpečnost | MED | ✓ |  |
 | [`compose-risks`](docs/checks/compose-risks.md) | Bezpečnost | MED |  |  |
+| [`deps-install-scripts`](docs/checks/deps-install-scripts.md) | Bezpečnost | LOW |  |  |
+| [`deps-lock-drift`](docs/checks/deps-lock-drift.md) | Bezpečnost | MED |  |  |
 | [`deps-lockfile-missing`](docs/checks/deps-lockfile-missing.md) | Bezpečnost | MED |  |  |
 | [`deps-vulnerable`](docs/checks/deps-vulnerable.md) | Bezpečnost | HIGH |  | síť |
 | [`docker-hygiene`](docs/checks/docker-hygiene.md) | Bezpečnost | MED | ✓ |  |
@@ -412,6 +414,8 @@ Dokumentace každé kontroly je v `docs/checks/<id>.md`, anglicky v
 | [`conflict-markers`](docs/checks/conflict-markers.md) | Údržba | MED |  |  |
 | [`dependency-bot-missing`](docs/checks/dependency-bot-missing.md) | Údržba | LOW |  |  |
 | [`deps-outdated`](docs/checks/deps-outdated.md) | Údržba | LOW |  | síť |
+| [`deps-unmaintained`](docs/checks/deps-unmaintained.md) | Údržba | MED |  | síť |
+| [`deps-unpinned`](docs/checks/deps-unpinned.md) | Údržba | LOW |  |  |
 | [`disk-usage`](docs/checks/disk-usage.md) | Údržba | LOW |  |  |
 | [`gitignore-incomplete`](docs/checks/gitignore-incomplete.md) | Údržba | MED | ✓ |  |
 | [`gitignore-missing`](docs/checks/gitignore-missing.md) | Údržba | MED | ✓ |  |
