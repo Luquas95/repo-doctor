@@ -419,3 +419,40 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - **Dokumentace kontrol** leží v `docs/checks/<id>.md` a do wheelu se kopíruje jako
   `repo_doctor/_checkdocs` (hatch `force-include`), takže `explain` funguje i po instalaci.
 - **Python 3.12+:** zadání; CI testuje 3.12 a 3.13.
+
+## Odeslání oprav (push, PR, merge) – #39
+
+- **Záruka se mění:** dřív „repo-doctor nikdy nepushuje“, teď „nepushuje bez výslovného pokynu“.
+  Sken, léčba, úklid, synchronizace i MCP server dál nic neposílají; zápis na remote a hosting
+  mají jen kroky v `publish.py`, každý samostatný, s náhledem a potvrzením (CLI: `--apply`).
+  Funkce je zapnutá hned (žádný přepínač), protože každý krok vyžaduje vědomou akci.
+- **Jen opravná větev:** push smí poslat jen `repo-doctor/fixes-*` a po lokálním merge výchozí
+  větev. Žádný force (git sám odmítne non-fast-forward), žádné tagy, `--no-recurse-submodules`,
+  hooky vypnuté (`core.hooksPath`) a `--receive-pack=git-receive-pack` přebíjí
+  `remote.*.receivepack` z cizí konfigurace (stejný důvod jako `--upload-pack` u fetch).
+- **Kontrola tajemství před pushem:** `plan_push` pustí `run_guard` na rozsah „commity, které
+  nejsou na žádném remote“; nález push zastaví (stejně jako hook `pre-push`).
+- **Push bez našich tokenů:** jde přes SSH klíč nebo credential helper uživatele. Token hostingu
+  z konfigurace se používá jen pro API (PR/MR, merge) – do gitu se nikdy nepředává.
+- **Merge na hostingu jen po zelené CI:** `plan_merge` vyžaduje CI `success` nebo `none`
+  (žádná CI), `mergeable` a shodu SHA hlavičky PR s lokální větví. `pending`, `failure`
+  i neznámý stav merge nenabídnou. `apply_merge` stav načte znovu a hostingu pošle SHA hlavičky
+  (GitHub `sha`, Gitea `head_commit_id`, GitLab `sha`), takže merge selže, pokud se větev změnila.
+  Metoda: `[publish] merge_method` (`auto` = merge → squash → rebase podle toho, co repo
+  povoluje); GitLab má metodu v projektu, jde volit jen squash.
+- **Lokální merge jen fast-forward:** když je výchozí větev checkoutnutá, platí stejná pravidla
+  jako u Synchronizace (čisté repo, žádné přepsání nesledovaných/ignorovaných souborů, žádné
+  filtry v `.git/config`) a jde přes `merge --ff-only`. Jinak se posune jen ref
+  (`update-ref` se starým SHA), takže pracovní strom ani index nezůstanou nikde napůl.
+  Větev checkoutnutá v jiném worktree se odmítne. Rozdělená historie se neřeší – uživatel
+  ji srovná ručně.
+- **Žádná cache u zápisů:** `post_json` i `PUT` jdou s `ttl=0` a stav PR/CI se čte vždy čerstvě;
+  cachovaná odpověď by jinak mohla vrátit starý PR nebo opakovat POST.
+- **Zápisové metody forge klientů** (`create_pr`, `find_pr`, `get_pr`, `pr_ci`, `merge_pr`) jsou
+  abstraktní na `Forge`; sken je nevolá. Chybu API doplňuje zpráva z těla odpovědi (`message`),
+  zkrácená a prohnaná `redact`, ať je vidět proč hosting PR/merge odmítl.
+- **Remote pro push:** `[publish] remote`, jinak remote výchozí větve, jinak `origin`, jinak jediný
+  remote; víc remotů bez volby se odmítne. Hosting se hledá podle URL remotu (`match_forge`).
+- **TUI jako tenká vrstva:** `tui/screens/publish.py` (`PublishFlow`) jen volá `plan_*`/`apply_*`
+  ve vlákně a ukazuje je v `ConfirmDialog`; kvůli asyncio smyčce se hosting pro náhled i zápis
+  připojuje zvlášť (`with_hosting`).

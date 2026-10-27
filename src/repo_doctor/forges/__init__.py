@@ -20,7 +20,9 @@ __all__ = [
     "ForgeManager",
     "ForgeRepo",
     "ForgeSnapshot",
+    "ForgeUnavailable",
     "build_forge",
+    "connect_forge",
     "insecure_reason",
 ]
 
@@ -82,6 +84,36 @@ def build_forge(
     )
 
 
+class ForgeUnavailable(Exception):
+    """Hosting nejde použít (nešifrovaný http, token nejde získat, chyba TLS)."""
+
+
+def connect_forge(
+    config: ForgeConfig,
+    *,
+    cache: ResponseCache | None = None,
+    ttl: float = 900,
+    transport: httpx.AsyncBaseTransport | None = None,
+) -> Forge:
+    """Jeden hosting s tokenem z konfigurace. Chyba = `ForgeUnavailable` s důvodem."""
+    if reason := insecure_reason(config):
+        raise ForgeUnavailable(reason)
+    try:
+        token = resolve_token(config)
+    except TokenError as err:
+        raise ForgeUnavailable(f"token: {err}") from err
+    try:
+        return build_forge(
+            config,
+            token=token.reveal() if token else None,
+            cache=cache,
+            ttl=ttl,
+            transport=transport,
+        )
+    except OSError as err:  # např. neexistující ca_bundle
+        raise ForgeUnavailable(f"TLS: {err}") from err
+
+
 @dataclass
 class ForgeManager:
     """Připojené hostingy. Hosting, jehož token nejde získat, je `unavailable` (s důvodem)."""
@@ -103,24 +135,10 @@ class ForgeManager:
         for fc in config.forges:
             if not fc.enabled:
                 continue
-            if reason := insecure_reason(fc):
-                mgr.unavailable[fc.name] = reason
-                continue
             try:
-                token = resolve_token(fc)
-            except TokenError as err:
-                mgr.unavailable[fc.name] = f"token: {err}"
-                continue
-            try:
-                mgr.forges[fc.name] = build_forge(
-                    fc,
-                    token=token.reveal() if token else None,
-                    cache=cache,
-                    ttl=ttl,
-                    transport=transport,
-                )
-            except OSError as err:  # např. neexistující ca_bundle
-                mgr.unavailable[fc.name] = f"TLS: {err}"
+                mgr.forges[fc.name] = connect_forge(fc, cache=cache, ttl=ttl, transport=transport)
+            except ForgeUnavailable as err:
+                mgr.unavailable[fc.name] = str(err)
         return mgr
 
     async def aclose(self) -> None:

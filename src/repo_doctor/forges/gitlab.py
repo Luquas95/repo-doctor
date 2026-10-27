@@ -12,6 +12,8 @@ from repo_doctor.forges.base import (
     Forge,
     ForgeRepo,
     PullRequest,
+    PullRequestInfo,
+    int_field,
     opt_int,
     parse_time,
     str_tuple,
@@ -55,6 +57,42 @@ def _repo(d: dict[str, object]) -> ForgeRepo:
         open_issues=opt_int(d.get("open_issues_count")),
         topics=str_tuple(d.get("topics") or d.get("tag_list")),
         created_at=parse_time(d.get("created_at")),
+    )
+
+
+_RUNNING = frozenset(
+    {"running", "pending", "created", "waiting_for_resource", "preparing", "scheduled"}
+)
+
+
+def _pipeline_state(status: str) -> CIState:
+    if status == "failed":
+        return "failure"
+    if status == "success":
+        return "success"
+    return "pending" if status in _RUNNING else "none"
+
+
+def _mr(d: dict[str, object]) -> PullRequestInfo:
+    state = str(d.get("state") or "")
+    detailed = str(d.get("detailed_merge_status") or "")
+    legacy = str(d.get("merge_status") or "")
+    mergeable: bool | None
+    if detailed in ("mergeable", "ci_still_running", "ci_must_pass") or legacy == "can_be_merged":
+        mergeable = True  # CI vyhodnocuje publish zvlášť
+    elif detailed in ("checking", "unchecked", "preparing") or legacy in ("checking", "unchecked"):
+        mergeable = None
+    else:
+        mergeable = False
+    return PullRequestInfo(
+        number=int_field(d, "iid"),
+        url=str(d.get("web_url") or ""),
+        state="merged" if state == "merged" else ("open" if state == "opened" else "closed"),
+        title=str(d.get("title") or ""),
+        head_branch=str(d.get("source_branch") or ""),
+        base_branch=str(d.get("target_branch") or ""),
+        head_sha=str(d.get("sha") or ""),
+        mergeable=mergeable,
     )
 
 
@@ -106,24 +144,11 @@ class GitLabForge(Forge):
         if not items:
             return CIStatus("none", branch)
         p = items[0]
-        status = str(p.get("status", ""))
-        if status == "failed":
-            state: CIState = "failure"
-        elif status == "success":
-            state = "success"
-        elif status in (
-            "running",
-            "pending",
-            "created",
-            "waiting_for_resource",
-            "preparing",
-            "scheduled",
-        ):
-            state = "pending"
-        else:
-            state = "none"
         return CIStatus(
-            state, branch, str(p.get("iid") or p.get("id") or ""), str(p.get("web_url") or "")
+            _pipeline_state(str(p.get("status", ""))),
+            branch,
+            str(p.get("iid") or p.get("id") or ""),
+            str(p.get("web_url") or ""),
         )
 
     async def open_prs(self, repo: ForgeRepo) -> list[PullRequest]:
@@ -144,6 +169,71 @@ class GitLabForge(Forge):
                 for i in items
             )
         return result
+
+    async def find_pr(self, repo: ForgeRepo, head: str) -> PullRequestInfo | None:
+        items = await self.client.get_json(
+            f"/projects/{_pid(repo)}/merge_requests",
+            params={
+                "source_branch": head,
+                "state": "all",
+                "order_by": "created_at",
+                "sort": "desc",
+                "per_page": 1,
+            },
+            ttl=0,
+        )
+        return _mr(items[0]) if isinstance(items, list) and items else None
+
+    async def get_pr(self, repo: ForgeRepo, number: int) -> PullRequestInfo:
+        return _mr(
+            await self.client.get_json(f"/projects/{_pid(repo)}/merge_requests/{number}", ttl=0)
+        )
+
+    async def create_pr(
+        self, repo: ForgeRepo, *, head: str, base: str, title: str, body: str
+    ) -> PullRequestInfo:
+        data = await self.client.post_json(
+            f"/projects/{_pid(repo)}/merge_requests",
+            {
+                "source_branch": head,
+                "target_branch": base,
+                "title": title,
+                "description": body,
+                "remove_source_branch": False,
+            },
+            ttl=0,
+        )
+        return _mr(data)
+
+    async def pr_ci(self, repo: ForgeRepo, pr: PullRequestInfo) -> CIStatus:
+        if not pr.head_sha:
+            return CIStatus("unknown", pr.head_branch)
+        try:
+            items = await self.client.get_json(
+                f"/projects/{_pid(repo)}/pipelines",
+                params={"sha": pr.head_sha, "per_page": 1, "order_by": "id", "sort": "desc"},
+                ttl=0,
+            )
+        except (NotFoundError, ForbiddenError):
+            return CIStatus("unknown", pr.head_branch)
+        if not items:
+            return CIStatus("none", pr.head_branch)
+        p = items[0]
+        return CIStatus(
+            _pipeline_state(str(p.get("status", ""))),
+            pr.head_branch,
+            str(p.get("iid") or p.get("id") or ""),
+            str(p.get("web_url") or ""),
+        )
+
+    async def merge_pr(self, repo: ForgeRepo, pr: PullRequestInfo, method: str | None) -> None:
+        # metodu merge (merge commit / rebase / ff) má GitLab v nastavení projektu, volit jde jen squash
+        await self.client.request_json(
+            "PUT",
+            f"/projects/{_pid(repo)}/merge_requests/{pr.number}/merge",
+            json_body={"sha": pr.head_sha, "squash": method == "squash"},
+            ttl=0,
+        )
 
     async def _fetch_noreply(self) -> str | None:
         if not self.authenticated:
@@ -182,7 +272,9 @@ class GitLabForge(Forge):
         broad = sorted(set(scopes) & BROAD_SCOPES)
         if broad:
             warnings.append(
-                "token má zbytečně široká práva (" + ", ".join(broad) + "); stačí read_api"
+                "token má zbytečně široká práva ("
+                + ", ".join(broad)
+                + "); pro sken stačí read_api (PR a merge z odeslání oprav potřebují api)"
             )
         return ConnectionReport(
             True,

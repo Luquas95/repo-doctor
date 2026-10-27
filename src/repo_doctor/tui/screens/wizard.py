@@ -56,7 +56,9 @@ class WizardScreen(NavMixin, Screen[None]):
                 style=Style(color=p.text),
             )
             intro.append(
-                _("a umí bezpečně připravit opravy. Ve výchozím stavu jen čte a nic nepushuje."),
+                _(
+                    "a umí bezpečně připravit opravy. Jen čte; cokoli změní nebo odešle, až po tvém potvrzení."
+                ),
                 style=Style(color=p.muted),
             )
             yield Static(intro)

@@ -1,7 +1,8 @@
 """Neinteraktivní CLI (pro CI a skripty) a vstupní bod `repo-doctor`.
 
 Bez argumentů (nebo jen s cestami) na TTY spustí TUI; bez TTY vypíše nápovědu.
-CLI repozitáře nikdy nemění – opravy jdou jen přes TUI.
+CLI mění repa jen na výslovný pokyn (`--apply`, výchozí je náhled): úklid, synchronizace
+a odeslání oprav (`publish`). Léčba (tvorba opravné větve) jde jen přes TUI.
 """
 
 from __future__ import annotations
@@ -9,19 +10,21 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import sys
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from repo_doctor import __version__, czech, i18n, netpolicy, paths
+from repo_doctor import __version__, czech, i18n, netpolicy, paths, publish
 from repo_doctor.checkdocs import load as load_doc
 from repo_doctor.checks import all_checks, check_ids
 from repo_doctor.config import Config, ConfigError, ConfigStore, RootConfig
-from repo_doctor.gitwrap import configure_ssh
+from repo_doctor.gitwrap import Git, configure_ssh
 from repo_doctor.i18n import _
 from repo_doctor.masking import install_log_redaction, redact
 from repo_doctor.models import ScanResult, Severity
+from repo_doctor.publish import PublishRefused
 from repo_doctor.reports import FORMATS, ReportFormat, render
 
 app = typer.Typer(
@@ -39,6 +42,13 @@ forges_app = typer.Typer(help=_("Připojené git hostingy."), no_args_is_help=Tr
 config_app = typer.Typer(help=_("Konfigurace."), no_args_is_help=True)
 app.add_typer(forges_app, name="forges")
 app.add_typer(config_app, name="config")
+publish_app = typer.Typer(
+    help=_(
+        "Odeslání oprav: push větve, PR/MR a merge. Výchozí je náhled, --apply opravdu provede."
+    ),
+    no_args_is_help=True,
+)
+app.add_typer(publish_app, name="publish")
 schedule_app = typer.Typer(
     help=_("Plánovaný sken (uživatelský systemd timer)."), no_args_is_help=True
 )
@@ -450,6 +460,196 @@ def sync_cmd(
     )
     if result.skipped or fetch_failed:
         raise typer.Exit(1)
+
+
+# ----------------------------------------------------------------------------- publish
+RepoArg = Annotated[Path, typer.Argument(help=_("Složka repa (výchozí aktuální)."))]
+BranchOpt = Annotated[
+    str | None,
+    typer.Option("--branch", help=_("Opravná větev (výchozí nejnovější repo-doctor/fixes-*).")),
+]
+ApplyOpt = Annotated[
+    bool,
+    typer.Option("--dry-run/--apply", help=_("Náhled (výchozí), nebo opravdu provést.")),
+]
+
+
+def _publish_git(path: Path) -> Git:
+    git = Git(paths.expand_path(str(path)))
+    if not git.is_repo():
+        _err(_("{path} není git repozitář.").format(path=path))
+        raise typer.Exit(2)
+    return Git(git.toplevel() or git.path)
+
+
+def _publish_exit(err: PublishRefused) -> typer.Exit:
+    _err(str(err))
+    return typer.Exit(1)
+
+
+def _echo_commits(commits: list[publish.CommitInfo]) -> None:
+    for c in commits:
+        typer.echo(f"  {c.short} {c.subject}")
+
+
+@publish_app.command(
+    "push",
+    help=_(
+        "Pošle opravnou větev na remote (bez force a tagů; před tím kontrola tajemství).\n\n"
+        "S --default pošle výchozí větev po lokálním merge. Exit: 0 = hotovo, 1 = nelze, 2 = chyba zadání."
+    ),
+)
+def publish_push(
+    path: RepoArg = Path(),
+    branch: BranchOpt = None,
+    dry_run: ApplyOpt = True,
+    default: Annotated[
+        bool, typer.Option("--default", help=_("Poslat výchozí větev (po lokálním merge)."))
+    ] = False,
+) -> None:
+    config = _load_config()
+    git = _publish_git(path)
+    try:
+        plan = publish.plan_push(git, config, branch, default=default)
+        typer.echo(
+            _("Push {branch} → {remote} ({url}), {commits}:").format(
+                branch=plan.branch,
+                remote=plan.remote,
+                url=plan.remote_url,
+                commits=czech.commits(len(plan.commits)),
+            )
+        )
+        _echo_commits(plan.commits)
+        if dry_run:
+            typer.echo(_("\nNic se neodeslalo – použij --apply."))
+            return
+        publish.apply_push(git, plan, config)
+    except PublishRefused as err:
+        raise _publish_exit(err) from None
+    typer.echo(_("Odesláno: {branch} → {remote}.").format(branch=plan.branch, remote=plan.remote))
+
+
+def _with_hosting(
+    path: Path, work: Callable[[Git, publish.Hosting, Config], Awaitable[None]]
+) -> None:
+    config = _load_config()
+    git = _publish_git(path)
+
+    async def run(hosting: publish.Hosting) -> None:
+        await work(git, hosting, config)
+
+    try:
+        asyncio.run(publish.with_hosting(git, config, run))
+    except PublishRefused as err:
+        raise _publish_exit(err) from None
+
+
+@publish_app.command(
+    "pr",
+    help=_(
+        "Vytvoří PR/MR z opravné větve (větev musí být na remote – nejdřív `publish push`).\n\n"
+        "Token hostingu musí mít právo zápisu. Exit: 0 = hotovo, 1 = nelze, 2 = chyba zadání."
+    ),
+)
+def publish_pr(path: RepoArg = Path(), branch: BranchOpt = None, dry_run: ApplyOpt = True) -> None:
+    async def work(git: Git, hosting: publish.Hosting, config: Config) -> None:
+        plan = await publish.plan_pr(git, hosting, config, branch)
+        typer.echo(
+            _("PR na {forge} ({owner_path}): {head} → {base}").format(
+                forge=plan.forge, owner_path=plan.owner_path, head=plan.branch, base=plan.base
+            )
+        )
+        typer.echo(f"\n{plan.title}\n\n{plan.body}")
+        if dry_run:
+            typer.echo(_("\nNic se nevytvořilo – použij --apply."))
+            return
+        pr = await publish.apply_pr(git, hosting, config, plan)
+        typer.echo(_("Vytvořen PR #{number}: {url}").format(number=pr.number, url=pr.url))
+
+    _with_hosting(path, work)
+
+
+@publish_app.command(
+    "merge",
+    help=_(
+        "Mergne PR na hostingu – jen když je CI zelená (nebo žádná není) a jde mergnout.\n\n"
+        "Metodu merge určuje [publish] merge_method a nastavení repa. Exit: 0 = hotovo, 1 = nelze, 2 = chyba zadání."
+    ),
+)
+def publish_merge(
+    path: RepoArg = Path(), branch: BranchOpt = None, dry_run: ApplyOpt = True
+) -> None:
+    async def work(git: Git, hosting: publish.Hosting, config: Config) -> None:
+        plan = await publish.plan_merge(git, hosting, config, branch)
+        typer.echo(
+            _("PR #{number} {title} ({url})\nCI: {ci} · metoda: {method}").format(
+                number=plan.pr.number,
+                title=plan.pr.title,
+                url=plan.pr.url,
+                ci=plan.ci.state,
+                method=plan.method or _("výchozí hostingu"),
+            )
+        )
+        if not plan.ready:
+            for blocker in plan.blockers:
+                typer.echo(f"  ✗ {blocker}")
+            raise typer.Exit(1)
+        if dry_run:
+            typer.echo(_("\nNic se nemergnulo – použij --apply."))
+            return
+        done = await publish.apply_merge(git, hosting, config, plan)
+        typer.echo(
+            _("PR #{number} mergnut. Změny stáhneš: repo-doctor sync --fetch --apply").format(
+                number=done.number
+            )
+            if done.state == "merged"
+            else _("Hosting merge přijal, PR zatím není mergnutý: {url}").format(url=done.url)
+        )
+
+    _with_hosting(path, work)
+
+
+@publish_app.command(
+    "merge-local",
+    help=_(
+        "Lokálně posune výchozí větev na opravnou (jen fast-forward, bez merge commitu).\n\n"
+        "Funguje i bez remote; pracovní strom se mění jen když je výchozí větev checkoutnutá a repo čisté. "
+        "Exit: 0 = hotovo, 1 = nelze, 2 = chyba zadání."
+    ),
+)
+def publish_merge_local(
+    path: RepoArg = Path(), branch: BranchOpt = None, dry_run: ApplyOpt = True
+) -> None:
+    config = _load_config()
+    git = _publish_git(path)
+    try:
+        plan = publish.plan_merge_local(git, config, branch)
+        typer.echo(
+            _("Merge {branch} → {target} (fast-forward), {commits}, změní {files}:").format(
+                branch=plan.branch,
+                target=plan.target,
+                commits=czech.commits(len(plan.commits)),
+                files=czech.files(len(plan.files)),
+            )
+        )
+        _echo_commits(plan.commits)
+        if not plan.checked_out:
+            typer.echo(
+                _("Pracovní strom se nezmění (větev {target} není checkoutnutá).").format(
+                    target=plan.target
+                )
+            )
+        if dry_run:
+            typer.echo(_("\nNic se nezměnilo – použij --apply."))
+            return
+        publish.apply_merge_local(git, config, plan)
+    except PublishRefused as err:
+        raise _publish_exit(err) from None
+    typer.echo(
+        _("{target} posunuta na {branch}. Nic se nepushnulo.").format(
+            target=plan.target, branch=plan.branch
+        )
+    )
 
 
 @app.command(

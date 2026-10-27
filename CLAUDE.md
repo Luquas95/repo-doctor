@@ -29,10 +29,11 @@ skutečné ani regexům odpovídající hodnoty. Testy TUI používají `tests/t
 
 - Jádro je oddělené od UI: `discovery`, `gitwrap`, `checks/`, `scanner`, `fixes`, `reports/`,
   `forges/`, `config`, `netpolicy` (http jen pro `allow_http_hosts`), `cleanup` (koš),
-  `sync` (jen ff), `guard`, `sbom`, `notify`, `schedule`, `mcpserver`. TUI (`tui/`), CLI
+  `sync` (jen ff), `publish` (push, PR/MR, merge), `guard`, `sbom`, `notify`, `schedule`, `mcpserver`. TUI (`tui/`), CLI
   (`cli.py`) i MCP server jsou tenké vrstvy nad ním.
-- Co mění soubory nebo repa, je volitelné, s náhledem a potvrzením (výchozí „Zrušit“)
-  a nikdy nepushuje. MCP server je jen pro čtení.
+- Co mění soubory, repa nebo hosting, je volitelné, s náhledem a potvrzením (výchozí „Zrušit“).
+  Léčba jen vytváří větev; push, PR, merge a lokální merge jsou samostatné kroky v `publish`
+  (jen opravná větev, nikdy force, merge na hostingu jen po zelené CI). MCP server je jen pro čtení.
 - `gitwrap.Git` je jediné místo, kde se volá `git` (timeouty, bezpečné prostředí, redakce chyb).
 - Kontroly nevolají síť: scanner předem připraví `RepoContext.deps` (OSV, registry, licence),
   `RepoContext.forge_snapshot` (API hostingu), `noreply_email` a `action_shas`.

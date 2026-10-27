@@ -376,8 +376,13 @@ class FixScreen(BaseScreen):
         if result.branch:
             parts.append(
                 _(
-                    "Vytvořena větev {branch} s {n} {commits_word}. Nic se nepushnulo – zkontroluj ji: git log {branch}"
-                ).format(branch=result.branch, n=n, commits_word=commits_word(n))
+                    "Vytvořena větev {branch} s {n} {commits_word}. Nic se nepushnulo – zkontroluj ji: git log {branch}. Odeslat ji jde z karty repa ({key})."
+                ).format(
+                    branch=result.branch,
+                    n=n,
+                    commits_word=commits_word(n),
+                    key=self.rd.key("publish_push"),
+                )
             )
         parts.extend(f"✓ {desc}" for desc in result.local)
         msg = "\n".join(parts)

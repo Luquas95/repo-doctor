@@ -47,6 +47,19 @@ class SyncStatus:
         return self.state == "behind" and self.reason is None
 
 
+def overwrite_clash(git: Git, files: list[str]) -> list[str]:
+    """Soubory z `files`, které leží na nesledovaných či ignorovaných cestách pracovního stromu."""
+    changed = set(git.status().paths)  # status vrací i nesledované (soubory i „dir/“)
+    # ignorované soubory (např. lokální .env) by fast-forward přepsal bez varování
+    ignored = git.run(
+        "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory", check=False
+    )
+    changed.update(p for p in ignored.split("\0") if p)
+    return sorted(
+        f for f in files for u in changed if f == u or (u.endswith("/") and f.startswith(u))
+    )
+
+
 def _plan_reason(git: Git, st: SyncStatus) -> str | None:
     if st.state != "behind":
         return {
@@ -63,16 +76,7 @@ def _plan_reason(git: Git, st: SyncStatus) -> str | None:
         return "pracovní strom repa je jinde než repo (core.worktree) – nic se nemění"
     if any(k.startswith(("filter.", "merge.")) for k, _ in git.hardening_pairs()):
         return "repo má vlastní filtry/drivery v .git/config – dohnat ručně (git pull --ff-only)"
-    s = git.status()
-    changed = set(s.paths)  # status vrací i nesledované (soubory i „dir/“)
-    # ignorované soubory (např. lokální .env) by fast-forward přepsal bez varování
-    ignored = git.run(
-        "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--directory", check=False
-    )
-    changed.update(p for p in ignored.split("\0") if p)
-    clash = sorted(
-        f for f in st.files for u in changed if f == u or (u.endswith("/") and f.startswith(u))
-    )
+    clash = overwrite_clash(git, st.files)
     if clash:
         return f"nesledované nebo ignorované soubory by se přepsaly: {', '.join(clash[:3])}"
     return None

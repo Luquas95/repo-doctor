@@ -120,6 +120,17 @@ ACTIONS: tuple[KeyAction, ...] = (
     _a("open_web", "w", "detail", _("otevřít na webu")),
     _a("copy_path", "y", "detail", _("kopírovat cestu")),
     _a("export_sbom", "b", "detail", _("export SBOM (CycloneDX)"), show=False),
+    _a("publish_push", "P", "detail", _("poslat opravnou větev (push)"), show=False),
+    _a("publish_pr", "C", "detail", _("vytvořit PR/MR z opravné větve"), show=False),
+    _a("publish_merge", "M", "detail", _("mergnout PR na hostingu (po zelené CI)"), show=False),
+    _a("publish_merge_local", "L", "detail", _("lokální merge opravy (fast-forward)"), show=False),
+    _a(
+        "publish_push_default",
+        "U",
+        "detail",
+        _("poslat výchozí větev (po lokálním merge)"),
+        show=False,
+    ),
     # léčba
     _a("toggle_fix", "space", "fix", _("vybrat opravu"), label="space"),
     _a("select_all", "A", "fix", _("vybrat vše")),
