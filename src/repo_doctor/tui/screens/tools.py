@@ -25,7 +25,7 @@ from repo_doctor.tui.util import home_path
 from repo_doctor.tui.widgets.keybar import KeyBar
 
 if TYPE_CHECKING:
-    from repo_doctor.tools import ToolStatus
+    from repo_doctor.tools import Tool, ToolStatus
     from repo_doctor.tui.app import RepoDoctorApp
 
 
@@ -46,7 +46,16 @@ class ToolsScreen(BaseScreen):
             yield Static(id="tools-note", classes="page-header")
             yield DataTable(id="tools", cursor_type="row")
             yield Static(id="tools-keyring", classes="page-header")
-        yield KeyBar(["tools_install", "tools_update", "tools_remove", ("esc", _("zpět")), "help"])
+        yield KeyBar(
+            [
+                "tools_install",
+                "tools_install_all",
+                "tools_update",
+                "tools_remove",
+                ("esc", _("zpět")),
+                "help",
+            ]
+        )
 
     def on_mount(self) -> None:
         p = self.rd.palette
@@ -118,12 +127,21 @@ class ToolsScreen(BaseScreen):
 
     # ------------------------------------------------------------------ instalace
     def action_tools_install(self) -> None:
-        self.prepare_install()
+        st = self._selected()
+        if st is None:
+            return
+        if st.installed:
+            self.notify(_("{id} už je nainstalovaný.").format(id=st.tool.id), severity="warning")
+            return
+        self.prepare_install(st.tool)
+
+    def action_tools_install_all(self) -> None:
+        self.prepare_install(None)
 
     @work(thread=True, exclusive=True, group="tools-plan")
-    def prepare_install(self) -> None:
+    def prepare_install(self, only: Tool | None) -> None:
         backend = self.rd.tools_backend
-        missing = backend.missing()
+        missing = [only] if only is not None else backend.missing()
         if not missing:
             self.app.call_from_thread(
                 self.notify, _("Všechny volitelné nástroje jsou nainstalované.")

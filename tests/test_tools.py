@@ -456,14 +456,14 @@ async def test_tui_settings_points_to_tools_screen(tmp_path: Path) -> None:
         assert "obrazovce Nástroje (klávesa 8)" in str(hint.render())
 
 
-async def test_tui_install_tools(tmp_path: Path) -> None:
+async def test_tui_install_all_missing(tmp_path: Path) -> None:
     from repo_doctor.tui.screens.dialogs import ConfirmDialog
 
     fake = FakeTools(missing=("gitleaks", "wl-clipboard"))
     app = make_app(tmp_path, tools_backend=fake)
     async with app.run_test(size=(120, 40)) as pilot:
         await _open_tools(app, pilot)
-        await pilot.press("i")
+        await pilot.press("I")
         await app.workers.wait_for_complete()
         await pilot.pause()
         assert isinstance(app.screen, ConfirmDialog)
@@ -476,11 +476,44 @@ async def test_tui_install_tools(tmp_path: Path) -> None:
         assert any("apt-get install wl-clipboard" in str(n.message) for n in app._notifications)
 
 
+async def test_tui_install_only_selected_tool(tmp_path: Path) -> None:
+    from repo_doctor.tui.screens.dialogs import ConfirmDialog
+
+    fake = FakeTools(missing=("gitleaks", "wl-clipboard"))
+    app = make_app(tmp_path, tools_backend=fake)
+    async with app.run_test(size=(120, 40)) as pilot:
+        await _open_tools(app, pilot)
+        await pilot.press("j", "i")  # kurzor na wl-clipboard
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        assert isinstance(app.screen, ConfirmDialog)
+        assert "wl-clipboard" in str(app.screen.body)
+        assert "gitleaks" not in str(app.screen.body)
+        app.screen.dismiss(True)
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        assert fake.downloads == []
+        assert any("apt-get install wl-clipboard" in str(n.message) for n in app._notifications)
+
+
+async def test_tui_install_selected_already_installed(tmp_path: Path) -> None:
+    from repo_doctor.tui.screens.dialogs import ConfirmDialog
+
+    app = make_app(tmp_path, tools_backend=FakeTools(missing=("wl-clipboard",)))
+    async with app.run_test(size=(120, 40)) as pilot:
+        await _open_tools(app, pilot)
+        await pilot.press("i")  # kurzor na gitleaks, který je nainstalovaný
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        assert not isinstance(app.screen, ConfirmDialog)
+        assert any("už je nainstalovaný" in str(n.message) for n in app._notifications)
+
+
 async def test_tui_install_nothing_missing(tmp_path: Path) -> None:
     app = make_app(tmp_path, tools_backend=FakeTools())
     async with app.run_test(size=(120, 40)) as pilot:
         await _open_tools(app, pilot)
-        await pilot.press("i")
+        await pilot.press("I")
         await app.workers.wait_for_complete()
         await pilot.pause()
         assert any("Všechny" in str(n.message) for n in app._notifications)
@@ -492,7 +525,7 @@ async def test_tui_install_unknown_distro_only_advises(tmp_path: Path) -> None:
     app = make_app(tmp_path, tools_backend=FakeTools(missing=("xdg-utils",), manager=None))
     async with app.run_test(size=(120, 40)) as pilot:
         await _open_tools(app, pilot)
-        await pilot.press("i")
+        await pilot.press("I")
         await app.workers.wait_for_complete()
         await pilot.pause()
         assert not isinstance(app.screen, ConfirmDialog)
