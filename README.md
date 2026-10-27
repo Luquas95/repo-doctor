@@ -406,6 +406,7 @@ Dokumentace každé kontroly je v `docs/checks/<id>.md`, anglicky v
 | [`ci-missing`](docs/checks/ci-missing.md) | Údržba | LOW | ✓ |  |
 | [`committed-artifacts`](docs/checks/committed-artifacts.md) | Údržba | MED |  |  |
 | [`conflict-markers`](docs/checks/conflict-markers.md) | Údržba | MED |  |  |
+| [`dependency-bot-missing`](docs/checks/dependency-bot-missing.md) | Údržba | LOW |  |  |
 | [`deps-outdated`](docs/checks/deps-outdated.md) | Údržba | LOW |  | síť |
 | [`disk-usage`](docs/checks/disk-usage.md) | Údržba | LOW |  |  |
 | [`gitignore-incomplete`](docs/checks/gitignore-incomplete.md) | Údržba | MED | ✓ |  |
@@ -415,9 +416,15 @@ Dokumentace každé kontroly je v `docs/checks/<id>.md`, anglicky v
 | [`license-compat`](docs/checks/license-compat.md) | Údržba | LOW |  | síť |
 | [`license-missing`](docs/checks/license-missing.md) | Údržba | LOW | ✓ |  |
 | [`line-endings`](docs/checks/line-endings.md) | Údržba | LOW |  |  |
+| [`lint-config-missing`](docs/checks/lint-config-missing.md) | Údržba | LOW |  |  |
 | [`precommit-missing`](docs/checks/precommit-missing.md) | Údržba | LOW | ✓ |  |
+| [`project-docs-missing`](docs/checks/project-docs-missing.md) | Údržba | LOW |  |  |
+| [`readme-links-broken`](docs/checks/readme-links-broken.md) | Údržba | LOW |  |  |
 | [`readme-missing`](docs/checks/readme-missing.md) | Údržba | LOW | ✓ |  |
+| [`runtime-unpinned`](docs/checks/runtime-unpinned.md) | Údržba | LOW |  |  |
 | [`scan-incomplete`](docs/checks/scan-incomplete.md) | Údržba | LOW |  |  |
+| [`tests-missing`](docs/checks/tests-missing.md) | Údržba | LOW |  |  |
+| [`tests-not-in-ci`](docs/checks/tests-not-in-ci.md) | Údržba | LOW |  |  |
 | [`default-branch-behind`](docs/checks/default-branch-behind.md) | Stav gitu | LOW |  |  |
 | [`detached-head`](docs/checks/detached-head.md) | Stav gitu | LOW |  |  |
 | [`duplicate-clone`](docs/checks/duplicate-clone.md) | Stav gitu | LOW |  |  |

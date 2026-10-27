@@ -55,6 +55,10 @@ class RepoContext:
         return [f for f in files if not (ignore and matches_any(f, ignore))]
 
     @cached_property
+    def all_files_set(self) -> frozenset[str]:
+        return frozenset(self.all_files)
+
+    @cached_property
     def tracked_files(self) -> list[str]:
         files = self.git.ls_files()
         ignore = self.config.ignore_paths

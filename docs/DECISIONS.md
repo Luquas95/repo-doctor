@@ -496,3 +496,17 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - **Konce řádků se berou z indexu** (`git ls-files --eol`), tedy z toho, co se commituje, ne
   z pracovního stromu, který ovlivňuje `core.autocrlf`.
 
+## Další metody analýzy, díl 2: kvalita a zdraví projektu (#34)
+
+- **Prahy proti šumu:** kontroly kódu (testy, lint, verze jazyka) se zapnou až od 5 zdrojových
+  souborů (`SOURCE_MIN`), `vendor`, `node_modules` a testy se nepočítají. SECURITY.md se vyžaduje
+  jen u repa, kterému hosting potvrdil, že je veřejné; CONTRIBUTING až od 3 autorů; CHANGELOG jen
+  když existují tagy.
+- **CI se neinterpretuje:** `tests-not-in-ci` hledá v textu CI souborů známé příkazy k testům.
+  CI složené z jiných souborů (`uses: ./`, `include:`, `extends:`) nebo nečitelné se nehlásí,
+  falešný poplach by byl horší než přehlédnutí.
+- **Odkazy v README bez disku:** existence cíle se bere ze seznamu souborů (sledované +
+  nesledované neignorované), stejně jako u symlinků. Cíl odkazu je text z cizího README.
+- **Bot na závislosti** se hlásí jen u repa s remote a manifestem; konkrétní hosting se nerozlišuje
+  (Dependabot i Renovate se počítají).
+
