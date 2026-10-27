@@ -340,7 +340,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | Klávesa | Akce |
 |---|---|
 | `i` | nainstalovat vybraný |
-| `I` | doinstalovat všechny chybějící |
+| `I` | nainstalovat vše |
 | `u` | aktualizovat stažené |
 | `d` | odebrat stažený |
 

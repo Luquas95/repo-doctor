@@ -162,7 +162,7 @@ ACTIONS: tuple[KeyAction, ...] = (
     _a("settings_allow_remove", "d", "settings", _("odebrat z allowlistu"), show=False),
     # nástroje
     _a("tools_install", "i", "tools", _("nainstalovat vybraný")),
-    _a("tools_install_all", "I", "tools", _("doinstalovat všechny chybějící")),
+    _a("tools_install_all", "I", "tools", _("nainstalovat vše")),
     _a("tools_update", "u", "tools", _("aktualizovat stažené")),
     _a("tools_remove", "d", "tools", _("odebrat stažený")),
     # export

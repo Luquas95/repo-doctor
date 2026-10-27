@@ -3435,10 +3435,6 @@ msgstr "in the repo via pre-commit"
 msgid "dohnat vybrané (fast-forward)"
 msgstr "catch up selected (fast-forward)"
 
-#: repo_doctor/keymap.py:165
-msgid "doinstalovat všechny chybějící"
-msgstr "install all missing"
-
 #: repo_doctor/keymap.py:91
 msgid "dolů"
 msgstr "down"
@@ -3862,6 +3858,10 @@ msgstr "installed but inactive"
 #: repo_doctor/keymap.py:164
 msgid "nainstalovat vybraný"
 msgstr "install selected"
+
+#: repo_doctor/keymap.py:165
+msgid "nainstalovat vše"
+msgstr "install all"
 
 #: repo_doctor/checks/prepush.py:138
 msgid "nainstaluje .git/hooks/pre-push, který spustí repo-doctor guard (jen tvůj klon, nic se necommituje)"
