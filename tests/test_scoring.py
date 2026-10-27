@@ -73,7 +73,9 @@ def test_same_score_sorted_by_severity() -> None:
 @pytest.mark.parametrize(
     ("host", "label"),
     [
-        ("github.com", "github"),
+        ("github.com", "GitHub"),
+        ("gitlab.com", "GitLab"),
+        ("codeberg.org", "Codeberg"),
         ("git.example.org", "git"),
         ("100.121.109.115", "100.121.109.115"),
         ("[fd7a:115c::1]", "[fd7a:115c::1]"),

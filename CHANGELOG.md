@@ -5,6 +5,11 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 ## [Nevydáno]
 
 ### Opraveno
+- **Popisek hostingu u nepřipojeného remote (#58):** u repa na vlastním Forgejo/Gitea
+  (např. `100.x.x.x:3000`), které není v Hostingech (2), se ukazuje celá IP adresa. Je to záměr
+  (#37): bez nastavení se název hostingu nedá poznat. Známé služby se teď ukazují jménem
+  (`GitHub`, `GitLab`, `Codeberg`), shodně s připojeným hostingem. Self-hosted hosting
+  se pojmenuje přidáním v Hostingech (2).
 - **Sken v hlavičce (#57):** „x zruší sken“ zůstávalo vidět i po dokončení skenu (poslední
   překreslení proběhlo, dokud worker ještě běžel). Ukazatel průběhu je nově zelený a za běhu
   skenu v něm zprava doleva létají černé tečky (náhodně, i víc ve sloupci). Z hlavičky zmizel
