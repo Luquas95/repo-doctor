@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import random
 from datetime import datetime
 
 from rich.style import Style
@@ -14,6 +15,41 @@ from repo_doctor.notify import RunState
 from repo_doctor.scanner import aggregate_pulse
 from repo_doctor.scoring import gauge, sparkline
 from repo_doctor.tui.theme import Palette
+
+# Braille body: [sloupec][řádek] -> bit; v jedné buňce je tak 2×4 podbuněk pro „tečky“.
+_BRAILLE = ((0x01, 0x02, 0x04, 0x40), (0x08, 0x10, 0x20, 0x80))
+_TICKS_PER_CELL = 2
+
+
+def scan_dots(width: int, frame: int) -> list[int]:
+    """Masky braille teček pro každou buňku pruhu; tečky letí zprava doleva, každá po své dráze.
+
+    Dráhy (řádek, rychlost, posun) jsou pevně dané šířkou pruhu, takže poloha je čistá funkce
+    snímku – v jednom sloupci jich tak může být víc, jinde žádná.
+    """
+    rng = random.Random(width)  # noqa: S311 – vzhled animace, ne kryptografie
+    span = width * _TICKS_PER_CELL
+    cells = [0] * width
+    for _lane in range(max(3, width * 2 // 3)):
+        row = rng.randrange(4)
+        speed = rng.randint(1, 3)
+        x = (rng.randrange(span) - speed * frame) % span
+        cells[x // _TICKS_PER_CELL] |= _BRAILLE[x % _TICKS_PER_CELL][row]
+    return cells
+
+
+def scan_bar(width: int, done: int, total: int, frame: int, p: Palette) -> Text:
+    """Zelený ukazatel průběhu skenu s černými tečkami, které letí zprava doleva."""
+    filled = round(width * done / total) if total else 0
+    t = Text()
+    for i, mask in enumerate(scan_dots(width, frame)):
+        on = i < filled
+        char = chr(0x2800 + mask) if mask else " "
+        t.append(
+            char,
+            style=Style(color="black", bgcolor=p.ok) if on else Style(color=p.muted, bgcolor=p.dim),
+        )
+    return t
 
 
 def vitals_text(
@@ -28,6 +64,7 @@ def vitals_text(
     current: str,
     keys: tuple[str, str] = ("R", "x"),
     scheduled: RunState | None = None,
+    frame: int = 0,
 ) -> Text:
     s = result.summary(no_pulse_days)
     t = Text()
@@ -53,10 +90,8 @@ def vitals_text(
     t.append("\n")
     if scanning:
         bar_w = 20 if width >= 90 else 10
-        filled = round(bar_w * done / total) if total else 0
         t.append(_("sken "), style=Style(color=p.muted))
-        t.append("█" * filled, style=Style(color=p.accent))
-        t.append("░" * (bar_w - filled), style=Style(color=p.dim))
+        t.append_text(scan_bar(bar_w, done, total, frame, p))
         t.append(f" {done}/{total}", style=Style(color=p.text))
         if current:
             t.append("   › ", style=Style(color=p.muted))

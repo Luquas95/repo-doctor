@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING, Any
 
 from textual.app import App
 from textual.binding import Binding
-from textual.worker import Worker
+from textual.worker import Worker, WorkerState
 
 from repo_doctor import gitwrap, history, netpolicy, paths
 from repo_doctor.config import Config, ConfigError, ConfigStore, RootConfig
@@ -30,6 +30,7 @@ if TYPE_CHECKING:
     from repo_doctor.tui.screens.dashboard import DashboardScreen
 
 ScannerFactory = Callable[[Config, ScanOptions, Callable[[ScanEvent], None]], Scanner]
+TERMINAL_WORKER_STATES = {WorkerState.SUCCESS, WorkerState.ERROR, WorkerState.CANCELLED}
 
 
 class RepoDoctorApp(App[int]):
@@ -336,6 +337,12 @@ class RepoDoctorApp(App[int]):
                     severity="warning",
                     timeout=10,
                 )
+
+    def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
+        # `_scan` překresluje ještě za běhu workeru (`scanning` je tehdy True) – po jeho skutečném
+        # skončení proto musí následovat poslední překreslení, jinak zůstane hlavička „skenuje“.
+        if event.worker is self.scan_worker and event.state in TERMINAL_WORKER_STATES:
+            self._refresh_views()
 
     def _on_scan_event(self, event: ScanEvent) -> None:
         if event.kind == "discovered":

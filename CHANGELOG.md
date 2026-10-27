@@ -5,6 +5,9 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 ## [Nevydáno]
 
 ### Opraveno
+- **Sken v hlavičce (#57):** „x zruší sken“ zůstávalo vidět i po dokončení skenu (poslední
+  překreslení proběhlo, dokud worker ještě běžel). Ukazatel průběhu je nově zelený a za běhu
+  skenu v něm zprava doleva létají černé tečky (náhodně, i víc ve sloupci).
 - **Nástroje (klávesa 8): výběr, co nainstalovat (#56):** `i` nově nainstaluje jen nástroj pod
   kurzorem, `I` doinstaluje všechny chybějící (dosavadní chování `i`).
 
