@@ -61,7 +61,7 @@ msgstr ""
 "\n"
 "Local only in .git/ (nothing is committed):\n"
 
-#: repo_doctor/tui/screens/tools.py:107
+#: repo_doctor/tui/screens/tools.py:116
 msgid ""
 "\n"
 "Klíčenka se neinstaluje – Secret Service musí běžet v relaci."
@@ -181,7 +181,7 @@ msgstr ""
 "\n"
 "Can fast-forward {repos}. Nothing was changed"
 
-#: repo_doctor/tui/screens/tools.py:232
+#: repo_doctor/tui/screens/tools.py:250
 msgid ""
 "\n"
 "Smazat {id} ({home_path})?\n"
@@ -205,7 +205,7 @@ msgstr ""
 "\n"
 "Downloaded tools are up to date."
 
-#: repo_doctor/tui/screens/tools.py:195
+#: repo_doctor/tui/screens/tools.py:213
 msgid ""
 "\n"
 "Stiskni Enter pro návrat do repo-doctoru…"
@@ -221,7 +221,7 @@ msgstr ""
 "\n"
 "PULSE  "
 
-#: repo_doctor/tui/screens/tools.py:153
+#: repo_doctor/tui/screens/tools.py:171
 msgid ""
 "\n"
 "TUI se na chvíli pozastaví a správce balíčků se v terminálu zeptá na heslo (sudo) a potvrzení.\n"
@@ -903,11 +903,11 @@ msgstr "Update failed: {err}"
 msgid "Aktualizace: {instructions}"
 msgstr "Update: {instructions}"
 
-#: repo_doctor/tui/screens/tools.py:143
+#: repo_doctor/tui/screens/tools.py:161
 msgid "Aktualizovat"
 msgstr "Update"
 
-#: repo_doctor/tui/screens/tools.py:143
+#: repo_doctor/tui/screens/tools.py:161
 msgid "Aktualizovat nástroje"
 msgstr "Update tools"
 
@@ -1467,7 +1467,7 @@ msgstr "The checksum of the downloaded package does not match."
 msgid "Kontrolní součet {name} nesedí – soubor nepoužiju."
 msgstr "The {name} checksum does not match – the file will not be used."
 
-#: repo_doctor/tui/screens/tools.py:236
+#: repo_doctor/tui/screens/tools.py:254
 msgid ""
 "Kontroly, které ho používají, pak poběží bez něj.\n"
 msgstr ""
@@ -1585,11 +1585,11 @@ msgstr "CANNOT BE CHECKED"
 msgid "Na hostingu zapni skrývání e-mailu (GitHub: Settings → Emails → Keep my email addresses private)."
 msgstr "Turn on e-mail privacy on the hosting (GitHub: Settings → Emails → Keep my email addresses private)."
 
-#: repo_doctor/tui/screens/tools.py:134
+#: repo_doctor/tui/screens/tools.py:152
 msgid "Nainstalovat"
 msgstr "Install"
 
-#: repo_doctor/tui/screens/tools.py:134
+#: repo_doctor/tui/screens/tools.py:152
 msgid "Nainstalovat nástroje"
 msgstr "Install tools"
 
@@ -1727,7 +1727,7 @@ msgstr "Invalid configuration"
 msgid "Neplatná konfigurace ({source}):"
 msgstr "Invalid configuration ({source}):"
 
-#: repo_doctor/keymap.py:342
+#: repo_doctor/keymap.py:343
 msgid ""
 "Neplatné mapování kláves v [keys]:\n"
 msgstr ""
@@ -1829,7 +1829,7 @@ msgstr "Follow symlinks"
 msgid "Nástroje"
 msgstr "Tools"
 
-#: repo_doctor/tui/screens/tools.py:208
+#: repo_doctor/tui/screens/tools.py:226
 msgid "Nástroje jsou nainstalované."
 msgstr "The tools are installed."
 
@@ -1877,7 +1877,7 @@ msgstr "Remove"
 msgid "Odebrat hosting"
 msgstr "Remove hosting"
 
-#: repo_doctor/tui/screens/tools.py:251
+#: repo_doctor/tui/screens/tools.py:269
 msgid "Odebrat nástroj"
 msgstr "Remove tool"
 
@@ -2579,7 +2579,7 @@ msgstr "Report file (otherwise stdout)."
 msgid "Soubor {rel} v pracovním stromu neexistuje (je jen v historii)."
 msgstr "File {rel} does not exist in the working tree (it is only in the history)."
 
-#: repo_doctor/cli.py:863 repo_doctor/tui/screens/tools.py:211
+#: repo_doctor/cli.py:863 repo_doctor/tui/screens/tools.py:229
 msgid "Správce balíčků skončil s kódem {code}."
 msgstr "The package manager exited with code {code}."
 
@@ -2645,7 +2645,7 @@ msgstr ""
 "\n"
 "Exit: 0 = done, 1 = fetch failed or something was skipped, 2 = invalid input."
 
-#: repo_doctor/tui/screens/tools.py:141
+#: repo_doctor/tui/screens/tools.py:159
 msgid "Stažené nástroje jsou aktuální. Systémové aktualizuje správce balíčků."
 msgstr "Downloaded tools are up to date. System ones are updated by the package manager."
 
@@ -2701,7 +2701,7 @@ msgstr "Secret in the CI log"
 msgid "Tajemství z těchto souborů zůstávají v historii – považuj je za prozrazená a rotuj je."
 msgstr "The secrets in these files stay in history – treat them as leaked and rotate them."
 
-#: repo_doctor/tui/screens/tools.py:200
+#: repo_doctor/tui/screens/tools.py:218
 msgid "Terminál nejde pozastavit – spusť ručně: {join}"
 msgstr "The terminal cannot be suspended – run manually: {join}"
 
@@ -2847,7 +2847,7 @@ msgstr "Optional tools"
 msgid "Volitelné nástroje (gitleaks, wl-clipboard, xdg-utils, libnotify) a klíčenka."
 msgstr "Optional tools (gitleaks, wl-clipboard, xdg-utils, libnotify) and the keyring."
 
-#: repo_doctor/tui/screens/tools.py:55
+#: repo_doctor/tui/screens/tools.py:64
 msgid "Volitelné – repo-doctor funguje i bez nich, s nimi umí víc. Systémové balíčky odinstaluješ správcem balíčků."
 msgstr "Optional – repo-doctor works without them, with them it can do more. Uninstall system packages with the package manager."
 
@@ -3029,7 +3029,7 @@ msgstr "The branches changed since the preview – try again."
 msgid "Všechna repa z hostingů mají lokální klon. ✓"
 msgstr "All repos from hostings have a local clone. ✓"
 
-#: repo_doctor/tui/screens/tools.py:129
+#: repo_doctor/tui/screens/tools.py:147
 msgid "Všechny volitelné nástroje jsou nainstalované."
 msgstr "All optional tools are installed."
 
@@ -3151,11 +3151,11 @@ msgstr "DEPENDENCIES"
 msgid "Základní pre-commit"
 msgstr "Basic pre-commit"
 
-#: repo_doctor/keymap.py:316
+#: repo_doctor/keymap.py:317
 msgid "`{action_id}`: klávesa {key!r} je vyhrazená (Esc = zpět)"
 msgstr "`{action_id}`: key {key!r} is reserved (Esc = back)"
 
-#: repo_doctor/keymap.py:311
+#: repo_doctor/keymap.py:312
 msgid "`{action_id}`: neplatná klávesa {key!r}"
 msgstr "`{action_id}`: invalid key {key!r}"
 
@@ -3203,7 +3203,7 @@ msgstr "actions"
 msgid "aktivní"
 msgstr "active"
 
-#: repo_doctor/keymap.py:165
+#: repo_doctor/keymap.py:166
 msgid "aktualizovat stažené"
 msgstr "update downloaded"
 
@@ -3335,7 +3335,7 @@ msgstr "registry and OSV cache (h)"
 msgid "celý duplicitní klon"
 msgstr "whole duplicate clone"
 
-#: repo_doctor/tui/screens/folders.py:84 repo_doctor/tui/screens/remote.py:170 repo_doctor/tui/screens/tools.py:63
+#: repo_doctor/tui/screens/folders.py:84 repo_doctor/tui/screens/remote.py:170 repo_doctor/tui/screens/tools.py:72
 msgid "cesta"
 msgstr "path"
 
@@ -3435,10 +3435,6 @@ msgstr "in the repo via pre-commit"
 msgid "dohnat vybrané (fast-forward)"
 msgstr "catch up selected (fast-forward)"
 
-#: repo_doctor/keymap.py:164
-msgid "doinstalovat chybějící"
-msgstr "install missing"
-
 #: repo_doctor/keymap.py:91
 msgid "dolů"
 msgstr "down"
@@ -3475,7 +3471,7 @@ msgstr "enter save · esc cancel"
 msgid "export SBOM (CycloneDX)"
 msgstr "export SBOM (CycloneDX)"
 
-#: repo_doctor/keymap.py:168
+#: repo_doctor/keymap.py:169
 msgid "exportovat report"
 msgstr "export report"
 
@@ -3639,7 +3635,7 @@ msgstr "problem repos only"
 msgid "k repu nemá token přístup"
 msgstr "the token has no access to the repo"
 
-#: repo_doctor/tui/screens/tools.py:63
+#: repo_doctor/tui/screens/tools.py:72
 msgid "k čemu"
 msgstr "purpose"
 
@@ -3719,7 +3715,7 @@ msgstr "keyring not available ({name})"
 msgid "klíčenka není dostupná: {error}"
 msgstr "the keyring is not available: {error}"
 
-#: repo_doctor/keymap.py:330
+#: repo_doctor/keymap.py:331
 msgid "kolize: klávesa {display_key!r} je přiřazena akcím `{id}` ({v}) a `{id2}` ({v2})"
 msgstr "conflict: key {display_key!r} is assigned to actions `{id}` ({v}) and `{id2}` ({v2})"
 
@@ -3858,6 +3854,14 @@ msgstr "up"
 #: repo_doctor/tui/screens/settings.py:249
 msgid "nainstalovaný, ale neaktivní"
 msgstr "installed but inactive"
+
+#: repo_doctor/keymap.py:164
+msgid "nainstalovat vybraný"
+msgstr "install selected"
+
+#: repo_doctor/keymap.py:165
+msgid "nainstalovat vše"
+msgstr "install all"
 
 #: repo_doctor/checks/prepush.py:138
 msgid "nainstaluje .git/hooks/pre-push, který spustí repo-doctor guard (jen tvůj klon, nic se necommituje)"
@@ -4009,7 +4013,7 @@ msgstr "untracked or ignored files would be overwritten: {files}"
 msgid "neznám tvůj e-mail – nastav git config --global user.email nebo my_emails"
 msgstr "your e-mail is unknown – set git config --global user.email or my_emails"
 
-#: repo_doctor/keymap.py:304
+#: repo_doctor/keymap.py:305
 msgid "neznámá akce `{action_id}` (platné: {join})"
 msgstr "unknown action `{action_id}` (valid: {join})"
 
@@ -4081,7 +4085,7 @@ msgstr "findings"
 msgid "nápověda"
 msgstr "help"
 
-#: repo_doctor/tui/screens/tools.py:63
+#: repo_doctor/tui/screens/tools.py:72
 msgid "nástroj"
 msgstr "tool"
 
@@ -4121,7 +4125,7 @@ msgstr "remove hosting"
 msgid "odebrat složku"
 msgstr "remove folder"
 
-#: repo_doctor/keymap.py:166
+#: repo_doctor/keymap.py:167
 msgid "odebrat stažený"
 msgstr "remove downloaded"
 
@@ -4373,7 +4377,7 @@ msgstr "moves to trash"
 msgid "přesunout do koše"
 msgstr "move to trash"
 
-#: repo_doctor/keymap.py:153 repo_doctor/keymap.py:171
+#: repo_doctor/keymap.py:153 repo_doctor/keymap.py:172
 msgid "přidat hosting"
 msgstr "add hosting"
 
@@ -4441,7 +4445,7 @@ msgstr "half page down"
 msgid "půl stránky nahoru"
 msgstr "half page up"
 
-#: repo_doctor/tui/screens/tools.py:63
+#: repo_doctor/tui/screens/tools.py:72
 msgid "původ"
 msgstr "source"
 
@@ -4821,11 +4825,11 @@ msgstr "weekly on Monday at {time}"
 msgid "ukázka"
 msgstr "snippet"
 
-#: repo_doctor/keymap.py:173
+#: repo_doctor/keymap.py:174
 msgid "uložit / potvrdit formulář"
 msgstr "save / confirm form"
 
-#: repo_doctor/keymap.py:170
+#: repo_doctor/keymap.py:171
 msgid "uložit a skenovat"
 msgstr "save and scan"
 
@@ -5187,11 +5191,11 @@ msgstr "{human} in history (no longer in the current tree, but it enlarges every
 msgid "{human} v regenerovatelných složkách ({join}); repo je neaktivní {inactive_days}+ dní – uvolníš na obrazovce Úklid"
 msgstr "{human} in regenerable folders ({join}); the repo has been inactive for {inactive_days}+ days – free it on the Cleanup screen"
 
-#: repo_doctor/tui/screens/tools.py:227
+#: repo_doctor/tui/screens/tools.py:245
 msgid "{id} je ze systému – odinstaluj ho správcem balíčků."
 msgstr "{id} comes from the system – uninstall it with the package manager."
 
-#: repo_doctor/tui/screens/tools.py:223
+#: repo_doctor/tui/screens/tools.py:241
 msgid "{id} není nainstalovaný."
 msgstr "{id} is not installed."
 
@@ -5199,9 +5203,13 @@ msgstr "{id} is not installed."
 msgid "{id} není stažený repo-doctorem – odinstaluj ho správcem balíčků."
 msgstr "{id} was not downloaded by repo-doctor – uninstall it with the package manager."
 
-#: repo_doctor/tui/screens/tools.py:247
+#: repo_doctor/tui/screens/tools.py:265
 msgid "{id} odebrán."
 msgstr "{id} removed."
+
+#: repo_doctor/tui/screens/tools.py:134
+msgid "{id} už je nainstalovaný."
+msgstr "{id} is already installed."
 
 #: repo_doctor/checks/docker.py:150
 msgid "{instr} {name} obsahuje tajemství – zůstane ve vrstvách image"
@@ -5255,7 +5263,7 @@ msgstr "{name!r}: a folder name only (no path, not .git)"
 msgid "{name} chybí v podepsaném seznamu kontrolních součtů."
 msgstr "{name} is missing from the signed list of checksums."
 
-#: repo_doctor/tui/screens/tools.py:181
+#: repo_doctor/tui/screens/tools.py:199
 msgid "{name} {version} nainstalován do {path}."
 msgstr "{name} {version} installed to {path}."
 
@@ -5383,7 +5391,7 @@ msgstr "{text!r}: a wildcard for all hosts is not allowed"
 msgid "{untracked} nesledovaných"
 msgstr "{untracked} untracked"
 
-#: repo_doctor/tui/screens/tools.py:103
+#: repo_doctor/tui/screens/tools.py:112
 msgid "{v} klíčenka · {detail}"
 msgstr "{v} keyring · {detail}"
 

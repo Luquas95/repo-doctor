@@ -4,6 +4,10 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 
 ## [Nevydáno]
 
+### Opraveno
+- **Nástroje (klávesa 8): výběr, co nainstalovat (#56):** `i` nově nainstaluje jen nástroj pod
+  kurzorem, `I` doinstaluje všechny chybějící (dosavadní chování `i`).
+
 ## [0.3.1] – 2026-10-27
 
 ### Přidáno
