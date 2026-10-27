@@ -356,20 +356,35 @@ _DB_PORTS = frozenset({3306, 5432, 6379, 9200, 11211, 27017, 5984, 1433, 9042})
 _COMPOSE_NAME = re.compile(r"^(docker-)?compose(\..+)?\.ya?ml$", re.IGNORECASE)
 
 
+def _text(value: Any) -> str:
+    """Skalár (text, celé číslo) jako text, cokoli jiného prázdný řetězec. Složené uzly se
+    nikdy nepřevádějí přes `str()`: YAML aliasy je umí sdílet a výpis by rostl exponenciálně."""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, int) and not isinstance(value, bool):
+        return str(value)
+    return ""
+
+
+def _items(value: Any) -> list[Any]:
+    return value if isinstance(value, list) else []
+
+
+def _port_number(value: Any) -> int | None:
+    text = _text(value)
+    return int(text) if text.isascii() and text.isdecimal() and len(text) <= 5 else None
+
+
 def _published(port: Any) -> tuple[int | None, bool]:
     """(zveřejněný port, je jen na loopbacku) z krátkého nebo dlouhého zápisu."""
     if isinstance(port, dict):
-        host = port.get("published")
-        local = str(port.get("host_ip", "")) in ("127.0.0.1", "::1", "localhost")
-        return (int(str(host)) if str(host).isdigit() else None, local)
-    if isinstance(port, int):
-        return None, False  # samotný kontejnerový port se nezveřejňuje
-    parts = str(port).split("/")[0].split(":")
+        local = _text(port.get("host_ip")) in ("127.0.0.1", "::1", "localhost")
+        return _port_number(port.get("published")), local
+    parts = _text(port).split("/")[0].split(":")
     if len(parts) == 1:
-        return None, False
+        return None, False  # samotný kontejnerový port se nezveřejňuje
     local = parts[0] in ("127.0.0.1", "::1", "[::1]", "localhost") and len(parts) == 3
-    host = parts[-2]
-    return (int(host) if host.isdigit() else None, local)
+    return _port_number(parts[-2]), local
 
 
 def compose_hits(doc: Any) -> dict[str, dict[str, list[int]]]:
@@ -378,27 +393,30 @@ def compose_hits(doc: Any) -> dict[str, dict[str, list[int]]]:
     services = doc.get("services") if isinstance(doc, dict) else None
     if not isinstance(services, dict):
         return result
-    for name, svc in services.items():
-        if not isinstance(svc, dict):
+    for key, svc in services.items():
+        name = _text(key)
+        if not name or not isinstance(svc, dict):
             continue
         hits: dict[str, list[int]] = defaultdict(list)
         if svc.get("privileged") is True:
             hits["privileged"].append(1)
-        if str(svc.get("network_mode", "")) == "host":
+        if _text(svc.get("network_mode")) == "host":
             hits["host-network"].append(1)
-        caps = svc.get("cap_add")
-        if isinstance(caps, list) and {str(c).upper() for c in caps} & {"ALL", "SYS_ADMIN"}:
+        if {c.upper() for c in _items(svc.get("cap_add")) if isinstance(c, str)} & {
+            "ALL",
+            "SYS_ADMIN",
+        }:
             hits["cap-add"].append(1)
-        for volume in svc.get("volumes") or []:
-            source = volume.get("source", "") if isinstance(volume, dict) else str(volume)
-            if "docker.sock" in str(source):
+        for volume in _items(svc.get("volumes")):
+            source = volume.get("source") if isinstance(volume, dict) else volume
+            if "docker.sock" in _text(source):
                 hits["docker-sock"].append(1)
-        for port in svc.get("ports") or []:
+        for port in _items(svc.get("ports")):
             host, local = _published(port)
             if host in _DB_PORTS and not local:
                 hits["db-exposed"].append(1)
         if hits:
-            result[str(name)] = dict(hits)
+            result[name] = dict(hits)
     return result
 
 
@@ -419,7 +437,14 @@ class ComposeRisks(Check):
                 continue
             try:
                 doc = yaml.safe_load(text)
-            except (yaml.YAMLError, RecursionError, ValueError):
+            except (
+                yaml.YAMLError,
+                RecursionError,
+                ValueError,
+                TypeError,
+                MemoryError,
+                OverflowError,
+            ):
                 continue
             for service, rules in compose_hits(doc).items():
                 for rule in rules:

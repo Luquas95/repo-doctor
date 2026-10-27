@@ -212,3 +212,25 @@ def test_hostile_long_lines_stay_fast(tmp_path: Path) -> None:
         run(check, rb.path)
     assert time.monotonic() - started < 5
     assert "eval" in _rules(run("js-risks", rb.path))  # řádek pod limitem se dál čte
+
+
+def test_compose_hostile_yaml_does_not_break_or_blow_up(tmp_path: Path) -> None:
+    levels = ['a0: &a0 ["x","x","x","x","x","x","x","x","x"]']
+    for i in range(1, 10):
+        refs = ",".join([f"*a{i - 1}"] * 9)
+        levels.append(f"a{i}: &a{i} [{refs}]")
+    bomb = "\n".join(levels)
+    odd = (
+        "services:\n"
+        "  s1: {volumes: 5, ports: {a: b}, cap_add: [[1], 2], network_mode: [x]}\n"
+        "  s2: {ports: ['²:3', '\u0663\u0662:3', 123456789:80], volumes: [{source: [1]}]}\n"
+        "  s3: {volumes: *a9, ports: *a9, cap_add: *a9}\n"
+        "  4: {privileged: true}\n"
+        "  real: {privileged: true}\n"
+    )
+    rb = RepoBuilder.create(tmp_path / "r")
+    rb.write("docker-compose.yml", bomb + "\n" + odd).commit()
+    started = time.monotonic()
+    findings = run("compose-risks", rb.path)
+    assert time.monotonic() - started < 5
+    assert {f.key.rsplit(":", 1)[1] for f in findings} == {"4", "real"}
