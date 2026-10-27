@@ -37,6 +37,7 @@ class Row:
 
 
 class SyncScreen(BaseScreen):
+    help_context = "sync"
     BINDINGS = [
         *BaseScreen.BINDINGS,
         *[b for b in bindings("sync") if b.id != "sync_apply"],

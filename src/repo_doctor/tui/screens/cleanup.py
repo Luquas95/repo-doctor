@@ -67,6 +67,7 @@ class Item:
 
 
 class CleanupScreen(BaseScreen):
+    help_context = "cleanup"
     BINDINGS = [
         *BaseScreen.BINDINGS,
         *[b for b in bindings("cleanup") if b.id != "cleanup_apply"],

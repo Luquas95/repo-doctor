@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
 
 class FoldersScreen(BaseScreen):
+    help_context = "folders"
     BINDINGS = [*BaseScreen.BINDINGS, *bindings("folders")]
 
     def __init__(self) -> None:

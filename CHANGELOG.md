@@ -4,6 +4,14 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 
 ## [Nevydáno]
 
+### Přidáno
+- **Nápověda v TUI (#30):** dva druhy v jedné obrazovce se dvěma záložkami (přepíná `Tab`).
+  `?` otevře nápovědu k aktuální obrazovce (k čemu slouží, jak se s ní pracuje, její zkratky,
+  pohyb a globální zkratky), nová `H` (akce `help_all`, jde přemapovat) rovnou úplnou nápovědu:
+  postup práce, přehled obrazovek, pojmy, bezpečnostní zásady a všechny zkratky. Texty jsou
+  v `tui/helptext.py`, zkratky dál z `keymap.py`; každá obrazovka má `help_context` a test hlídá,
+  že nový kontext nezůstane bez textu. Dialogy bez vlastní nápovědy ukážou nápovědu obrazovky pod nimi.
+
 ### Opraveno
 - **Popisek hostingu u nepřipojeného remote (#58):** u repa na vlastním Forgejo/Gitea
   (např. `100.x.x.x:3000`), které není v Hostingech (2), se ukazuje celá IP adresa. Je to záměr

@@ -30,6 +30,7 @@ LABELS = {
 
 
 class ExportScreen(BaseScreen):
+    help_context = "export"
     BINDINGS = [*BaseScreen.BINDINGS, *bindings("export")]
 
     def __init__(self) -> None:
