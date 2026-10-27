@@ -14,6 +14,7 @@ from tomlkit.items import AoT, Table
 from tomlkit.toml_document import TOMLDocument
 
 from repo_doctor import paths
+from repo_doctor.i18n import N_, _
 from repo_doctor.models import Severity
 
 ForgeType = Literal["github", "gitea", "forgejo", "gitlab"]
@@ -45,7 +46,7 @@ class RootConfig(_Model):
     @classmethod
     def _path_not_empty(cls, value: str) -> str:
         if not value.strip():
-            raise ValueError("cesta nesmí být prázdná")
+            raise ValueError(_("cesta nesmí být prázdná"))
         return value.strip()
 
     @property
@@ -74,8 +75,9 @@ class ForgeConfig(_Model):
             for key in ("token", "password", "api_key", "secret"):
                 if key in data:
                     raise ValueError(
-                        f"klíč `{key}` není povolený: token nepatří do config.toml jako prostý text. "
-                        'Použij token_env, token_cmd nebo token_source = "keyring".'
+                        _(
+                            'klíč `{key}` není povolený: token nepatří do config.toml jako prostý text. Použij token_env, token_cmd nebo token_source = "keyring".'
+                        ).format(key=key)
                     )
         return data
 
@@ -86,9 +88,9 @@ class ForgeConfig(_Model):
             return None
         value = value.strip().rstrip("/")
         if not value.startswith(("http://", "https://")):
-            raise ValueError("URL instance musí začínat http:// nebo https://")
+            raise ValueError(_("URL instance musí začínat http:// nebo https://"))
         if "@" in value.split("//", 1)[1].split("/", 1)[0]:
-            raise ValueError("URL nesmí obsahovat přihlašovací údaje")
+            raise ValueError(_("URL nesmí obsahovat přihlašovací údaje"))
         return value
 
     @model_validator(mode="after")
@@ -101,11 +103,11 @@ class ForgeConfig(_Model):
             else:
                 self.token_source = "none"
         if self.token_source == "env" and not self.token_env:
-            raise ValueError('token_source = "env" vyžaduje token_env (název proměnné)')
+            raise ValueError(_('token_source = "env" vyžaduje token_env (název proměnné)'))
         if self.token_source == "cmd" and not self.token_cmd:
-            raise ValueError('token_source = "cmd" vyžaduje token_cmd')
+            raise ValueError(_('token_source = "cmd" vyžaduje token_cmd'))
         if self.type in ("gitea", "forgejo") and not self.url:
-            raise ValueError(f"hosting typu {self.type} vyžaduje url instance")
+            raise ValueError(_("hosting typu {type} vyžaduje url instance").format(type=self.type))
         return self
 
     @property
@@ -171,7 +173,7 @@ class PublishConfig(_Model):
     @classmethod
     def _remote_name(cls, value: str | None) -> str | None:
         if value is not None and not re.fullmatch(r"[A-Za-z0-9_.][A-Za-z0-9_.\-]*", value):
-            raise ValueError("neplatný název remotu")
+            raise ValueError(_("neplatný název remotu"))
         return value
 
 
@@ -191,7 +193,9 @@ class CleanupConfig(_Model):
     def _plain_names(cls, value: list[str]) -> list[str]:
         for name in value:
             if not name or "/" in name or name in (".", "..", ".git"):
-                raise ValueError(f"{name!r}: jen název složky (bez cesty, ne .git)")
+                raise ValueError(
+                    _("{name!r}: jen název složky (bez cesty, ne .git)").format(name=name)
+                )
         return value
 
 
@@ -219,7 +223,7 @@ class NotifyConfig(_Model):
             not value.startswith(("https://", "http://"))
             or "@" in value.split("//", 1)[1].split("/", 1)[0]
         ):
-            raise ValueError("ntfy_url musí být https:// URL tématu bez přihlašovacích údajů")
+            raise ValueError(_("ntfy_url musí být https:// URL tématu bez přihlašovacích údajů"))
         return value
 
     @field_validator("email")
@@ -228,7 +232,7 @@ class NotifyConfig(_Model):
         if value is None or not value.strip():
             return None
         if not re.fullmatch(r"[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+", value.strip()):
-            raise ValueError("email musí být jedna adresa")
+            raise ValueError(_("email musí být jedna adresa"))
         return value.strip()
 
     @model_validator(mode="after")
@@ -294,12 +298,14 @@ class Config(_Model):
 
             if not HttpHostPolicy(self.allow_http_hosts).allows_http_url(url):
                 raise ValueError(
-                    "notify.ntfy_url přes http:// je povolená jen pro host z allow_http_hosts"
+                    _("notify.ntfy_url přes http:// je povolená jen pro host z allow_http_hosts")
                 )
         names = [f.name for f in self.forges]
         dupes = {n for n in names if names.count(n) > 1}
         if dupes:
-            raise ValueError(f"duplicitní názvy hostingů: {', '.join(sorted(dupes))}")
+            raise ValueError(
+                _("duplicitní názvy hostingů: {names}").format(names=", ".join(sorted(dupes)))
+            )
         return self
 
     def forge(self, name: str) -> ForgeConfig | None:
@@ -317,9 +323,9 @@ class RepoOverrides(_Model):
 
 
 def format_validation_error(err: ValidationError, source: str) -> str:
-    lines = [f"Neplatná konfigurace ({source}):"]
+    lines = [_("Neplatná konfigurace ({source}):").format(source=source)]
     for e in err.errors():
-        loc = ".".join(str(p) for p in e["loc"]) or "(kořen)"
+        loc = ".".join(str(p) for p in e["loc"]) or _("(kořen)")
         msg = str(e["msg"]).removeprefix("Value error, ")
         lines.append(f"  • {loc}: {msg}")
     return "\n".join(lines)
@@ -340,7 +346,7 @@ def load_repo_overrides(repo_path: Path) -> RepoOverrides | None:
         data = tomlkit.parse(file.read_text("utf-8")).unwrap()
         return RepoOverrides.model_validate(data)
     except (ValidationError, tomlkit.exceptions.TOMLKitError, OSError) as err:
-        raise ConfigError(f"Neplatný {file}: {err}") from err
+        raise ConfigError(_("Neplatný {file}: {err}").format(file=file, err=err)) from err
 
 
 def effective_for_repo(config: Config, overrides: RepoOverrides | None) -> Config:
@@ -361,11 +367,13 @@ def effective_for_repo(config: Config, overrides: RepoOverrides | None) -> Confi
     return config.model_copy(update=update)
 
 
-DEFAULT_HEADER = """\
+DEFAULT_HEADER = N_(
+    """\
 # repo-doctor – konfigurace
 # Dokumentace: README.md, sekce Konfigurace. Tokeny sem nepatří (použij token_env,
 # token_cmd nebo token_source = "keyring").
 """
+)
 
 
 class ConfigStore:
@@ -382,14 +390,16 @@ class ConfigStore:
 
     def load(self) -> Config:
         if not self.exists:
-            self.doc = tomlkit.parse(DEFAULT_HEADER)
+            self.doc = tomlkit.parse(_(DEFAULT_HEADER))
             self.config = Config()
             return self.config
         try:
             text = self.path.read_text("utf-8")
             self.doc = tomlkit.parse(text)
         except (OSError, tomlkit.exceptions.TOMLKitError) as err:
-            raise ConfigError(f"Nelze načíst {self.path}: {err}") from err
+            raise ConfigError(
+                _("Nelze načíst {path}: {err}").format(path=self.path, err=err)
+            ) from err
         self.config = parse_config(self.doc.unwrap(), str(self.path))
         return self.config
 
@@ -417,7 +427,7 @@ class ConfigStore:
             self.doc[key] = tomlkit.aot()
         item = self.doc[key]
         if not isinstance(item, AoT):
-            raise ConfigError(f"`{key}` musí být pole tabulek ([[{key}]])")
+            raise ConfigError(_("`{key}` musí být pole tabulek ([[{key}]])").format(key=key))
         return item
 
     def _table(self, key: str) -> Table:
@@ -425,7 +435,7 @@ class ConfigStore:
             self.doc[key] = tomlkit.table()
         item = self.doc[key]
         if not isinstance(item, Table):
-            raise ConfigError(f"`{key}` musí být tabulka ([{key}])")
+            raise ConfigError(_("`{key}` musí být tabulka ([{key}])").format(key=key))
         return item
 
     def _transaction(self, mutate: Any) -> Config:

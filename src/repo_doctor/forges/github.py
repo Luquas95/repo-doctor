@@ -22,6 +22,7 @@ from repo_doctor.forges.base import (
     valid_owner_path,
 )
 from repo_doctor.httpclient import ForbiddenError, HttpClient, HttpError, NotFoundError
+from repo_doctor.i18n import _
 
 BROAD_SCOPES = {
     "repo",
@@ -296,7 +297,7 @@ class GitHubForge(Forge):
             else:
                 if not self.config.user and not self.config.org:
                     return ConnectionReport(
-                        False, error="bez tokenu je potřeba vyplnit uživatele nebo organizaci"
+                        False, error=_("bez tokenu je potřeba vyplnit uživatele nebo organizaci")
                     )
                 target = (
                     f"/orgs/{quote(self.config.org)}"
@@ -306,7 +307,7 @@ class GitHubForge(Forge):
                 user = await self.client.get_json(target)
                 login = str(user.get("login", ""))
                 scopes_header = None
-                warnings.append("bez tokenu: jen veřejná data a limit 60 dotazů za hodinu")
+                warnings.append(_("bez tokenu: jen veřejná data a limit 60 dotazů za hodinu"))
             repos = await self.list_repos()
         except HttpError as err:
             return ConnectionReport(False, error=str(err))
@@ -314,11 +315,11 @@ class GitHubForge(Forge):
         broad = sorted(set(scopes) & BROAD_SCOPES)
         if broad:
             warnings.append(
-                "token má zbytečně široká práva ("
-                + ", ".join(broad)
-                + "); pro sken stačí fine-grained token s Metadata, Contents, Actions a "
-                "Dependabot alerts: read-only (PR a merge z odeslání oprav navíc Contents a "
-                "Pull requests: read & write)"
+                _(
+                    "token má zbytečně široká práva ({scopes}); pro sken stačí fine-grained "
+                    "token s Metadata, Contents, Actions a Dependabot alerts: read-only "
+                    "(PR a merge z odeslání oprav navíc Contents a Pull requests: read & write)"
+                ).format(scopes=", ".join(broad))
             )
         return ConnectionReport(
             True, user=login, repo_count=len(repos), scopes=scopes, warnings=warnings

@@ -19,6 +19,7 @@ from repo_doctor.forges.base import (
     sub_dict,
 )
 from repo_doctor.httpclient import ForbiddenError, HttpClient, HttpError, NotFoundError
+from repo_doctor.i18n import _
 
 
 def api_base(url: str) -> str:
@@ -203,10 +204,10 @@ class GiteaForge(Forge):
                 user = await self.client.get_json("/user")
             elif self.config.user:
                 user = await self.client.get_json(f"/users/{quote(self.config.user)}")
-                warnings.append("bez tokenu: jen veřejná repa")
+                warnings.append(_("bez tokenu: jen veřejná repa"))
             else:
                 return ConnectionReport(
-                    False, error="bez tokenu je potřeba vyplnit uživatele nebo organizaci"
+                    False, error=_("bez tokenu je potřeba vyplnit uživatele nebo organizaci")
                 )
             login = str(user.get("login") or user.get("username") or "")
             repos = await self.list_repos()
@@ -216,19 +217,21 @@ class GiteaForge(Forge):
                     "forgejo" if "forgejo" in str(version.get("version", "")).lower() else None
                 )
                 if detected and self.config.type == "gitea":
-                    warnings.append('instance je Forgejo – nastav type = "forgejo"')
+                    warnings.append(_('instance je Forgejo – nastav type = "forgejo"'))
             except HttpError:
                 pass
         except HttpError as err:
             return ConnectionReport(False, error=str(err))
         if self.authenticated:
             warnings.append(
-                "rozsah tokenu Gitea/Forgejo API neprozradí – pro sken stačí read:repository, read:user "
-                "(a read:issue pro PR); PR a merge z odeslání oprav potřebují write:repository "
-                "a write:issue"
+                _(
+                    "rozsah tokenu Gitea/Forgejo API neprozradí – pro sken stačí read:repository, read:user "
+                    "(a read:issue pro PR); PR a merge z odeslání oprav potřebují write:repository "
+                    "a write:issue"
+                )
             )
         if not self.config.verify_tls and not self.config.ca_bundle:
             warnings.append(
-                "ověřování TLS je vypnuté (verify_tls = false) – raději nastav ca_bundle"
+                _("ověřování TLS je vypnuté (verify_tls = false) – raději nastav ca_bundle")
             )
         return ConnectionReport(True, user=login, repo_count=len(repos), warnings=warnings)

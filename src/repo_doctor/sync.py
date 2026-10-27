@@ -12,19 +12,20 @@ from pathlib import Path
 from typing import Literal
 
 from repo_doctor.gitwrap import Git, GitError
+from repo_doctor.i18n import N_, _
 
 State = Literal[
     "clean", "behind", "ahead", "diverged", "no-upstream", "detached", "untrusted", "error"
 ]  # fmt: skip
 STATE_LABELS: dict[str, str] = {
-    "clean": "aktuální",
-    "behind": "pozadu",
-    "ahead": "napřed",
-    "diverged": "rozdělené",
-    "no-upstream": "bez sledované větve",
-    "detached": "detached HEAD",
-    "untrusted": "cizí vlastník",
-    "error": "chyba",
+    "clean": N_("aktuální"),
+    "behind": N_("pozadu"),
+    "ahead": N_("napřed"),
+    "diverged": N_("rozdělené"),
+    "no-upstream": N_("bez sledované větve"),
+    "detached": N_("detached HEAD"),
+    "untrusted": N_("cizí vlastník"),
+    "error": N_("chyba"),
 }
 
 
@@ -63,22 +64,26 @@ def overwrite_clash(git: Git, files: list[str]) -> list[str]:
 def _plan_reason(git: Git, st: SyncStatus) -> str | None:
     if st.state != "behind":
         return {
-            "clean": "už je aktuální",
-            "ahead": "má jen nepushnuté commity – nic k dohnání",
-            "diverged": "rozdělená historie – vyřeš ručně (merge/rebase), repo-doctor jen fast-forward",
-            "no-upstream": "větev nesleduje žádnou vzdálenou větev",
-            "detached": "není na větvi (detached HEAD)",
-            "untrusted": "repo patří jinému uživateli – nic se nemění",
+            "clean": _("už je aktuální"),
+            "ahead": _("má jen nepushnuté commity – nic k dohnání"),
+            "diverged": _(
+                "rozdělená historie – vyřeš ručně (merge/rebase), repo-doctor jen fast-forward"
+            ),
+            "no-upstream": _("větev nesleduje žádnou vzdálenou větev"),
+            "detached": _("není na větvi (detached HEAD)"),
+            "untrusted": _("repo patří jinému uživateli – nic se nemění"),
         }.get(st.state, "stav repa nejde zjistit")
     if st.dirty:
-        return f"necommitnuté změny ve sledovaných souborech ({st.dirty})"
+        return _("necommitnuté změny ve sledovaných souborech ({dirty})").format(dirty=st.dirty)
     if not git.worktree_is_path():
-        return "pracovní strom repa je jinde než repo (core.worktree) – nic se nemění"
+        return _("pracovní strom repa je jinde než repo (core.worktree) – nic se nemění")
     if any(k.startswith(("filter.", "merge.")) for k, _ in git.hardening_pairs()):
-        return "repo má vlastní filtry/drivery v .git/config – dohnat ručně (git pull --ff-only)"
+        return _("repo má vlastní filtry/drivery v .git/config – dohnat ručně (git pull --ff-only)")
     clash = overwrite_clash(git, st.files)
     if clash:
-        return f"nesledované nebo ignorované soubory by se přepsaly: {', '.join(clash[:3])}"
+        return _("nesledované nebo ignorované soubory by se přepsaly: {files}").format(
+            files=", ".join(clash[:3])
+        )
     return None
 
 
@@ -88,7 +93,7 @@ def status(path: Path, *, fetch: bool = False) -> SyncStatus:
     st = SyncStatus(path=path, name=path.name, state="error")
     try:
         if git.dubious_ownership():
-            st.state, st.reason = "untrusted", "repo patří jinému uživateli – nic se nemění"
+            st.state, st.reason = "untrusted", _("repo patří jinému uživateli – nic se nemění")
             return st
         if fetch:
             try:

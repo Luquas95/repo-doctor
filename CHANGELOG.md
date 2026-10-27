@@ -26,7 +26,11 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
   v Nastavení platí po restartu.
 - **Angličtina (#33, fáze 2):** anglicky jsou i nálezy kontrol (názvy, zprávy, důvody
   přeskočení), návrhy oprav a jejich chybová hlášení a dokumentace kontrol
-  (`docs/checks/en/`, `explain` a „proč to vadí“ v kartě). Reporty přijdou ve fázi 3.
+  (`docs/checks/en/`, `explain` a „proč to vadí“ v kartě).
+- **Angličtina (#33, fáze 3):** anglicky jsou i reporty (Markdown, HTML s `lang`), šablony
+  README/CI/pre-commit/.dockerignore, hook `pre-push`, hlášky hostingů a tokenů, sítě, úklidu,
+  synchronizace, aktualizací, plánování a oznámení. Popisy v JSON schématu jsou napevno
+  anglicky (schéma je strojový kontrakt, nezávislý na jazyku rozhraní).
 - **Detaily repa v kartě (#36):** hlavička karty ukazuje navíc
   - KÓD: jazyky (podíl podle velikosti), počet souborů, velikost a `.git`, licenci,
   - ZÁVISLOSTI: ekosystém, správce balíčků, přímé / všechny závislosti,

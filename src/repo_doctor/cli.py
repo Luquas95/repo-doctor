@@ -425,7 +425,7 @@ def sync_cmd(
     fetch_failed = False
     for repo in discover(roots, config.ignore_repos).repos:
         st = status(repo.path, fetch=fetch)
-        line = f"{repo.display}  {STATE_LABELS[st.state]}"
+        line = f"{repo.display}  {_(STATE_LABELS[st.state])}"
         if st.behind or st.ahead:
             line += f" (↓{st.behind} ↑{st.ahead})"
         if st.can_fast_forward:
@@ -930,7 +930,7 @@ def forges_test(
             if not fc.verify_tls and not fc.ca_bundle:
                 typer.echo(_("  ! ověřování TLS je vypnuté"))
             if fc.base_url.startswith("http://"):
-                typer.echo(f"  ! {HTTP_NOTE}")
+                typer.echo(f"  ! {_(HTTP_NOTE)}")
         return failures
 
     failures = asyncio.run(run_all())

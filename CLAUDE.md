@@ -41,7 +41,7 @@ skutečné ani regexům odpovídající hodnoty. Testy TUI používají `tests/t
 - Texty pro uživatele jsou česky v `_("…")` (`repo_doctor.i18n`), anglicky v `locale/en.po`.
   Proměnné přes `_("… {jmeno} …").format(jmeno=…)`, ne f-string; tvary podle čísla přes
   `czech.plural`. Test hlídá úplnost překladu (#33: fáze 1 TUI, CLI, zkratky; fáze 2 kontroly,
-  opravy, dokumentace kontrol). Texty v konstantách modulů a atributech tříd přes `N_()`,
+  opravy, dokumentace kontrol; fáze 3 reporty, šablony a zbytek jádra). Texty v konstantách modulů a atributech tříd přes `N_()`,
   překlad `_()` až při použití.
 
 ## Přidání nové kontroly

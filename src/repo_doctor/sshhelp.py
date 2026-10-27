@@ -11,6 +11,7 @@ from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 from repo_doctor.forges.urls import parse_remote
+from repo_doctor.i18n import N_, _
 from repo_doctor.masking import redact
 
 if TYPE_CHECKING:
@@ -28,12 +29,14 @@ _PROTOCOL = re.compile(r"transport '([A-Za-z0-9+.-]{1,32})' not allowed")
 _SAFE_HOST = re.compile(r"^[A-Za-z0-9.-]{1,253}$|^\[[0-9A-Fa-f:.]+\]$")
 _SAFE_USER = re.compile(r"^[A-Za-z0-9._-]{1,32}$")
 
-PUBLICKEY_MSG = (
+PUBLICKEY_MSG = N_(
     "Server odmítl SSH klíč. Zkontroluj, že je klíč přidaný v účtu na hostingu, "
     "případně `core.sshCommand` / `~/.ssh/config`."
 )
-HTTP_ADVICE = " Pokud je server v důvěryhodné síti (Tailscale), přidej ho do `allow_http_hosts`."
-UNREACHABLE_MSG = "Server není dostupný (síť, VPN/Tailscale, port)."
+HTTP_ADVICE = N_(
+    " Pokud je server v důvěryhodné síti (Tailscale), přidej ho do `allow_http_hosts`."
+)
+UNREACHABLE_MSG = N_("Server není dostupný (síť, VPN/Tailscale, port).")
 
 
 def _ssh_target(url: str | None) -> str:
@@ -55,22 +58,20 @@ def _ssh_target(url: str | None) -> str:
 def explain_ssh_error(stderr: str, url: str | None = None) -> str | None:
     """Česká hláška s postupem pro známou SSH chybu (nebo zakázaný protokol), jinak None."""
     if m := _PROTOCOL.search(stderr):
-        msg = (
-            f"Remote používá nepovolený protokol {m.group(1)}, repo-doctor ho z bezpečnostních "
-            "důvodů nefetchuje (povolené jsou https a ssh)."
-        )
+        msg = _(
+            "Remote používá nepovolený protokol {protocol}, repo-doctor ho z bezpečnostních důvodů nefetchuje (povolené jsou https a ssh)."
+        ).format(protocol=m.group(1))
         if m.group(1) == "http":
-            msg += HTTP_ADVICE
+            msg += _(HTTP_ADVICE)
         return msg
     if _HOST_KEY.search(stderr):
-        return (
-            "Server zatím neznáš. Připoj se k němu jednou ručně: "
-            f"`{_ssh_target(url)}` a potvrď otisk klíče. Pak to zkus znovu."
-        )
+        return _(
+            "Server zatím neznáš. Připoj se k němu jednou ručně: `{target}` a potvrď otisk klíče. Pak to zkus znovu."
+        ).format(target=_ssh_target(url))
     if _PUBLICKEY.search(stderr):
-        return PUBLICKEY_MSG
+        return _(PUBLICKEY_MSG)
     if _UNREACHABLE.search(stderr):
-        return UNREACHABLE_MSG
+        return _(UNREACHABLE_MSG)
     return None
 
 

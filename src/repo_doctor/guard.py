@@ -15,12 +15,14 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from repo_doctor import czech
 from repo_doctor.config import Config, ConfigError, effective_for_repo, load_repo_overrides
 from repo_doctor.gitwrap import Git, GitError
+from repo_doctor.i18n import N_, _
 from repo_doctor.secrets_scan import SecretMatch, parse_log_patch
 
 ZERO = re.compile(r"^0+$")
-HOOK_SCRIPT = """\
+HOOK_SCRIPT = N_("""\
 #!/bin/sh
 # repo-doctor guard – kontrola tajemství před pushem (nainstaloval repo-doctor)
 # Odinstalace: smaž tento soubor. Jednorázové obejití: git push --no-verify
@@ -29,7 +31,7 @@ if command -v repo-doctor >/dev/null 2>&1; then
 fi
 echo "repo-doctor guard: repo-doctor není v PATH – kontrola tajemství přeskočena" >&2
 exit 0
-"""
+""")
 
 
 @dataclass
@@ -122,24 +124,28 @@ def render(result: GuardResult) -> str:
     if result.errors and not result.matches:
         return "\n".join(
             [
-                "repo-doctor guard: push zastaven – nové commity nešlo zkontrolovat:",
+                _("repo-doctor guard: push zastaven – nové commity nešlo zkontrolovat:"),
                 *(f"  ! {e}" for e in result.errors[:5]),
                 "",
-                "Zkus git fetch a push znovu. Výjimečně jde kontrolu obejít: git push --no-verify",
+                _(
+                    "Zkus git fetch a push znovu. Výjimečně jde kontrolu obejít: git push --no-verify"
+                ),
             ]
         )
-    lines = ["repo-doctor guard: push zastaven – v nových commitech jsou tajemství:"]
+    lines = [_("repo-doctor guard: push zastaven – v nových commitech jsou tajemství:")]
     for m in result.matches[:20]:
         commit = (m.commit or "")[:8]
         lines.append(f"  ▲ {m.kind}: {m.masked} · {m.path}:{m.line} · commit {commit}")
     if len(result.matches) > 20:
-        lines.append(f"  … a {len(result.matches) - 20} dalších")
+        lines.append(f"  {czech.more(len(result.matches) - 20)}")
     lines += [
         "",
-        "Co dál:",
-        "  1. Tajemství z commitu odstraň (git commit --amend / git rebase -i) a zneplatni ho",
-        "     u poskytovatele – i nepushnuté mohlo uniknout jinam.",
-        "  2. Falešný poplach? Přidej ho do allowlistu (repo-doctor TUI, karta repa, klávesa a).",
-        "  3. Výjimečně jde kontrolu obejít: git push --no-verify",
+        _("Co dál:"),
+        _("  1. Tajemství z commitu odstraň (git commit --amend / git rebase -i) a zneplatni ho"),
+        _("     u poskytovatele – i nepushnuté mohlo uniknout jinam."),
+        _(
+            "  2. Falešný poplach? Přidej ho do allowlistu (repo-doctor TUI, karta repa, klávesa a)."
+        ),
+        _("  3. Výjimečně jde kontrolu obejít: git push --no-verify"),
     ]
     return "\n".join(lines)

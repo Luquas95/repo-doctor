@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from repo_doctor.i18n import _
+
 Interval = Literal["daily", "weekly"]
 UNIT = "repo-doctor"
 Runner = Callable[[list[str]], "subprocess.CompletedProcess[str]"]
@@ -60,7 +62,9 @@ def _run(cmd: list[str]) -> subprocess.CompletedProcess[str]:
 def parse_time(value: str) -> tuple[int, int]:
     m = _TIME.match(value.strip())
     if not m:
-        raise ScheduleError(f"neplatný čas {value!r} – zadej HH:MM v rozsahu 00:00–23:59")
+        raise ScheduleError(
+            _("neplatný čas {value!r} – zadej HH:MM v rozsahu 00:00–23:59").format(value=value)
+        )
     return int(m.group(1)), int(m.group(2))
 
 
@@ -78,7 +82,11 @@ def describe(value: str | None) -> str:
     if parsed is None:
         return value or "?"
     interval, time = parsed
-    return f"týdně v pondělí {time}" if interval == "weekly" else f"denně {time}"
+    return (
+        _("týdně v pondělí {time}").format(time=time)
+        if interval == "weekly"
+        else _("denně {time}").format(time=time)
+    )
 
 
 def on_calendar(interval: Interval, time: str) -> str:
@@ -95,9 +103,7 @@ def cron_line(interval: Interval, time: str) -> str:
 
 def service_text() -> str:
     return (
-        "[Unit]\n"
-        "Description=repo-doctor – plánovaný sken repozitářů\n\n"
-        "[Service]\n"
+        "[Unit]\n" + _("Description=repo-doctor – plánovaný sken repozitářů\n\n") + "[Service]\n"
         "Type=oneshot\n"
         f"ExecStart={executable()} scan --scheduled\n"
         "Nice=10\n"
@@ -107,9 +113,7 @@ def service_text() -> str:
 
 def timer_text(interval: Interval, time: str) -> str:
     return (
-        "[Unit]\n"
-        "Description=repo-doctor – plánovaný sken repozitářů\n\n"
-        "[Timer]\n"
+        "[Unit]\n" + _("Description=repo-doctor – plánovaný sken repozitářů\n\n") + "[Timer]\n"
         f"OnCalendar={on_calendar(interval, time)}\n"
         "Persistent=true\n"
         "RandomizedDelaySec=10min\n\n"
@@ -122,12 +126,14 @@ def install(
     interval: Interval = "weekly", time: str = "08:00", runner: Runner | None = None
 ) -> list[Path]:
     if interval not in ("daily", "weekly"):
-        raise ScheduleError("interval musí být daily nebo weekly")
+        raise ScheduleError(_("interval musí být daily nebo weekly"))
     run = runner or _run
     if not systemd_available(run):
         raise ScheduleError(
-            "Uživatelský systemd tu není k dispozici – plánování se nenainstaluje. "
-            f"Do crontab -e můžeš přidat:\n  {cron_line(interval, time)}"
+            _(
+                "Uživatelský systemd tu není k dispozici – plánování se nenainstaluje. "
+                "Do crontab -e můžeš přidat:\n  {line}"
+            ).format(line=cron_line(interval, time))
         )
     directory = unit_dir()
     directory.mkdir(parents=True, exist_ok=True)

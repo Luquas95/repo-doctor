@@ -164,7 +164,7 @@ class PrecommitMissing(Check):
         ]
 
     def fix(self, repo: RepoContext, findings: list[Finding]) -> Patch | None:
-        default = templates.PRECOMMIT_BASE
+        default = _(templates.PRECOMMIT_BASE)
         extras = ["gitleaks", "trailing whitespace", _("velké soubory")]
         if Ecosystem.PYTHON in repo.ecosystems:
             default += templates.PRECOMMIT_PYTHON

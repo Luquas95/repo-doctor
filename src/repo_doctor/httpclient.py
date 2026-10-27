@@ -21,6 +21,7 @@ from typing import Any
 import httpx
 
 from repo_doctor import __version__, netpolicy
+from repo_doctor.i18n import _
 from repo_doctor.masking import redact
 from repo_doctor.paths import ensure_private_dir
 
@@ -200,7 +201,9 @@ class HttpClient:
             # Nešifrovaný http jen na hosty z `allow_http_hosts` – platí i pro přesměrování,
             # takže token ani jiná data nikdy neodejdou po http jinam.
             raise InsecureHostError(
-                f"http://{request.url.host} není v allow_http_hosts – nešifrované spojení odmítnuto",
+                _("http://{host} není v allow_http_hosts – nešifrované spojení odmítnuto").format(
+                    host=request.url.host
+                ),
                 url=str(request.url),
             )
         if self._origin is not None and _origin(request.url) != self._origin:
@@ -231,18 +234,21 @@ class HttpClient:
                     resp = await self._client.request(method, url, headers=headers, content=content)
             except httpx.TimeoutException as err:
                 raise UnavailableError(
-                    f"časový limit při dotazu na {url.split('?')[0]}", url=url
+                    _("časový limit při dotazu na {url}").format(url=url.split("?")[0]), url=url
                 ) from err
             except httpx.HTTPError as err:
                 raise UnavailableError(
-                    f"nedostupné: {type(err).__name__} ({url.split('?')[0]})", url=url
+                    _("nedostupné: {error} ({url})").format(
+                        error=type(err).__name__, url=url.split("?")[0]
+                    ),
+                    url=url,
                 ) from err
             wait = self._rate_limit_wait(resp)
             if wait is None:
                 return resp
             if wait > self.max_rate_wait or attempts > 2:
                 raise RateLimitError(
-                    f"vyčerpaný rate-limit (další pokus za {wait:.0f} s)",
+                    _("vyčerpaný rate-limit (další pokus za {wait:.0f} s)").format(wait=wait),
                     status=resp.status_code,
                     url=url,
                 )
@@ -278,13 +284,21 @@ class HttpClient:
             return
         short = url.split("?")[0]
         if status == 401:
-            raise AuthError("neplatný nebo expirovaný token (401)", status=status, url=url)
+            raise AuthError(_("neplatný nebo expirovaný token (401)"), status=status, url=url)
         if status == 403:
-            raise ForbiddenError(f"přístup odepřen (403) – {short}", status=status, url=url)
+            raise ForbiddenError(
+                _("přístup odepřen (403) – {short}").format(short=short), status=status, url=url
+            )
         if status == 404:
-            raise NotFoundError(f"nenalezeno (404) – {short}", status=status, url=url)
+            raise NotFoundError(
+                _("nenalezeno (404) – {short}").format(short=short), status=status, url=url
+            )
         if status >= 500:
-            raise UnavailableError(f"chyba serveru {status} – {short}", status=status, url=url)
+            raise UnavailableError(
+                _("chyba serveru {status} – {short}").format(status=status, short=short),
+                status=status,
+                url=url,
+            )
         detail = _error_detail(resp)
         raise HttpError(
             f"HTTP {status} – {short}" + (f": {detail}" if detail else ""), status=status, url=url
@@ -325,7 +339,9 @@ class HttpClient:
         try:
             body = resp.json() if resp.content else None
         except ValueError as err:
-            raise HttpError(f"neplatná JSON odpověď – {full.split('?')[0]}", url=full) from err
+            raise HttpError(
+                _("neplatná JSON odpověď – {url}").format(url=full.split("?")[0]), url=full
+            ) from err
         link_next = _parse_link_next(resp.headers.get("link"))
         if ttl > 0:
             self.cache.set(
@@ -357,7 +373,7 @@ class HttpClient:
         items: list[Any] = []
         next_url: str | None = url
         next_params = params
-        for _ in range(max_pages):
+        for _page in range(max_pages):
             if next_url is None:
                 break
             body, link = await self.request_json("GET", next_url, params=next_params, ttl=ttl)

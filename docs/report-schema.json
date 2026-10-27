@@ -51,12 +51,12 @@
     "JFinding": {
       "properties": {
         "id": {
-          "description": "ID kontroly, např. secrets-history",
+          "description": "Check ID, e.g. secrets-history",
           "title": "Id",
           "type": "string"
         },
         "fingerprint": {
-          "description": "Stabilní hash nálezu pro allowlist",
+          "description": "Stable finding hash for the allowlist",
           "title": "Fingerprint",
           "type": "string"
         },
@@ -88,7 +88,7 @@
             }
           ],
           "default": null,
-          "description": "Vždy maskovaná ukázka (AKIA…(20 znaků))",
+          "description": "Always-masked sample (AKIA…(20 chars))",
           "title": "Snippet"
         },
         "kind": {
@@ -124,7 +124,7 @@
               }
             ]
           },
-          "description": "Podrobnosti kontroly (např. chybějící položky, ID zranitelností)",
+          "description": "Check details (e.g. missing items, vulnerability IDs)",
           "title": "Data",
           "type": "object"
         }
@@ -314,7 +314,7 @@
         },
         "details": {
           "$ref": "#/$defs/RepoDetails",
-          "description": "Jazyky, velikost, závislosti, historie a data z hostingu (přidáno v 0.4)"
+          "description": "Languages, size, dependencies, history and hosting data (added in 0.4)"
         }
       },
       "required": [

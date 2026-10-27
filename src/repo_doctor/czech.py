@@ -30,6 +30,11 @@ def repos(n: int) -> str:
     return count(n, _("repo"), _("repa"), _("rep"))
 
 
+def repositories(n: int) -> str:
+    """Delší tvar než `repos` – do hlaviček reportů."""
+    return count(n, _("repozitář"), _("repozitáře"), _("repozitářů"))
+
+
 def commits(n: int) -> str:
     return count(n, _("commit"), _("commity"), _("commitů"))
 
