@@ -68,6 +68,7 @@ def _a(
 ACTIONS: tuple[KeyAction, ...] = (
     # globální
     _a("help", "question_mark", "global", _("nápověda"), label="?"),
+    _a("help_all", "H", "global", _("úplná nápověda (vše)"), show=False),
     _a("command_palette", "ctrl+p", "global", _("příkazová paleta"), show=False),
     # přehled, karta repa a léčba nemají číslo: ⏎ a f na přehledu, zpět q / esc (#32)
     _a("screen_folders", "1", "global", _("složky s repy"), "open_screen('folders')"),
@@ -352,13 +353,20 @@ def key_label(action_id: str, keymap: Mapping[str, str] | None = None) -> str:
     return action.label if action.label and key == action.key else display_key(key)
 
 
-def grouped(keymap: Mapping[str, str] | None = None) -> dict[str, list[tuple[str, str]]]:
-    """Pro nápovědu: {kontext: [(klávesa, popis)]} podle aktuálního mapování."""
+def grouped(
+    keymap: Mapping[str, str] | None = None, contexts: tuple[str, ...] | None = None
+) -> dict[str, list[tuple[str, str]]]:
+    """Pro nápovědu: {kontext: [(klávesa, popis)]} podle aktuálního mapování.
+
+    `contexts` omezí a seřadí výpis (např. kontext obrazovky, pohyb, globální).
+    """
     keymap = keymap or {a.id: a.key for a in ACTIONS}
-    out: dict[str, list[tuple[str, str]]] = {label: [] for label in CONTEXTS.values()}
+    wanted = contexts if contexts is not None else tuple(CONTEXTS)
+    out: dict[str, list[tuple[str, str]]] = {CONTEXTS[c]: [] for c in wanted}
     for a in ACTIONS:
         key = keymap.get(a.id, a.key)
         shown = a.label if a.label and key == a.key else display_key(key)
         for ctx in a.contexts:
-            out[CONTEXTS[ctx]].append((shown, a.description))
+            if ctx in wanted:
+                out[CONTEXTS[ctx]].append((shown, a.description))
     return {k: v for k, v in out.items() if v}

@@ -77,6 +77,7 @@ class TriageList(OptionList):
 
 
 class DashboardScreen(NavMixin, Screen[Any]):
+    help_context = "dashboard"
     BINDINGS = [
         *bindings("nav"),
         *bindings("dashboard"),

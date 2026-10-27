@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
 
 class ToolsScreen(BaseScreen):
+    help_context = "tools"
     BINDINGS = [*BaseScreen.BINDINGS, *bindings("tools")]
 
     def __init__(self) -> None:

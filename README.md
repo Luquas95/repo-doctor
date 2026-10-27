@@ -214,7 +214,10 @@ lokální repa bez remote nebo s remote, které hosting nezná.
 ## Klávesové zkratky
 
 Ovládání jako lazygit / k9s – vše jde jen z klávesnice, myš je volitelná. `?` zobrazí
-nápovědu generovanou ze stejných definic, `Ctrl+P` příkazovou paletu (všechny akce
+nápovědu k aktuální obrazovce (záložka „Tato obrazovka“: k čemu slouží, jak se s ní pracuje
+a její zkratky), `H` rovnou úplnou nápovědu (záložka „Vše“: postup práce, pojmy, bezpečnostní
+zásady a všechny zkratky; záložky přepíná `Tab`). Zkratky se generují ze stejných definic,
+`Ctrl+P` příkazovou paletu (všechny akce
 a přechod na libovolné repo podle názvu). Zkratky jdou přemapovat v `config.toml`:
 
 ```toml
@@ -231,6 +234,7 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | Klávesa | Akce |
 |---|---|
 | `?` | nápověda |
+| `H` | úplná nápověda (vše) |
 | `ctrl+p` | příkazová paleta |
 | `1` | složky s repy |
 | `2` | hostingy (GitHub, Forgejo…) |

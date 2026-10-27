@@ -306,6 +306,7 @@ def diagnosis(finding: Finding | None, app: RepoDoctorApp) -> Text:
 
 
 class DetailScreen(BaseScreen):
+    help_context = "detail"
     BINDINGS = [*BaseScreen.BINDINGS, *bindings("detail")]
 
     def __init__(self, path: str) -> None:

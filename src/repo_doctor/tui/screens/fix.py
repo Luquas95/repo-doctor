@@ -58,6 +58,7 @@ def commits_word(n: int) -> str:
 
 
 class FixScreen(BaseScreen):
+    help_context = "fix"
     BINDINGS = [
         *BaseScreen.BINDINGS,
         *[b for b in bindings("fix") if b.id != "confirm_fix"],

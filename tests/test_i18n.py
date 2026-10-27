@@ -234,7 +234,14 @@ async def main():
 asyncio.run(main())
 """
     out = _run_en(code, tmp_path)
-    for needle in ("TRIAGE", "scan all repos", "repositories", "CRITICAL", "GLOBAL", "quit"):
+    for needle in (
+        "TRIAGE",
+        "scan all repos",
+        "repositories",
+        "CRITICAL",
+        "sorted by finding severity",
+        "quit",
+    ):
         assert needle in out, needle
     assert "skenovat" not in out and "Nastavení" not in out
 

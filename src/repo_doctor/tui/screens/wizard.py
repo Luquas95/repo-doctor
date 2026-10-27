@@ -31,6 +31,7 @@ if TYPE_CHECKING:
 
 
 class WizardScreen(NavMixin, Screen[None]):
+    help_context = "wizard"
     BINDINGS = [
         *bindings("wizard"),
         Binding("escape", "skip", _("přeskočit")),

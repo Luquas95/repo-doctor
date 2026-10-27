@@ -34,6 +34,8 @@ from repo_doctor.tui.widgets.forms import (
 class RootDialog(ModalScreen[RootConfig | None]):
     """Přidání / úprava sledované složky."""
 
+    help_context = "dialog"
+
     BINDINGS = [Binding("escape", "cancel", _("zrušit")), *bindings("dialog")]
 
     def __init__(self, root: RootConfig | None = None) -> None:
@@ -184,6 +186,8 @@ FORGE_TYPES = [
 
 class ForgeDialog(ModalScreen[ForgeFormResult | None]):
     """Přidání / úprava hostingu. Token se nikdy nezobrazí (pole je maskované a prázdné)."""
+
+    help_context = "dialog"
 
     BINDINGS = [Binding("escape", "cancel", _("zrušit")), *bindings("dialog")]
 
@@ -405,6 +409,8 @@ class CloneRequest:
 
 class CloneDialog(ModalScreen[CloneRequest | None]):
     """Volba cílové složky pro klon. Výchozí tlačítko = Zrušit, existující cíl se odmítne."""
+
+    help_context = "dialog"
 
     BINDINGS = [Binding("escape", "cancel", _("zrušit")), *bindings("dialog")]
 

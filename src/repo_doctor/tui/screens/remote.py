@@ -30,6 +30,7 @@ if TYPE_CHECKING:
 
 
 class RemoteScreen(BaseScreen):
+    help_context = "remote"
     BINDINGS = [*BaseScreen.BINDINGS, *bindings("remote")]
 
     def __init__(self) -> None:

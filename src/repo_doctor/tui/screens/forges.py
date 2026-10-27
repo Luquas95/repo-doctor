@@ -70,6 +70,7 @@ async def test_forge(
 
 
 class ForgesScreen(BaseScreen):
+    help_context = "forges"
     BINDINGS = [*BaseScreen.BINDINGS, *bindings("forges")]
 
     def __init__(self) -> None:

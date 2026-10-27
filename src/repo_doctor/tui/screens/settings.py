@@ -48,6 +48,7 @@ FLOAT_LIMITS = {"large_file_mb", "history_timeout_s", "git_timeout_s"}
 
 
 class SettingsScreen(BaseScreen):
+    help_context = "settings"
     BINDINGS = [*BaseScreen.BINDINGS, *bindings("settings")]
 
     @property

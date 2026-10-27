@@ -169,7 +169,7 @@ async def test_screen_switching_and_help(tmp_path: Path) -> None:
         await pilot.press("question_mark")
         await pilot.pause()
         assert isinstance(app.screen, HelpScreen)
-        assert "GLOBÁLNÍ" in screen_text(app) and "POHYB" in screen_text(app)
+        assert "PŘEHLED (TRIÁŽ)" in screen_text(app)
         await pilot.press("j", "k", "escape")
         assert isinstance(app.screen, DashboardScreen)
         await pilot.press("t")

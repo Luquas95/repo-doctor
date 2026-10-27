@@ -385,11 +385,27 @@ class RepoDoctorApp(App[int]):
         self.scanner.cancel()
 
     # ------------------------------------------------------------------ akce
+    def help_context(self) -> str:
+        """Kontext nejvyšší obrazovky, která má vlastní nápovědu (dialogy se řídí podkladem)."""
+        for screen in reversed(self.screen_stack):
+            context = getattr(screen, "help_context", None)
+            if isinstance(context, str):
+                return context
+        return "global"
+
     def action_help(self) -> None:
         from repo_doctor.tui.screens.help import HelpScreen
 
         if not isinstance(self.screen, HelpScreen):
-            self.push_screen(HelpScreen())
+            self.push_screen(HelpScreen(self.help_context()))
+
+    def action_help_all(self) -> None:
+        from repo_doctor.tui.screens.help import HelpScreen
+
+        if isinstance(self.screen, HelpScreen):
+            self.screen.show("all")
+        else:
+            self.push_screen(HelpScreen(self.help_context(), "all"))
 
     def action_scan_all(self) -> None:
         self.start_scan()

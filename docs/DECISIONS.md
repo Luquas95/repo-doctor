@@ -469,3 +469,14 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - **TUI jako tenká vrstva:** `tui/screens/publish.py` (`PublishFlow`) jen volá `plan_*`/`apply_*`
   ve vlákně a ukazuje je v `ConfirmDialog`; kvůli asyncio smyčce se hosting pro náhled i zápis
   připojuje zvlášť (`with_hosting`).
+
+## Nápověda v TUI: jedna obrazovka, dvě záložky (#30)
+
+- `?` = nápověda k aktuální obrazovce, `H` = úplná nápověda. Častá potřeba je „co tady můžu
+  dělat?“, proto `?` zůstává kontextová; `F1` se nepoužil, protože ho řada terminálů zachytí.
+- Texty (`tui/helptext.py`) jsou oddělené od zkratek (`keymap.py` zůstává jediným zdrojem
+  pravdy). Obrazovka se hlásí atributem `help_context` (klíč z `keymap.CONTEXTS`);
+  dialogy bez něj dědí kontext obrazovky pod sebou.
+- Modální `HelpScreen` si zkratky `help` a `help_all` (i přemapované) přidává sám, protože
+  modální obrazovka aplikační zkratky nepouští.
+
