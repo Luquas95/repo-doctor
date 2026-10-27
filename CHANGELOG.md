@@ -8,7 +8,7 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 - **Hygiena stromu a historie (#34, 1/4):** sedm nových kontrol, které nepotřebují síť
   a nespouštějí žádný kód z repa: `conflict-markers` (nevyřešené značky konfliktu),
   `committed-artifacts` (`node_modules`, `__pycache__`, `.venv`, `*.pyc`, `.DS_Store`…
-  v gitu), `broken-symlinks`, `case-collisions` (cesty lišící se jen velikostí písmen),
+  v gitu), `broken-symlinks` (i symlinky mířící mimo repo; ty se na disku neověřují), `case-collisions` (cesty lišící se jen velikostí písmen),
   `line-endings` (smíšené LF/CRLF a chybějící pravidlo v `.gitattributes`),
   `submodule-state` (submodul bez záznamu v `.gitmodules`, zbylý záznam, nestažený submodul,
   `http://` / `git://` adresa) a `lfs-not-applied` (soubor určený pro Git LFS uložený celý v gitu).

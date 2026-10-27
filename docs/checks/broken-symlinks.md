@@ -4,7 +4,7 @@
 
 ## Co kontrola hledá
 
-Projde sledované symlinky (režim 120000), přečte jejich cíl a ověří, že cíl v pracovním stromu existuje. Relativní cíle se počítají od adresáře symlinku, absolutní se berou tak, jak jsou. Nic se nenásleduje mimo prosté ověření existence. U bare repa se kontrola přeskočí.
+Projde sledované symlinky (režim 120000), přečte jejich cíl a ověří, že cíl v pracovním stromu existuje. Cíl se spočítá jen z textu, od adresáře symlinku, a na disk se sahá výhradně uvnitř repa. Symlink s absolutní cestou, UNC cestou, písmenem disku nebo cílem mimo repo (`..`) se nehlásí jako rozbitý, ale jako symlink mířící mimo repozitář (jinde nefunguje) a cílová cesta se vůbec neověřuje. U bare repa se kontrola přeskočí.
 
 ## Proč to vadí
 

@@ -146,3 +146,18 @@ def test_lfs_not_applied(tmp_path: Path) -> None:
     rb.write(".gitattributes", "*.bin filter=lfs diff=lfs merge=lfs -text\n").commit()
     paths = sorted(f.location.path or "" for f in run("lfs-not-applied", rb.path))
     assert paths == ["data/model.bin", "tool.bin"]  # small.bin se vejde do pointeru
+
+
+@pytest.mark.skipif(os.name == "nt", reason="symlinky")
+def test_symlinks_pointing_outside_are_not_touched(tmp_path: Path) -> None:
+    rb = RepoBuilder.create(tmp_path / "r")
+    rb.write("README.md", "x")
+    (rb.path / "abs").symlink_to("/etc/passwd")
+    (rb.path / "up").symlink_to("../../outside")
+    (rb.path / "unc").symlink_to("\\\\host\\share\\f")
+    (rb.path / "dir").mkdir()
+    (rb.path / "dir" / "ok").symlink_to("../README.md")
+    (rb.path / "root").symlink_to(".")
+    rb.commit()
+    found = {f.key for f in run("broken-symlinks", rb.path)}
+    assert found == {"symlink-outside:abs", "symlink-outside:up", "symlink-outside:unc"}

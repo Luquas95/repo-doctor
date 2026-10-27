@@ -1067,7 +1067,7 @@ msgstr "Path (tab completes the suggestion)"
 msgid "Cesta k repozitáři."
 msgstr "Path to the repository."
 
-#: repo_doctor/checks/tree.py:155
+#: repo_doctor/checks/tree.py:188
 msgid "Cesty lišící se jen velikostí písmen"
 msgstr "Paths that differ only by letter case"
 
@@ -1131,7 +1131,7 @@ msgstr "What repo-doctor is"
 msgid "Co kontrola hledá"
 msgstr "What the check looks for"
 
-#: repo_doctor/checks/tree.py:93
+#: repo_doctor/checks/tree.py:94
 msgid "Commitnuté build artefakty a cache"
 msgstr "Committed build artifacts and caches"
 
@@ -1669,7 +1669,7 @@ msgstr "CANNOT BE CHECKED"
 msgid "Na hostingu zapni skrývání e-mailu (GitHub: Settings → Emails → Keep my email addresses private)."
 msgstr "Turn on e-mail privacy on the hosting (GitHub: Settings → Emails → Keep my email addresses private)."
 
-#: repo_doctor/checks/tree.py:175
+#: repo_doctor/checks/tree.py:208
 msgid "Na macOS a Windows se tyto cesty srazí do jedné: {names}."
 msgstr "On macOS and Windows these paths collapse into one: {names}."
 
@@ -1755,7 +1755,7 @@ msgstr "Move to the allowlist table first (tab)."
 msgid "Nejdřív vyber repo."
 msgstr "Select a repo first."
 
-#: repo_doctor/checks/tree.py:193
+#: repo_doctor/checks/tree.py:226
 msgid "Nejednotné konce řádků"
 msgstr "Inconsistent line endings"
 
@@ -2217,7 +2217,7 @@ msgstr "Scheduled scan: {v} · {describe}"
 msgid "Po checkoutu větve spusť `pre-commit install`."
 msgstr "After checking out the branch, run `pre-commit install`."
 
-#: repo_doctor/checks/tree.py:338
+#: repo_doctor/checks/tree.py:371
 msgid "Podle .gitattributes patří do Git LFS, ale v gitu je celý ({human})."
 msgstr ".gitattributes says this belongs in Git LFS, but the whole file ({human}) is stored in git."
 
@@ -2587,11 +2587,11 @@ msgstr "Repositories on the hosting service that you do not have locally, and th
 msgid "Rizikové nastavení CI workflow"
 msgstr "Risky CI workflow settings"
 
-#: repo_doctor/checks/tree.py:243
+#: repo_doctor/checks/tree.py:276
 msgid "Rozbité nebo nezabezpečené submoduly"
 msgstr "Broken or insecure submodules"
 
-#: repo_doctor/checks/tree.py:122
+#: repo_doctor/checks/tree.py:123
 msgid "Rozbité symlinky"
 msgstr "Broken symlinks"
 
@@ -2747,11 +2747,11 @@ msgstr "Folders where repo-doctor looks for repositories."
 msgid "Soubor (jinak stdout). Nepřepisuje."
 msgstr "File (otherwise stdout). Never overwrites."
 
-#: repo_doctor/checks/tree.py:209
+#: repo_doctor/checks/tree.py:242
 msgid "Soubor má v gitu smíšené konce řádků (LF i CRLF)."
 msgstr "The file has mixed line endings in git (both LF and CRLF)."
 
-#: repo_doctor/checks/tree.py:48
+#: repo_doctor/checks/tree.py:49
 msgid "Soubor obsahuje nevyřešené značky konfliktu (<<<<<<<, =======, >>>>>>>)."
 msgstr "The file contains unresolved conflict markers (<<<<<<<, =======, >>>>>>>)."
 
@@ -2763,7 +2763,7 @@ msgstr "Report file (otherwise stdout)."
 msgid "Soubor {rel} v pracovním stromu neexistuje (je jen v historii)."
 msgstr "File {rel} does not exist in the working tree (it is only in the history)."
 
-#: repo_doctor/checks/tree.py:321
+#: repo_doctor/checks/tree.py:354
 msgid "Soubory určené pro Git LFS uložené přímo v gitu"
 msgstr "Git LFS files stored directly in git"
 
@@ -2849,21 +2849,25 @@ msgstr "Downloading {name} failed: {name2}"
 msgid "Stáhne {name} {version} z GitHubu do {tools_dir} (ověří SHA-256 zapsaný v repo-doctoru)"
 msgstr "Downloads {name} {version} from GitHub to {tools_dir} (verifies the SHA-256 pinned in repo-doctor)"
 
-#: repo_doctor/checks/tree.py:276
+#: repo_doctor/checks/tree.py:309
 msgid "Submodul není stažený (git submodule update --init)."
 msgstr "The submodule is not checked out (git submodule update --init)."
 
-#: repo_doctor/checks/tree.py:254
+#: repo_doctor/checks/tree.py:287
 msgid "Submodul není v .gitmodules, klon repa proto hlásí chybu (no submodule mapping)."
 msgstr "The submodule is missing from .gitmodules, so cloning the repo fails (no submodule mapping)."
 
-#: repo_doctor/checks/tree.py:285
+#: repo_doctor/checks/tree.py:318
 msgid "Submodul se stahuje nešifrovaně ({scheme}), obsah jde podvrhnout."
 msgstr "The submodule is fetched unencrypted ({scheme}); its content can be tampered with."
 
 #: repo_doctor/checks/tree.py:142
+msgid "Symlink ukazuje mimo repozitář („{target}“), na jiném počítači nebude fungovat."
+msgstr "The symlink points outside the repository (\"{target}\"); it will not work on another machine."
+
+#: repo_doctor/checks/tree.py:153
 msgid "Symlink ukazuje na „{target}“, což neexistuje."
-msgstr "The symlink points to "{target}", which does not exist."
+msgstr "The symlink points to "
 
 #: repo_doctor/keymap.py:28 repo_doctor/tui/screens/sync.py:262
 msgid "Synchronizace"
@@ -3329,7 +3333,7 @@ msgstr "No version has been released yet."
 msgid "Zatím žádný sken – stiskni {key} a repo-doctor zkontroluje všechna repa ve sledovaných složkách."
 msgstr "No scan yet – press {key} and repo-doctor checks all repos in the watched folders."
 
-#: repo_doctor/checks/tree.py:29
+#: repo_doctor/checks/tree.py:30
 msgid "Zbytky po konfliktu při mergi"
 msgstr "Leftover merge-conflict markers"
 
@@ -3403,7 +3407,7 @@ msgstr "DEPENDENCIES"
 msgid "Základní pre-commit"
 msgstr "Basic pre-commit"
 
-#: repo_doctor/checks/tree.py:266
+#: repo_doctor/checks/tree.py:299
 msgid "Záznam v .gitmodules už nemá odpovídající submodul."
 msgstr "The .gitmodules entry no longer has a matching submodule."
 
@@ -4933,15 +4937,15 @@ msgstr "folders"
 msgid "složky s repy"
 msgstr "repo folders"
 
-#: repo_doctor/checks/hygiene.py:326 repo_doctor/checks/tree.py:109 repo_doctor/checks/tree.py:229
+#: repo_doctor/checks/hygiene.py:326 repo_doctor/checks/tree.py:110 repo_doctor/checks/tree.py:262
 msgid "soubor"
 msgstr "file"
 
-#: repo_doctor/checks/tree.py:109 repo_doctor/checks/tree.py:229 repo_doctor/czech.py:43
+#: repo_doctor/checks/tree.py:110 repo_doctor/checks/tree.py:262 repo_doctor/czech.py:43
 msgid "soubory"
 msgstr "files"
 
-#: repo_doctor/checks/tree.py:109 repo_doctor/checks/tree.py:229 repo_doctor/czech.py:43
+#: repo_doctor/checks/tree.py:110 repo_doctor/checks/tree.py:262 repo_doctor/czech.py:43
 msgid "souborů"
 msgstr "files"
 
@@ -5507,11 +5511,11 @@ msgstr "{err}. Prefer token_env or token_cmd."
 msgid "{event} spouští kód z PR (checkout {what}) s právy repa · job {job}"
 msgstr "{event} runs PR code (checkout {what}) with the repo's permissions · job {job}"
 
-#: repo_doctor/checks/tree.py:225
+#: repo_doctor/checks/tree.py:258
 msgid "{files} má v gitu CRLF, ostatní LF, a žádné pravidlo v .gitattributes to nesjednocuje (např. {example})."
 msgstr "{files} use CRLF in git, the rest LF, and no rule in .gitattributes unifies them (e.g. {example})."
 
-#: repo_doctor/checks/tree.py:108
+#: repo_doctor/checks/tree.py:109
 msgid "{files} v gitu, ale patří do .gitignore (vygenerované nebo lokální)"
 msgstr "{files} in git, but they belong in .gitignore (generated or local)"
 

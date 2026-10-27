@@ -4,9 +4,10 @@ konce řádků, submoduly a soubory, které měly jít přes Git LFS."""
 from __future__ import annotations
 
 import os
+import posixpath
 import re
 from collections import defaultdict
-from pathlib import Path, PurePosixPath
+from pathlib import PurePosixPath
 
 from repo_doctor.checks.base import Check, RepoContext, register
 from repo_doctor.checks.hygiene import _human
@@ -134,19 +135,51 @@ class BrokenSymlinks(Check):
             target = raw.decode("utf-8", "replace").strip()
             if not target or "\0" in target:
                 continue
-            link = repo.path / entry.path
-            if Path(os.path.normpath(link.parent / target)).exists():
-                continue
-            findings.append(
-                self.finding(
-                    _("Symlink ukazuje na „{target}“, což neexistuje.").format(target=target[:200]),
-                    path=entry.path,
-                    key=f"symlink:{entry.path}",
+            inside = _inside_repo(entry.path, target)
+            if inside is None:
+                findings.append(
+                    self.finding(
+                        _(
+                            "Symlink ukazuje mimo repozitář („{target}“), "
+                            "na jiném počítači nebude fungovat."
+                        ).format(target=target[:200]),
+                        path=entry.path,
+                        key=f"symlink-outside:{entry.path}",
+                    )
                 )
-            )
+            elif not self._exists(repo, inside):
+                findings.append(
+                    self.finding(
+                        _("Symlink ukazuje na „{target}“, což neexistuje.").format(
+                            target=target[:200]
+                        ),
+                        path=entry.path,
+                        key=f"symlink:{entry.path}",
+                    )
+                )
             if len(findings) >= MAX_FILES:
                 break
         return findings
+
+    @staticmethod
+    def _exists(repo: RepoContext, inside: str) -> bool:
+        """Existence cíle uvnitř repa: nejdřív podle seznamu souborů, na disk se sahá až potom."""
+        if inside == "." or inside in repo.tracked_set:
+            return True
+        if any(f.startswith(inside + "/") for f in repo.tracked_files):
+            return True
+        return os.path.lexists(repo.path / inside)
+
+
+def _inside_repo(link: str, target: str) -> str | None:
+    """Cíl symlinku jako cesta uvnitř repa, spočítaná jen z textu (bez dotyku souborového
+    systému). `None`, když míří ven: absolutní cesta, UNC (`\\\\host`), písmeno disku, `..`."""
+    if target.startswith(("/", "\\")) or re.match(r"[A-Za-z]:", target):
+        return None
+    joined = posixpath.normpath(posixpath.join(posixpath.dirname(link), target))
+    if joined == ".." or joined.startswith("../"):
+        return None
+    return joined
 
 
 @register

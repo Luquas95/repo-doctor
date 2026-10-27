@@ -4,7 +4,7 @@
 
 ## What the check looks for
 
-Walks the tracked symlinks (mode 120000), reads their target and checks that the target exists in the working tree. Relative targets are resolved from the symlink's directory, absolute ones are used as they are. Nothing is followed beyond the plain existence check. Bare repositories are skipped.
+Walks the tracked symlinks (mode 120000), reads their target and checks that the target exists in the working tree. The target is computed from text only, from the symlink's directory, and the disk is touched only inside the repository. A symlink with an absolute path, a UNC path, a drive letter or a target outside the repository (`..`) is reported as pointing outside the repository (it will not work elsewhere) and its target is never checked. Bare repositories are skipped.
 
 ## Why it matters
 
