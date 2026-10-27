@@ -46,6 +46,7 @@ if TYPE_CHECKING:
 
 SIDEBAR_W = 22
 MIN_NAME_W = 13  # nejdelší názvy ve wireframu („thesis-2019“, „infra-notes“) se vejdou celé
+SCAN_ANIMATION_INTERVAL = 0.12  # s mezi snímky animace pruhu skenu
 # krátké tvary pro lištu; plné popisky jsou v nápovědě a paletě
 DASH_KEYS: list[str | tuple[str, str]] = [
     ("scan_all", _("sken všech rep")),
@@ -88,6 +89,7 @@ class DashboardScreen(NavMixin, Screen[Any]):
         self.sidebar_forced: bool | None = None
         self._row_paths: list[str | None] = []
         self._row_groups: list[str | None] = []
+        self._scan_frame = 0
 
     @property
     def rd(self) -> RepoDoctorApp:
@@ -114,6 +116,12 @@ class DashboardScreen(NavMixin, Screen[Any]):
         self.sidebar_forced = None if self.rd.config.ui.show_sidebar else False
         self.refresh_data()
         self.query_one(TriageList).focus()
+        self.set_interval(SCAN_ANIMATION_INTERVAL, self._animate_scan)
+
+    def _animate_scan(self) -> None:
+        if self.rd.scanning:
+            self._scan_frame += 1
+            self.refresh_data(light=True)
 
     def on_resize(self, event: Resize) -> None:
         self.refresh_data()
@@ -166,6 +174,7 @@ class DashboardScreen(NavMixin, Screen[Any]):
                 current=app.scan_current,
                 keys=(app.key("scan_all"), app.key("cancel_scan")),
                 scheduled=app.scheduled,
+                frame=self._scan_frame,
             )
         )
         if light:

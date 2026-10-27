@@ -261,6 +261,25 @@ async def test_progressive_scan_and_cancel(tmp_path: Path) -> None:
         await pilot.press("x")  # nic neběží
 
 
+async def test_cancel_hint_only_while_scanning(tmp_path: Path) -> None:
+    repos = sample_result().repos[:4]
+    app = make_app(
+        tmp_path,
+        result=sample_result().model_copy(update={"repos": []}),
+        scanner_factory=fake_factory(repos, 0.2),
+    )
+    async with app.run_test(size=(100, 31)) as pilot:
+        await pilot.pause()
+        assert "zruší sken" not in screen_text(app)
+        await pilot.press("R")
+        await pilot.pause(0.3)
+        assert "zruší sken" in screen_text(app)
+        await app.workers.wait_for_complete()
+        await pilot.pause()
+        assert not app.scanning
+        assert "zruší sken" not in screen_text(app)
+
+
 async def test_full_scan_updates_and_saves(tmp_path: Path) -> None:
     repos = sample_result().repos[:4]
     app = make_app(tmp_path, result=sample_result(), scanner_factory=fake_factory(repos, 0.01))
@@ -961,3 +980,23 @@ async def test_settings_editor_choice(tmp_path: Path, monkeypatch: pytest.Monkey
         await pilot.pause()
         assert app.screen.query_one("#editor-choice").value == "__custom__"
         assert app.screen.query_one("#editor", Input).value == "nvim -p"
+
+
+def test_scan_dots_animate_and_stack() -> None:
+    from repo_doctor.tui.widgets.vitals import scan_dots
+
+    assert scan_dots(20, 0) != scan_dots(20, 5)
+    assert scan_dots(20, 3) == scan_dots(20, 3)  # čistá funkce snímku
+    assert all(len(scan_dots(w, 7)) == w for w in (10, 20))
+    # v jednom sloupci jich bývá víc najednou (braille buňka nese až 8 teček)
+    assert any(m & (m - 1) for f in range(60) for m in scan_dots(20, f))
+
+
+def test_scan_bar_is_green_where_filled() -> None:
+    from repo_doctor.tui.theme import DARK
+    from repo_doctor.tui.widgets.vitals import scan_bar
+
+    bar = scan_bar(10, 5, 10, 3, DARK)
+    assert bar.cell_len == 10
+    assert [s.style.bgcolor.name for s in bar.spans[:5]] == [DARK.ok] * 5  # type: ignore[union-attr]
+    assert [s.style.bgcolor.name for s in bar.spans[5:]] == [DARK.dim] * 5  # type: ignore[union-attr]
