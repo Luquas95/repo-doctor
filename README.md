@@ -392,15 +392,19 @@ Dokumentace každé kontroly je v `docs/checks/<id>.md`, anglicky v
 | ID | Kategorie | Severity | Automatická oprava | Síť / hosting |
 |---|---|---|---|---|
 | [`ci-security`](docs/checks/ci-security.md) | Bezpečnost | MED | ✓ |  |
+| [`compose-risks`](docs/checks/compose-risks.md) | Bezpečnost | MED |  |  |
 | [`deps-lockfile-missing`](docs/checks/deps-lockfile-missing.md) | Bezpečnost | MED |  |  |
 | [`deps-vulnerable`](docs/checks/deps-vulnerable.md) | Bezpečnost | HIGH |  | síť |
 | [`docker-hygiene`](docs/checks/docker-hygiene.md) | Bezpečnost | MED | ✓ |  |
 | [`email-exposure`](docs/checks/email-exposure.md) | Bezpečnost | MED | ✓ | síť |
 | [`env-committed`](docs/checks/env-committed.md) | Bezpečnost | HIGH | ✓ |  |
+| [`js-risks`](docs/checks/js-risks.md) | Bezpečnost | MED |  |  |
 | [`prepush-guard`](docs/checks/prepush-guard.md) | Bezpečnost | LOW | ✓ |  |
 | [`public-sensitive`](docs/checks/public-sensitive.md) | Bezpečnost | HIGH |  | síť |
+| [`python-risks`](docs/checks/python-risks.md) | Bezpečnost | MED |  |  |
 | [`secrets-history`](docs/checks/secrets-history.md) | Bezpečnost | HIGH |  |  |
 | [`secrets-tree`](docs/checks/secrets-tree.md) | Bezpečnost | HIGH |  |  |
+| [`shell-risks`](docs/checks/shell-risks.md) | Bezpečnost | MED |  |  |
 | [`broken-symlinks`](docs/checks/broken-symlinks.md) | Údržba | LOW |  |  |
 | [`case-collisions`](docs/checks/case-collisions.md) | Údržba | MED |  |  |
 | [`ci-missing`](docs/checks/ci-missing.md) | Údržba | LOW | ✓ |  |

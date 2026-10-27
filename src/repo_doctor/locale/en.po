@@ -959,6 +959,10 @@ msgstr "Finding allowlist (d removes the selected one)"
 msgid "Anthropic API klíč"
 msgstr "Anthropic API key"
 
+#: repo_doctor/checks/static_code.py:96
+msgid "Aplikace se spouští s debug=True (konzole na dálku)."
+msgstr "The application is started with debug=True (a remote console)."
+
 #: repo_doctor/tui/app.py:466
 msgid "Aplikaci ukončíš klávesou {key}."
 msgstr "Quit the application with {key}."
@@ -1003,7 +1007,7 @@ msgstr "The package does not have the expected contents."
 msgid "Balík obsahuje verzi {packaged}, ne {version}."
 msgstr "The package contains version {packaged}, not {version}."
 
-#: repo_doctor/checks/quality.py:327
+#: repo_doctor/checks/quality.py:328
 msgid "Bez automatických aktualizací závislostí"
 msgstr "No automated dependency updates"
 
@@ -1099,7 +1103,7 @@ msgstr "No CI"
 msgid "Chybí README"
 msgstr "No README"
 
-#: repo_doctor/checks/quality.py:168
+#: repo_doctor/checks/quality.py:169
 msgid "Chybí konfigurace linteru nebo formátovače"
 msgstr "Linter or formatter configuration missing"
 
@@ -1123,7 +1127,7 @@ msgstr "Token permissions not restricted"
 msgid "Chybí pre-commit"
 msgstr "No pre-commit"
 
-#: repo_doctor/checks/quality.py:264
+#: repo_doctor/checks/quality.py:265
 msgid "Chybí projektové dokumenty"
 msgstr "Project documents missing"
 
@@ -1171,6 +1175,10 @@ msgstr "Target watched folder"
 msgid "D smaže trvale – jen po výslovném potvrzení."
 msgstr "D deletes permanently – only after explicit confirmation."
 
+#: repo_doctor/checks/static_code.py:97
+msgid "DEBUG = True v nastavení, v produkci musí být vypnuté."
+msgstr "DEBUG = True in the settings; it must be off in production."
+
 #: repo_doctor/schedule.py:106 repo_doctor/schedule.py:116
 msgid ""
 "Description=repo-doctor – plánovaný sken repozitářů\n"
@@ -1187,7 +1195,7 @@ msgstr "Detached HEAD"
 msgid "Do koše"
 msgstr "To trash"
 
-#: repo_doctor/checks/quality.py:296
+#: repo_doctor/checks/quality.py:297
 msgid "Do repa přispívá {people}, ale chybí CONTRIBUTING."
 msgstr "{people} contribute to the repo, but there is no CONTRIBUTING."
 
@@ -1351,6 +1359,10 @@ msgstr "Search depth (0–12)"
 msgid "Hloubka: "
 msgstr "Depth: "
 
+#: repo_doctor/checks/static_code.py:98
+msgid "Holé except: schová i KeyboardInterrupt a skutečné chyby."
+msgstr "A bare except: hides KeyboardInterrupt and real errors too."
+
 #: repo_doctor/fixes.py:150
 msgid "Hook {key} léčba neinstaluje."
 msgstr "The fix does not install the {key} hook."
@@ -1479,7 +1491,7 @@ msgstr "Version {latest} is available (you have {current}) – {how}."
 msgid "Je dostupná verze {version} (máš {version2})."
 msgstr "Version {version} is available (you have {version2})."
 
-#: repo_doctor/checks/quality.py:86
+#: repo_doctor/checks/quality.py:87
 msgid "Je tu {files}, ale žádné testy (adresář tests/, test_*.py, *.test.ts…)."
 msgstr "There are {files} but no tests (a tests/ directory, test_*.py, *.test.ts…)."
 
@@ -1544,6 +1556,14 @@ msgstr "Configuration does not exist ({path}) – defaults will be used."
 #: repo_doctor/cli.py:42
 msgid "Konfigurace."
 msgstr "Configuration."
+
+#: repo_doctor/checks/static_code.py:339
+msgid "Kontejner běží s privileged: true (skoro root na hostiteli)."
+msgstr "The container runs with privileged: true (almost root on the host)."
+
+#: repo_doctor/checks/static_code.py:343
+msgid "Kontejner má připojený docker.sock, kdo ho ovládne, ovládne hostitele."
+msgstr "The container has docker.sock mounted; whoever controls it controls the host."
 
 #: repo_doctor/cli.py:657
 msgid ""
@@ -1835,11 +1855,11 @@ msgstr "No channel is configured ([notify] in config.toml)."
 msgid "Není připojený žádný hosting – přidej ho na obrazovce Hostingy ({key})."
 msgstr "No hosting is connected – add one on the Hostings screen ({key})."
 
-#: repo_doctor/checks/quality.py:230
+#: repo_doctor/checks/quality.py:231
 msgid "Není určená podporovaná verze Pythonu (requires-python, .python-version nebo .tool-versions)."
 msgstr "No supported Python version is declared (requires-python, .python-version or .tool-versions)."
 
-#: repo_doctor/checks/quality.py:242
+#: repo_doctor/checks/quality.py:243
 msgid "Není určená verze Node.js (engines v package.json, .nvmrc nebo .tool-versions)."
 msgstr "No Node.js version is declared (engines in package.json, .nvmrc or .tool-versions)."
 
@@ -1873,7 +1893,7 @@ msgstr "Invalid {file}: {err}"
 msgid "Nepushnuté commity"
 msgstr "Unpushed commits"
 
-#: repo_doctor/checks/quality.py:213
+#: repo_doctor/checks/quality.py:214
 msgid "Nepřipnutá verze jazyka"
 msgstr "Language version not pinned"
 
@@ -1933,7 +1953,7 @@ msgstr "Nothing will be pushed."
 msgid "Nic se nepushuje – odeslání je samostatný krok na kartě repa."
 msgstr "Nothing is pushed – sending is a separate step on the repo card."
 
-#: repo_doctor/checks/quality.py:197
+#: repo_doctor/checks/quality.py:198
 msgid "Node projekt bez konfigurace linteru či formátovače (eslint, prettier, biome)."
 msgstr "Node project without a linter or formatter configuration (eslint, prettier, biome)."
 
@@ -2061,9 +2081,9 @@ msgstr "Sending failed"
 msgid "Odeslání selhalo"
 msgstr "Sending failed"
 
-#: repo_doctor/checks/quality.py:384
+#: repo_doctor/checks/quality.py:391
 msgid "Odkaz na „{target}“ vede na soubor, který v repu není."
-msgstr "The link to "{target}" points to a file that is not in the repository."
+msgstr "The link to "
 
 #: repo_doctor/tui/helptext.py:69
 msgid "Offline režim (O) vypne síťové kontroly (OSV, registry, API hostingů); nový sken spustí R."
@@ -2281,6 +2301,10 @@ msgstr "Continue"
 msgid "Pokračovat?"
 msgstr "Continue?"
 
+#: repo_doctor/checks/static_code.py:352
+msgid "Port databáze nebo cache je otevřený na všech rozhraních (chybí 127.0.0.1:)."
+msgstr "A database or cache port is open on all interfaces (127.0.0.1: is missing)."
+
 #: repo_doctor/tui/screens/publish.py:166
 msgid "Poslat"
 msgstr "Push"
@@ -2363,7 +2387,7 @@ msgstr "Private key"
 msgid "Pro větev {branch} není žádný PR – nejdřív ho vytvoř."
 msgstr "There is no PR for branch {branch} – create it first."
 
-#: repo_doctor/checks/quality.py:75
+#: repo_doctor/checks/quality.py:76
 msgid "Projekt bez testů"
 msgstr "Project without tests"
 
@@ -2411,7 +2435,7 @@ msgstr "Push failed: {why}"
 msgid "Push {branch} → {remote} ({url}), {commits}:"
 msgstr "Push {branch} → {remote} ({url}), {commits}:"
 
-#: repo_doctor/checks/quality.py:184
+#: repo_doctor/checks/quality.py:185
 msgid "Python projekt bez konfigurace linteru či formátovače (ruff, flake8, black…)."
 msgstr "Python project without a linter or formatter configuration (ruff, flake8, black…)."
 
@@ -2567,11 +2591,11 @@ msgstr "The repo has uncommitted changes – file fixes will not run."
 msgid "Repo má nevyřešené konflikty – nejdřív je vyřeš."
 msgstr "The repo has unresolved conflicts – resolve them first."
 
-#: repo_doctor/checks/quality.py:277
+#: repo_doctor/checks/quality.py:278
 msgid "Repo má tagy (poslední {tag}), ale žádný CHANGELOG ani poznámky k vydání."
 msgstr "The repo has tags (latest {tag}) but no CHANGELOG or release notes."
 
-#: repo_doctor/checks/quality.py:139
+#: repo_doctor/checks/quality.py:140
 msgid "Repo má testy, ale v CI konfiguraci není žádný příkaz, který je spouští."
 msgstr "The repo has tests, but no command in the CI configuration runs them."
 
@@ -2583,7 +2607,7 @@ msgstr "The repo has its own filters/drivers in .git/config – merge manually (
 msgid "Repo má víc remotů ({names}) – vyber jeden v nastavení [publish] remote."
 msgstr "The repo has several remotes ({names}) – pick one in the [publish] remote setting."
 
-#: repo_doctor/checks/quality.py:341
+#: repo_doctor/checks/quality.py:342
 msgid "Repo má závislosti, ale žádný Dependabot ani Renovate, takže aktualizace a bezpečnostní opravy hlídá jen člověk."
 msgstr "The repo has dependencies but neither Dependabot nor Renovate, so updates and security fixes depend on a human remembering."
 
@@ -2647,11 +2671,27 @@ msgstr "Repositories on the hosting service that you do not have locally, and th
 msgid "Rizikové nastavení CI workflow"
 msgstr "Risky CI workflow settings"
 
+#: repo_doctor/checks/static_code.py:408
+msgid "Rizikové nastavení Docker Compose"
+msgstr "Risky Docker Compose settings"
+
+#: repo_doctor/checks/static_code.py:258
+msgid "Rizikové vzory v JavaScriptu a TypeScriptu"
+msgstr "Risky patterns in JavaScript and TypeScript"
+
+#: repo_doctor/checks/static_code.py:190
+msgid "Rizikové vzory v Pythonu"
+msgstr "Risky patterns in Python"
+
+#: repo_doctor/checks/static_code.py:325
+msgid "Rizikové vzory v shell skriptech"
+msgstr "Risky patterns in shell scripts"
+
 #: repo_doctor/checks/tree.py:279
 msgid "Rozbité nebo nezabezpečené submoduly"
 msgstr "Broken or insecure submodules"
 
-#: repo_doctor/checks/quality.py:358
+#: repo_doctor/checks/quality.py:363
 msgid "Rozbité odkazy v README"
 msgstr "Broken links in README"
 
@@ -2759,6 +2799,10 @@ msgstr "Scan {when}{offline}{cancelled}."
 msgid "Skenování jen čte. Co mění soubory, repa nebo hosting, má náhled a potvrzení s výchozí volbou „Zrušit“. Push nikdy nejde silou (force), merge na hostingu jen po zelené CI."
 msgstr "Scanning only reads. Anything that changes files, repos or hosting has a preview and a confirmation that defaults to “Cancel”. Push is never forced, and merging on the hosting service happens only once CI is green."
 
+#: repo_doctor/checks/static_code.py:284
+msgid "Skript nemá set -e/-u (ani pipefail), chyba uprostřed se přejde bez hlášení."
+msgstr "The script has no set -e/-u (or pipefail), so a mid-script error passes silently."
+
 #: repo_doctor/reports/markdown.py:98
 msgid "Skryto allowlistem: {n}"
 msgstr "Hidden by the allowlist: {n}"
@@ -2806,6 +2850,10 @@ msgstr "Folders with repos (without them, folders from the configuration)."
 #: repo_doctor/tui/helptext.py:141
 msgid "Složky, ve kterých repo-doctor hledá repozitáře."
 msgstr "Folders where repo-doctor looks for repositories."
+
+#: repo_doctor/checks/static_code.py:429
+msgid "Služba {service}: "
+msgstr "Service {service}: "
 
 #: repo_doctor/cli.py:690
 msgid "Soubor (jinak stdout). Nepřepisuje."
@@ -2909,6 +2957,10 @@ msgstr "Downloading {name} failed (HTTP {status_code})."
 msgid "Stažení {name} selhalo: {name2}"
 msgstr "Downloading {name} failed: {name2}"
 
+#: repo_doctor/checks/static_code.py:274
+msgid "Stažený skript se rovnou pouští v shellu (… | sh), bez kontroly obsahu."
+msgstr "A downloaded script is piped straight into a shell (… | sh) without inspecting it."
+
 #: repo_doctor/tools.py:331
 msgid "Stáhne {name} {version} z GitHubu do {tools_dir} (ověří SHA-256 zapsaný v repo-doctoru)"
 msgstr "Downloads {name} {version} from GitHub to {tools_dir} (verifies the SHA-256 pinned in repo-doctor)"
@@ -2997,7 +3049,7 @@ msgstr "The terminal cannot be suspended – run manually: {join}"
 msgid "Test upozornění"
 msgstr "Test notification"
 
-#: repo_doctor/checks/quality.py:119
+#: repo_doctor/checks/quality.py:120
 msgid "Testy existují, ale CI je nespouští"
 msgstr "Tests exist but CI does not run them"
 
@@ -3131,7 +3183,7 @@ msgstr "Large files outside Git LFS"
 msgid "Verze {version} není novější než {current}."
 msgstr "Version {version} is not newer than {current}."
 
-#: repo_doctor/checks/quality.py:286
+#: repo_doctor/checks/quality.py:287
 msgid "Veřejné repo bez SECURITY.md: nahlašovatelé zranitelností nevědí, kam psát."
 msgstr "Public repo without SECURITY.md: people who find a vulnerability do not know where to report it."
 
@@ -3158,6 +3210,10 @@ msgstr "Optional tools (gitleaks, wl-clipboard, xdg-utils, libnotify) and the ke
 #: repo_doctor/tui/screens/tools.py:65
 msgid "Volitelné – repo-doctor funguje i bez nich, s nimi umí víc. Systémové balíčky odinstaluješ správcem balíčků."
 msgstr "Optional – repo-doctor works without them, with them it can do more. Uninstall system packages with the package manager."
+
+#: repo_doctor/checks/static_code.py:88
+msgid "Volání procesu přes shell=True (vstřikování příkazů)."
+msgstr "A process is called through shell=True (command injection)."
 
 #: repo_doctor/tui/helptext.py:189
 msgid "Vyber formát (Markdown, JSON, HTML) a cestu, e report uloží."
@@ -3214,6 +3270,10 @@ msgstr "Disable"
 #: repo_doctor/tui/screens/settings.py:312
 msgid "Vypnout plánovaný sken"
 msgstr "Disable the scheduled scan"
+
+#: repo_doctor/checks/static_code.py:217
+msgid "Vypnuté ověření TLS certifikátu (rejectUnauthorized: false)."
+msgstr "TLS certificate verification is disabled (rejectUnauthorized: false)."
 
 #: repo_doctor/cli.py:1012
 msgid "Vypíše cestu ke konfiguraci."
@@ -3377,9 +3437,17 @@ msgstr "Enable the scheduled scan"
 msgid "Zapnuto"
 msgstr "Enabled"
 
+#: repo_doctor/checks/static_code.py:99
+msgid "Zapomenuté ladicí volání (breakpoint, pdb.set_trace)."
+msgstr "A forgotten debugging call (breakpoint, pdb.set_trace)."
+
 #: repo_doctor/checks/git_state.py:159
 msgid "Zapomenuté stashe"
 msgstr "Forgotten stashes"
+
+#: repo_doctor/checks/static_code.py:219
+msgid "Zapomenutý příkaz debugger."
+msgstr "A forgotten debugger statement."
 
 #: repo_doctor/checks/git_state.py:108
 msgid "Zastaralé lokální branche"
@@ -3671,6 +3739,10 @@ msgstr "hosting API cache (min)"
 msgid "cache registrů a OSV (h)"
 msgstr "registry and OSV cache (h)"
 
+#: repo_doctor/checks/static_code.py:348
+msgid "cap_add: ALL nebo SYS_ADMIN dává kontejneru skoro root práva."
+msgstr "cap_add: ALL or SYS_ADMIN gives the container almost root privileges."
+
 #: repo_doctor/tui/screens/cleanup.py:168
 msgid "celý duplicitní klon"
 msgstr "whole duplicate clone"
@@ -3682,6 +3754,10 @@ msgstr "path"
 #: repo_doctor/config.py:49
 msgid "cesta nesmí být prázdná"
 msgstr "the path must not be empty"
+
+#: repo_doctor/checks/static_code.py:276
+msgid "chmod 777 dává zápis úplně všem."
+msgstr "chmod 777 gives everyone write access."
 
 #: repo_doctor/publish.py:316
 msgid "chore(repo-doctor): automatické opravy ({n})"
@@ -3763,6 +3839,10 @@ msgstr "next field"
 msgid "dalších"
 msgstr "more"
 
+#: repo_doctor/checks/static_code.py:213
+msgid "dangerouslySetInnerHTML: ověř, že vkládaný obsah nikdy nepochází od uživatele."
+msgstr "dangerouslySetInnerHTML: make sure the inserted content never comes from a user."
+
 #: repo_doctor/tui/app.py:222
 msgid "dashboard ještě neexistuje"
 msgstr "the dashboard does not exist yet"
@@ -3818,6 +3898,22 @@ msgstr "email must be a single address"
 #: repo_doctor/tui/screens/dialogs.py:96
 msgid "enter uložit · esc zrušit"
 msgstr "enter save · esc cancel"
+
+#: repo_doctor/checks/static_code.py:281
+msgid "eval s proměnnou spouští její obsah jako kód."
+msgstr "eval with a variable runs its content as code."
+
+#: repo_doctor/checks/static_code.py:202
+msgid "eval() nebo new Function() spouští řetězec jako kód."
+msgstr "eval() or new Function() runs a string as code."
+
+#: repo_doctor/checks/static_code.py:86
+msgid "eval()/exec() s nekonstantním argumentem (spuštění cizího kódu)."
+msgstr "eval()/exec() with a non-constant argument (running foreign code)."
+
+#: repo_doctor/checks/static_code.py:205
+msgid "exec()/execSync() se skládaným příkazem (vstřikování příkazů)."
+msgstr "exec()/execSync() with a composed command (command injection)."
 
 #: repo_doctor/keymap.py:123
 msgid "export SBOM (CycloneDX)"
@@ -3950,6 +4046,10 @@ msgstr "http://{host} is not in allow_http_hosts – unencrypted connection refu
 #: repo_doctor/tui/helptext.py:182
 msgid "i nainstaluje vybraný nástroj, I všechny chybějící."
 msgstr "i installs the selected tool, I all missing ones."
+
+#: repo_doctor/checks/static_code.py:209
+msgid "innerHTML = … nebo document.write vkládá řetězec jako HTML (XSS)."
+msgstr "innerHTML = … or document.write inserts a string as HTML (XSS)."
 
 #: repo_doctor/forges/gitea.py:220
 msgid "instance je Forgejo – nastav type = \"forgejo\""
@@ -4135,11 +4235,11 @@ msgstr "license "
 msgid "licence závislostí nejsou zjištěné (offline)"
 msgstr "dependency licenses are not known (offline)"
 
-#: repo_doctor/checks/quality.py:297
+#: repo_doctor/checks/quality.py:298
 msgid "lidé"
 msgstr "people"
 
-#: repo_doctor/checks/quality.py:297
+#: repo_doctor/checks/quality.py:298
 msgid "lidí"
 msgstr "people"
 
@@ -4389,6 +4489,10 @@ msgstr "invalid time {value!r} – enter HH:MM in the range 00:00–23:59"
 msgid "nesledované nebo ignorované soubory by se přepsaly: {files}"
 msgstr "untracked or ignored files would be overwritten: {files}"
 
+#: repo_doctor/checks/static_code.py:345
+msgid "network_mode: host obchází izolaci sítě kontejneru."
+msgstr "network_mode: host bypasses the container network isolation."
+
 #: repo_doctor/checks/privacy.py:97
 msgid "neznám tvůj e-mail – nastav git config --global user.email nebo my_emails"
 msgstr "your e-mail is unknown – set git config --global user.email or my_emails"
@@ -4460,6 +4564,10 @@ msgstr "finding"
 #: repo_doctor/tui/screens/detail.py:330
 msgid "nálezy"
 msgstr "findings"
+
+#: repo_doctor/checks/static_code.py:74
+msgid "nálezů je příliš mnoho, vypsáno prvních {n}"
+msgstr "too many findings, only the first {n} are listed"
 
 #: repo_doctor/keymap.py:70 repo_doctor/tui/screens/help.py:64
 msgid "nápověda"
@@ -4541,6 +4649,10 @@ msgstr "fixable findings"
 msgid "organizace / skupina"
 msgstr "organization / group"
 
+#: repo_doctor/checks/static_code.py:89
+msgid "os.system()/os.popen() spouští příkaz přes shell."
+msgstr "os.system()/os.popen() runs a command through a shell."
+
 #: repo_doctor/keymap.py:157
 msgid "otestovat připojení"
 msgstr "test connection"
@@ -4596,6 +4708,10 @@ msgstr "palette"
 #: repo_doctor/checks/ci_security.py:322
 msgid "permissions: write-all – token workflow smí zapisovat úplně všude"
 msgstr "permissions: write-all – the workflow token may write absolutely everywhere"
+
+#: repo_doctor/checks/static_code.py:90
+msgid "pickle/marshal.load() z nedůvěryhodných dat spustí kód."
+msgstr "pickle/marshal.load() on untrusted data runs code."
 
 #: repo_doctor/checks/duplicates.py:110
 msgid "po kontrole ho lze smazat (hlavní je {path})"
@@ -4909,6 +5025,10 @@ msgstr "repositories"
 msgid "repozitářů"
 msgstr "repositories"
 
+#: repo_doctor/checks/static_code.py:279
+msgid "rm -rf s cestou začínající proměnnou: když je prázdná, maže se od kořene."
+msgstr "rm -rf with a path starting with a variable: when it is empty, deletion starts at the root."
+
 #: repo_doctor/sync.py:69
 msgid "rozdělená historie – vyřeš ručně (merge/rebase), repo-doctor jen fast-forward"
 msgstr "diverged history – resolve it by hand (merge/rebase), repo-doctor only fast-forwards"
@@ -5137,6 +5257,10 @@ msgstr "secret"
 msgid "tajemství před pushem"
 msgstr "secrets before push"
 
+#: repo_doctor/checks/static_code.py:100
+msgid "tempfile.mktemp() je náchylné na souběh, použij mkstemp()."
+msgstr "tempfile.mktemp() is prone to races, use mkstemp()."
+
 #: repo_doctor/tui/triage_model.py:24
 msgid "tep"
 msgstr "pulse"
@@ -5305,6 +5429,10 @@ msgstr "large files"
 msgid "velký soubor (MB)"
 msgstr "large file (MB)"
 
+#: repo_doctor/checks/static_code.py:95
+msgid "verify=False vypíná ověření TLS certifikátu."
+msgstr "verify=False disables TLS certificate verification."
+
 #: repo_doctor/checks/privacy.py:135
 msgid "veřejná historie obsahuje tvůj e-mail {masked} ({commits})"
 msgstr "the public history contains your e-mail {masked} ({commits})"
@@ -5471,6 +5599,10 @@ msgstr "a workflow triggered by foreign PRs ({join}) has unrestricted token perm
 msgid "xdg-open není k dispozici: {web_url}"
 msgstr "xdg-open is not available: {web_url}"
 
+#: repo_doctor/checks/static_code.py:93
+msgid "yaml.load() bez SafeLoader umí vytvářet libovolné objekty."
+msgstr "yaml.load() without SafeLoader can construct arbitrary objects."
+
 #: repo_doctor/tui/helptext.py:114
 msgid "z sbalí nebo rozbalí skupinu, alt+g přepíná seskupení (triáž / složka / hosting)."
 msgstr "z collapses or expands a group, alt+g cycles the grouping (triage / folder / hosting)."
@@ -5519,15 +5651,15 @@ msgstr "health"
 msgid "zdraví "
 msgstr "health "
 
-#: repo_doctor/checks/quality.py:88
+#: repo_doctor/checks/quality.py:89
 msgid "zdrojové soubory"
 msgstr "source files"
 
-#: repo_doctor/checks/quality.py:88
+#: repo_doctor/checks/quality.py:89
 msgid "zdrojový soubor"
 msgstr "source file"
 
-#: repo_doctor/checks/quality.py:88
+#: repo_doctor/checks/quality.py:89
 msgid "zdrojových souborů"
 msgstr "source files"
 
@@ -5935,7 +6067,7 @@ msgstr "čeština"
 msgid "čisté"
 msgstr "clean"
 
-#: repo_doctor/checks/quality.py:297
+#: repo_doctor/checks/quality.py:298
 msgid "člověk"
 msgstr "person"
 

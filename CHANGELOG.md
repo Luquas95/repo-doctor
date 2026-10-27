@@ -20,6 +20,14 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
   s tagy, SECURITY.md u veřejného repa, CONTRIBUTING od tří autorů), `dependency-bot-missing`
   (Dependabot či Renovate) a `readme-links-broken` (relativní odkazy v README na neexistující
   soubory). Kontroly kódu mlčí u repí s méně než 5 zdrojovými soubory.
+- **Lehká statická analýza (#34, 3/4):** čtyři bezpečnostní kontroly, které kód jen čtou
+  (Python se parsuje přes `ast`, nic se nespouští ani neimportuje): `python-risks`
+  (`eval`/`exec`, `shell=True`, `os.system`, `pickle`, `yaml.load`, `verify=False`,
+  `debug=True`, holé `except:`, ladicí zbytky), `js-risks` (`eval`, skládané `exec`, `innerHTML`,
+  vypnuté TLS, `dangerouslySetInnerHTML`, `debugger`), `shell-risks` (stažený skript puštěný
+  v shellu, `chmod 777`, `rm -rf "$VAR"/…`, skript bez `set -e`) a `compose-risks`
+  (`privileged`, `docker.sock`, `network_mode: host`, `cap_add`, databáze na všech rozhraních).
+  Testy a vendorovaný kód se přeskakují, nálezů je nejvýš 50 na kontrolu.
 - **Nápověda v TUI (#30):** dva druhy v jedné obrazovce se dvěma záložkami (přepíná `Tab`).
   `?` otevře nápovědu k aktuální obrazovce (k čemu slouží, jak se s ní pracuje, její zkratky,
   pohyb a globální zkratky), nová `H` (akce `help_all`, jde přemapovat) rovnou úplnou nápovědu:

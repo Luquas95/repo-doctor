@@ -510,3 +510,19 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - **Bot na závislosti** se hlásí jen u repa s remote a manifestem; konkrétní hosting se nerozlišuje
   (Dependabot i Renovate se počítají).
 
+## Další metody analýzy, díl 3: lehká statická analýza (#34)
+
+- **Nic se nespouští ani neimportuje.** Python jde přes `ast.parse` (syntaktické chyby a Python 2
+  se tiše přeskočí), ostatní jazyky přes řádkové regexy. Plnohodnotná analýza (Semgrep, Bandit)
+  se záměrně nevolá: jsou to cizí programy s vlastními pravidly a konfigurací z repa.
+- **Cizí vstup je ohraničený:** soubory max. `limits.max_file_kb`, řádky max. 1000 znaků (delší je
+  minifikovaný kód), regexy bez vnořených kvantifikátorů, max. 3000 souborů na kontrolu a 50 nálezů
+  (nad to jeden nález „Nekompletní sken“, ne tiché oříznutí).
+- **Jeden nález na soubor a pravidlo**, s prvním řádkem a počtem výskytů v `data["count"]`; klíč
+  `py:<pravidlo>:<soubor>` je nezávislý na jazyku i na číslech řádků, takže allowlist drží i po úpravách.
+- **Testy a vendorovaný kód se přeskakují** (v testech jsou rizikové vzory záměrně; shell skripty
+  se čtou i v `tests/`, protože tam bývají nasazovací skripty).
+- **`dangerouslySetInnerHTML` je LOW:** v Next.js layoutech je to běžný idiom (JSON-LD, úvodní
+  skript s konstantou), MED by bylo hlučné.
+- **Compose nemá čísla řádků:** `yaml.safe_load` je nenese, nález se váže na službu (`compose:<pravidlo>:<soubor>:<služba>`).
+
