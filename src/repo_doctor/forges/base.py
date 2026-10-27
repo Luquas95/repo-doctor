@@ -1,4 +1,8 @@
-"""Společné rozhraní git hostingů. Všechny operace jsou jen čtecí."""
+"""Společné rozhraní git hostingů.
+
+Čtecí operace slouží skenu. Zápisové (`create_pr`, `merge_pr`) volá jen odeslání oprav
+(`repo_doctor.publish`), vždy až po náhledu a potvrzení; neposílají se přes cache.
+"""
 
 from __future__ import annotations
 
@@ -6,7 +10,7 @@ import abc
 import re
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
-from typing import Literal
+from typing import Any, Literal
 
 from repo_doctor.config import ForgeConfig
 from repo_doctor.httpclient import ForbiddenError, HttpClient, HttpError, NotFoundError
@@ -33,6 +37,7 @@ class ForgeRepo:
     open_issues: int | None = None  # u GitHubu včetně PR – scanner je odečte
     topics: tuple[str, ...] = ()
     created_at: datetime | None = None
+    merge_methods: tuple[str, ...] = ()  # povolené metody merge (merge, squash, rebase)
 
     @property
     def name(self) -> str:
@@ -57,6 +62,23 @@ class PullRequest:
     title: str
     updated_at: datetime | None
     kind: Literal["pr", "issue"] = "pr"
+
+
+PRState = Literal["open", "merged", "closed"]
+
+
+@dataclass
+class PullRequestInfo:
+    """Pull/merge request vytvořený z opravné větve (stav se čte vždy čerstvě)."""
+
+    number: int
+    url: str
+    state: PRState
+    title: str = ""
+    head_branch: str = ""
+    base_branch: str = ""
+    head_sha: str = ""
+    mergeable: bool | None = None  # None = hosting to ještě počítá
 
 
 @dataclass
@@ -100,6 +122,17 @@ def opt_int(value: object) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
 
 
+def sub_dict(value: object, key: str) -> dict[str, Any]:
+    """Vnořený objekt z JSON odpovědi (`{}`, pokud chybí nebo není objekt)."""
+    inner = value.get(key) if isinstance(value, dict) else None
+    return inner if isinstance(inner, dict) else {}
+
+
+def int_field(value: object, key: str) -> int:
+    got = value.get(key) if isinstance(value, dict) else None
+    return got if isinstance(got, int) and not isinstance(got, bool) else 0
+
+
 def str_tuple(value: object) -> tuple[str, ...]:
     return tuple(str(v) for v in value if isinstance(v, str)) if isinstance(value, list) else ()
 
@@ -118,6 +151,7 @@ class Forge(abc.ABC):
     """Základ implementace hostingu. `client` má nastavenou base URL API a autorizaci."""
 
     kind: str = ""
+    authenticated: bool = True  # False = bez tokenu (zápis nejde)
 
     def __init__(self, config: ForgeConfig, client: HttpClient) -> None:
         self.config = config
@@ -151,6 +185,29 @@ class Forge(abc.ABC):
 
     @abc.abstractmethod
     async def open_prs(self, repo: ForgeRepo) -> list[PullRequest]: ...
+
+    @abc.abstractmethod
+    async def find_pr(self, repo: ForgeRepo, head: str) -> PullRequestInfo | None:
+        """Nejnovější PR/MR z větve `head` (otevřený, mergnutý i zavřený), jinak None."""
+
+    @abc.abstractmethod
+    async def get_pr(self, repo: ForgeRepo, number: int) -> PullRequestInfo: ...
+
+    @abc.abstractmethod
+    async def create_pr(
+        self, repo: ForgeRepo, *, head: str, base: str, title: str, body: str
+    ) -> PullRequestInfo: ...
+
+    @abc.abstractmethod
+    async def pr_ci(self, repo: ForgeRepo, pr: PullRequestInfo) -> CIStatus:
+        """Stav CI pro poslední commit PR (ne pro výchozí větev)."""
+
+    @abc.abstractmethod
+    async def merge_pr(self, repo: ForgeRepo, pr: PullRequestInfo, method: str | None) -> None:
+        """Mergne PR; `method` je merge/squash/rebase, None = výchozí metoda hostingu.
+
+        Hosting dostane SHA hlavičky PR, takže merge selže, pokud se větev mezitím změnila.
+        """
 
     @abc.abstractmethod
     async def test_connection(self) -> ConnectionReport: ...
@@ -201,6 +258,23 @@ class Forge(abc.ABC):
         except HttpError as err:
             snap.errors.append(f"PR: {err}")
         return snap
+
+
+MERGE_PREFERENCE = ("merge", "squash", "rebase")
+
+
+def pick_merge_method(repo: ForgeRepo, wanted: str) -> str | None:
+    """Metoda merge podle nastavení (`auto` = první povolená v pořadí merge → squash → rebase).
+
+    None znamená „neposílej metodu“ (hosting použije vlastní výchozí). Výslovně zvolenou,
+    ale v repu zakázanou metodu vrací beze změny – hosting ji odmítne srozumitelnou chybou.
+    """
+    if wanted != "auto":
+        return wanted
+    for method in MERGE_PREFERENCE:
+        if method in repo.merge_methods:
+            return method
+    return None
 
 
 def is_stale(item: PullRequest, days: int, now: datetime) -> bool:

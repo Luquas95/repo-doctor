@@ -971,6 +971,82 @@ class Git:
     def temp_index(self) -> TempIndex:
         return TempIndex(self)
 
+    # ------------------------------------------------------------------ odeslání oprav (publish)
+    def rev_parse(self, ref: str) -> str | None:
+        out = self.run(
+            "rev-parse", "--verify", "--quiet", "--end-of-options", f"{ref}^{{commit}}", check=False
+        ).strip()
+        return out or None
+
+    def is_ancestor(self, ancestor: str, descendant: str) -> bool:
+        return self.ok("merge-base", "--is-ancestor", "--end-of-options", ancestor, descendant)
+
+    def log_commits(self, *revs: str) -> list[tuple[str, str, str]]:
+        """(sha, předmět, tělo) commitů z rozsahu `revs` (nejstarší první)."""
+        out = self.run(
+            "log", "--reverse", "--format=%H%x00%s%x00%b%x1e", *revs, "--", check=False
+        )  # fmt: skip
+        commits = []
+        for record in out.split("\x1e"):
+            parts = record.strip("\n").split("\0")
+            if len(parts) == 3 and parts[0]:
+                commits.append((parts[0], parts[1], parts[2].strip()))
+        return commits
+
+    def commits_not_on_remotes(self, ref: str) -> list[tuple[str, str, str]]:
+        """Commity z `ref`, které nejsou na žádném remote (stejný rozsah jako u pre-push)."""
+        return self.log_commits(ref, "--not", "--remotes")
+
+    def worktree_branches(self) -> dict[str, Path]:
+        """Větev → pracovní strom, ve kterém je právě checkoutnutá (včetně hlavního)."""
+        out = self.run("worktree", "list", "--porcelain", check=False)
+        result: dict[str, Path] = {}
+        current: Path | None = None
+        for line in out.splitlines():
+            if line.startswith("worktree "):
+                current = Path(line[len("worktree ") :])
+            elif line.startswith("branch refs/heads/") and current is not None:
+                result[line[len("branch refs/heads/") :]] = current
+        return result
+
+    def push_urls(self, remote: str) -> list[str]:
+        """Skutečné URL, na která `git push` remote pošle (po `pushurl` a přepisech `insteadOf`)."""
+        out = self.run("remote", "get-url", "--push", "--all", "--", remote, check=False)
+        return [u.strip() for u in out.splitlines() if u.strip()]
+
+    def push_branch(self, remote: str, branch: str, timeout: float = 120.0) -> None:
+        """Pošle jednu lokální větev pod stejným jménem. Nikdy force, tagy ani jiné refy.
+
+        Hooky jsou vypnuté (`core.hooksPath`), kontrolu tajemství dělá repo-doctor sám před
+        voláním. Non-fast-forward git odmítne; `--receive-pack` přebíjí `remote.*.receivepack`.
+        """
+        if remote.startswith("-") or remote not in self.remotes():
+            raise GitError(["push", remote], 1, "neznámý remote")
+        if not self.check_branch_name(branch):
+            raise GitError(["push", branch], 1, "neplatný název branche")
+        opts, env = network_options(self.push_urls(remote))
+        ref = f"refs/heads/{branch}"
+        self.run(
+            *opts,
+            "push",
+            "--porcelain",
+            "--no-verify",
+            "--no-follow-tags",
+            "--no-recurse-submodules",
+            "--receive-pack=git-receive-pack",
+            "--",
+            remote,
+            f"{ref}:{ref}",
+            timeout=timeout,
+            env=env or None,
+        )
+
+    def move_branch(self, branch: str, new: str, old: str) -> None:
+        """Posune lokální větev z `old` na `new` jen když stále ukazuje na `old` (bez pracovního stromu)."""
+        if not self.check_branch_name(branch):
+            raise GitError(["update-ref", branch], 1, "neplatný název branche")
+        self.run("update-ref", "-m", "repo-doctor: fast-forward", f"refs/heads/{branch}", new, old)
+
     # ------------------------------------------------------------------ síť (jen na výslovný pokyn)
     def fetch_urls(self) -> list[str]:
         """Skutečné URL, na které se `git fetch` může připojit (po přepisu `insteadOf`).

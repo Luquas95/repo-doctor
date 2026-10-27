@@ -156,6 +156,25 @@ class CIConfig(_Model):
     trusted_action_owners: list[str] = Field(default_factory=list)
 
 
+MergeMethod = Literal["auto", "merge", "squash", "rebase"]
+
+
+class PublishConfig(_Model):
+    """Odeslání oprav: push větve, PR/MR a merge. Jen v globální konfiguraci."""
+
+    # `auto` = první povolená metoda repa v pořadí merge → squash → rebase
+    merge_method: MergeMethod = "auto"
+    # remote pro push; prázdné = remote výchozí větve, jinak `origin`, jinak jediný remote
+    remote: str | None = None
+
+    @field_validator("remote")
+    @classmethod
+    def _remote_name(cls, value: str | None) -> str | None:
+        if value is not None and not re.fullmatch(r"[A-Za-z0-9_.][A-Za-z0-9_.\-]*", value):
+            raise ValueError("neplatný název remotu")
+        return value
+
+
 class CleanupConfig(_Model):
     # Regenerovatelné složky (jen ignorované gitem), které nabízí úklid a kontrola disk-usage.
     dirs: list[str] = Field(
@@ -255,6 +274,7 @@ class Config(_Model):
     mcp: MCPConfig = Field(default_factory=MCPConfig)
     ci: CIConfig = Field(default_factory=CIConfig)
     cleanup: CleanupConfig = Field(default_factory=CleanupConfig)
+    publish: PublishConfig = Field(default_factory=PublishConfig)
     notify: NotifyConfig = Field(default_factory=NotifyConfig)
     schedule: ScheduleConfig = Field(default_factory=ScheduleConfig)
     updates: UpdatesConfig = Field(default_factory=UpdatesConfig)

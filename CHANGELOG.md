@@ -5,6 +5,21 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 ## [Nevydáno]
 
 ### Přidáno
+- **Odeslání oprav: push, PR/MR a merge (#39):** po léčbě jde opravnou větev
+  `repo-doctor/fixes-<datum>` poslat, otevřít z ní PR/MR a mergnout, každý krok zvlášť
+  a s náhledem a potvrzením (výchozí „Zrušit“). V kartě repa `P` push, `C` PR/MR, `M` merge
+  na hostingu, `L` lokální merge a `U` push výchozí větve; v CLI
+  `repo-doctor publish push|pr|merge|merge-local [--branch B] [--apply]` (bez `--apply` jen náhled).
+  - Push: jen opravná větev (a po lokálním merge výchozí), nikdy force ani tagy, hooky se
+    nespouštějí, nové commity projdou kontrolou tajemství jako `guard`.
+  - PR/MR: GitHub, GitLab, Gitea i Forgejo, popis z commitů; token potřebuje právo zápisu.
+  - Merge na hostingu: jen když je CI zelená (nebo žádná není) a hosting hlásí `mergeable`;
+    hosting dostane SHA hlavičky, takže merge selže, pokud se větev mezitím změnila. Metoda podle
+    `[publish] merge_method` (`auto` = první povolená v repu).
+  - Lokální merge: jen fast-forward, pracovní strom se nemění, pokud výchozí větev není
+    checkoutnutá; funguje i bez remote.
+  - Záruka „nikdy nepushuje“ se mění na „nepushuje bez výslovného pokynu“; sken, MCP server
+    i léčba dál nic neposílají. Chyby API hostingu nově nesou jeho vlastní zprávu.
 - **Angličtina (#33, fáze 1):** TUI, CLI a zkratky jsou i anglicky. Jazyk se volí podle
   systému (`LANG`/`LC_ALL`: cs_* → čeština, jinak angličtina), v Nastavení / `[ui] language`
   (`auto` | `cs` | `en`), přepínačem `--lang` nebo proměnnou `REPO_DOCTOR_LANG`. Změna

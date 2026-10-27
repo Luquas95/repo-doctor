@@ -136,6 +136,19 @@ def _parse_link_next(header: str | None) -> str | None:
     return None
 
 
+def _error_detail(resp: httpx.Response) -> str:
+    """Zpráva z těla chyby API (`message`), zkrácená; prázdná, pokud tělo není JSON."""
+    try:
+        body = resp.json()
+    except ValueError:
+        return ""
+    message = body.get("message") if isinstance(body, dict) else None
+    if message is None:
+        return ""
+    text = message if isinstance(message, str) else json.dumps(message, ensure_ascii=False)
+    return " ".join(text.split())[:200]
+
+
 def build_verify(verify_tls: bool, ca_bundle: str | None) -> bool | ssl.SSLContext:
     if ca_bundle:
         from repo_doctor.paths import expand_path
@@ -272,7 +285,10 @@ class HttpClient:
             raise NotFoundError(f"nenalezeno (404) – {short}", status=status, url=url)
         if status >= 500:
             raise UnavailableError(f"chyba serveru {status} – {short}", status=status, url=url)
-        raise HttpError(f"HTTP {status} – {short}", status=status, url=url)
+        detail = _error_detail(resp)
+        raise HttpError(
+            f"HTTP {status} – {short}" + (f": {detail}" if detail else ""), status=status, url=url
+        )
 
     async def request_json(
         self,

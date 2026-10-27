@@ -3,7 +3,8 @@
 TUI pro audit a údržbu git repozitářů. Projde jednu nebo víc tvých složek s repozitáři,
 volitelně se připojí k jejich git hostingům (GitHub, Gitea, Forgejo, GitLab), najde
 bezpečnostní a hygienické problémy, vyrobí přehledný report a umí **bezpečně** připravit
-opravy – vždy jako commity v nové větvi, kterou si zkontroluješ sám.
+opravy – vždy jako commity v nové větvi, kterou si zkontroluješ sám – a na požádání je
+pošle, otevře PR/MR a mergne.
 
 ![Přehled / triáž](docs/screenshots/triaz.svg)
 
@@ -13,6 +14,9 @@ opravy – vždy jako commity v nové větvi, kterou si zkontroluješ sám.
   skóre 0–100, tep (commity za 30 dní), stav gitu a viditelnost na hostingu.
 - **Karta repa** s diagnózou každého nálezu, vysvětlením a ručním postupem opravy.
 - **Léčba:** barevný diff navrhovaných oprav, výběr zaškrtávátky a potvrzení dialogem.
+- **Odeslání oprav:** z karty repa push opravné větve, PR/MR na GitHubu, GitLabu, Gitea i
+  Forgejo, merge na hostingu (jen po zelené CI) a lokální merge. Každý krok zvlášť, s náhledem
+  a potvrzením – viz [Odeslání oprav](#odeslání-oprav-push-pr-merge).
 - **Funguje úplně offline** a bez hostingů; síťové kontroly (OSV.dev, PyPI, npm, API hostingů) jsou nadstavba.
 - **Minimální CLI** pro CI (`repo-doctor scan --report md|json|html`).
 - **Novinky 0.3:** samostatná aplikace bez Pythonu a dalších prostředí – balíčky `.deb`, `.rpm`,
@@ -151,13 +155,17 @@ neukládá do `config.toml`** – zdroj tokenu je jeden z:
 | proměnná prostředí | `token_env = "FORGEJO_TOKEN"` |
 | příkaz (výstup se ořízne a nikam neloguje) | `token_cmd = "pass show git/forgejo"` |
 
-repo-doctor na hostingu **nic nemění** – stačí tokeny jen pro čtení. Minimální oprávnění:
+Sken, karta repa i reporty hosting **jen čtou** – stačí tokeny jen pro čtení. Na hostingu
+cokoli zapíše (PR/MR, merge) jen [odeslání oprav](#odeslání-oprav-push-pr-merge) po tvém
+potvrzení; pokud ho nepoužiješ, nech token jen pro čtení. Minimální oprávnění:
 
-| hosting | minimální token |
-|---|---|
-| GitHub | fine-grained token, read-only: *Metadata*, *Contents*, *Actions*, *Dependabot alerts*, *Secret scanning alerts* (klasický token: `public_repo`/`repo` je zbytečně široký – `forges test` upozorní) |
-| Gitea / Forgejo | scopes `read:repository`, `read:user`, `read:issue` |
-| GitLab | `read_api` (+ `read_repository` pro HTTPS klon) |
+| hosting | jen sken (čtení) | navíc pro PR/MR a merge |
+|---|---|---|
+| GitHub | fine-grained token, read-only: *Metadata*, *Contents*, *Actions*, *Dependabot alerts*, *Secret scanning alerts* | *Contents* a *Pull requests*: read & write (klasický token: `repo`; `forges test` upozorní na zbytečně široká práva) |
+| Gitea / Forgejo | scopes `read:repository`, `read:user`, `read:issue` | `write:repository` a `write:issue` |
+| GitLab | `read_api` (+ `read_repository` pro HTTPS klon) | `api` |
+
+Samotný push jde přes tvůj SSH klíč nebo credential helper (viz níž), ne přes tyto tokeny.
 
 ### Self-hosted Forgejo za Tailscale
 
@@ -281,6 +289,11 @@ Neplatné nebo kolidující mapování se při startu nahlásí srozumitelnou ch
 | `w` | otevřít na webu |
 | `y` | kopírovat cestu |
 | `b` | export SBOM (CycloneDX) |
+| `P` | poslat opravnou větev (push) |
+| `C` | vytvořit PR/MR z opravné větve |
+| `M` | mergnout PR na hostingu (po zelené CI) |
+| `L` | lokální merge opravy (fast-forward) |
+| `U` | poslat výchozí větev (po lokálním merge) |
 
 **Léčba**
 
@@ -462,6 +475,10 @@ inactive_days = 60        # disk-usage a předvýběr v Úklidu jen u rep bez co
 min_mb = 200
 # dirs = ["node_modules", ".venv", "target", …]   # regenerovatelné složky
 
+[publish]                 # odeslání oprav (push, PR, merge)
+merge_method = "auto"     # auto | merge | squash | rebase; auto = první povolená v repu
+# remote = "origin"       # jinak remote výchozí větve, pak origin, pak jediný remote
+
 [notify]                  # upozornění plánovaného skenu (jen na změny)
 desktop = true            # notify-send, když běží grafická relace
 # ntfy_url = "https://ntfy.sh/moje-tema"   # token: token_source = "env"|"cmd"|"keyring"
@@ -489,10 +506,31 @@ editor = "nvim"            # klávesa o v kartě repa; bez hodnoty $VISUAL / $ED
 `.repo-doctor.toml` v kořeni repozitáře přepisuje `checks`, `limits`, `allowlist`,
 `ignore_paths` a `license` pro dané repo.
 
+## Odeslání oprav (push, PR, merge)
+
+Léčba (`f`) vytvoří větev `repo-doctor/fixes-<datum>`. Dál ji do světa dostaneš v kartě
+repa, každý krok zvlášť (stejně `repo-doctor publish push|pr|merge|merge-local`, kde je
+výchozí náhled a zápis až s `--apply`):
+
+| krok | klávesa | co se stane |
+|---|---|---|
+| Push | `P` | pošle jen tuto větev na remote, nikdy force ani tagy; nové commity projdou kontrolou tajemství (jako `guard`), hooky se nespouštějí |
+| PR/MR | `C` | vytvoří pull/merge request na hostingu, popis z commitů; větev musí být nejdřív na remote |
+| Merge | `M` | mergne PR na hostingu, **jen když je CI zelená (nebo žádná není)** a hosting hlásí, že jde mergnout; hosting dostane SHA hlavičky, takže merge selže, pokud se větev mezitím změnila |
+| Lokální merge | `L` | posune výchozí větev na opravnou, **jen fast-forward** (žádný merge commit); funguje i bez remote, pracovní strom se mění jen když je výchozí větev checkoutnutá a repo čisté |
+| Push výchozí větve | `U` | po lokálním merge pošle výchozí větev (bez force) |
+
+Odeslat jde jen opravná větev `repo-doctor/fixes-*` a po lokálním merge výchozí větev, žádná
+jiná. Push používá tvůj SSH klíč nebo credential helper (repo-doctor token do gitu nedává);
+PR a merge používají token hostingu z konfigurace, který potřebuje [právo zápisu](#připojení-hostingů).
+Metodu merge (merge commit, squash, rebase) bere z nastavení repa podle `[publish] merge_method`.
+Po merge na hostingu změny stáhneš v Synchronizaci (`7`).
+
 ## Bezpečnostní záruky – co repo-doctor nikdy neudělá
 
-**Nikdy:** nepushuje, nepřepisuje historii, nemaže branche ani stashe, nesahá na necommitnuté
-změny a na hostingu nic nemění (API se jen čte). **Tajemství nikdy nevypíše** – v TUI,
+**Nikdy:** nepushuje bez tvého výslovného pokynu (jen krok *Odeslání oprav*, viz níž), nikdy
+nepoužije force, nepřepisuje historii, nemaže branche ani stashe, nesahá na necommitnuté změny
+a na hostingu nezapisuje nic, co sis nevyžádal (sken API jen čte). **Tajemství nikdy nevypíše** – v TUI,
 reportech, logech, JSON, MCP ani upozorněních je vidět jen maskovaná podoba `AKIA…(20 znaků)`;
 totéž platí pro tokeny hostingů a e-maily (`l***@proton.me`). Odmaskovat nejde; soubor otevřeš
 klávesou `o`.
@@ -519,6 +557,10 @@ klávesou `o`.
 - **Synchronizace** (`0`, `repo-doctor sync --apply`) – jediná funkce, která mění pracovní
   strom, a **jen fast-forwardem** (`git merge --ff-only`) u čistých rep na sledované větvi;
   stav se těsně předtím ověří znovu. Nikdy merge commit, rebase ani reset.
+- **Odeslání oprav** (`P`, `C`, `M`, `L`, `U`, `repo-doctor publish … --apply`) – jediné, co
+  zapisuje na remote a hosting: push jedné opravné větve (bez force a tagů, po kontrole tajemství),
+  PR/MR, merge PR po zelené CI a lokální fast-forward. Každý krok je samostatný, s náhledem
+  a potvrzením; těsně před zápisem se stav ověří znovu.
 - **Klonování** ze záložky Vzdálená repa a **plánovaný sken** (uživatelský systemd timer).
 
 ### Cizí repo nic nespustí
@@ -589,6 +631,7 @@ repo-doctor scan [PATH…] --report md|json|html [--output FILE] [--offline] [--
 repo-doctor explain CHECK_ID
 repo-doctor clean [PATH…] [--apply] [--all] [--include-dirty] [--duplicates]   # úklid do koše
 repo-doctor sync [PATH…] [--fetch] [--apply]   # dohnat remote jen fast-forwardem
+repo-doctor publish push|pr|merge|merge-local [REPO] [--branch B] [--apply]   # odeslání oprav
 repo-doctor guard                   # pro hook pre-push: zastaví push s tajemstvím
 repo-doctor sbom REPO [--format cyclonedx-json] [-o FILE]   # SBOM z lockfilů, bez sítě
 repo-doctor mcp                     # MCP server jen pro čtení (stdio)

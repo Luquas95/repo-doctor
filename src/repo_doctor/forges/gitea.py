@@ -11,9 +11,12 @@ from repo_doctor.forges.base import (
     Forge,
     ForgeRepo,
     PullRequest,
+    PullRequestInfo,
+    int_field,
     opt_int,
     parse_time,
     str_tuple,
+    sub_dict,
 )
 from repo_doctor.httpclient import ForbiddenError, HttpClient, HttpError, NotFoundError
 
@@ -24,6 +27,30 @@ def api_base(url: str) -> str:
 
 def auth_headers(token: str | None) -> dict[str, str]:
     return {"Authorization": f"token {token}"} if token else {}
+
+
+def _merge_methods(d: dict[str, object]) -> tuple[str, ...]:
+    flags = (
+        ("merge", ("allow_merge_commits",)),
+        ("squash", ("allow_squash_merge",)),
+        ("rebase", ("allow_rebase", "allow_rebase_explicit")),
+    )
+    return tuple(method for method, keys in flags if any(d.get(k) for k in keys))
+
+
+def _pr(d: dict[str, object]) -> PullRequestInfo:
+    head, base = sub_dict(d, "head"), sub_dict(d, "base")
+    mergeable = d.get("mergeable")
+    return PullRequestInfo(
+        number=int_field(d, "number"),
+        url=str(d.get("html_url") or ""),
+        state="merged" if d.get("merged") else ("open" if d.get("state") == "open" else "closed"),
+        title=str(d.get("title") or ""),
+        head_branch=str(head.get("ref") or ""),
+        base_branch=str(base.get("ref") or ""),
+        head_sha=str(head.get("sha") or ""),
+        mergeable=mergeable if isinstance(mergeable, bool) else None,
+    )
 
 
 def _repo(d: dict[str, object]) -> ForgeRepo:
@@ -44,6 +71,7 @@ def _repo(d: dict[str, object]) -> ForgeRepo:
         open_issues=opt_int(d.get("open_issues_count")),
         topics=str_tuple(d.get("topics")),
         created_at=parse_time(d.get("created_at")),
+        merge_methods=_merge_methods(d),
     )
 
 
@@ -81,12 +109,16 @@ class GiteaForge(Forge):
             protected
         ) if protected is not None else None
 
-    async def latest_ci_status(self, repo: ForgeRepo, branch: str, sha: str | None) -> CIStatus:
+    async def latest_ci_status(
+        self, repo: ForgeRepo, branch: str, sha: str | None, *, ttl: float | None = None
+    ) -> CIStatus:
         """Gitea/Forgejo Actions hlásí výsledek jako commit status výchozí branche."""
         if not sha:
             return CIStatus("unknown", branch)
         try:
-            data = await self.client.get_json(f"/repos/{repo.full_name}/commits/{sha}/status")
+            data = await self.client.get_json(
+                f"/repos/{repo.full_name}/commits/{sha}/status", ttl=ttl
+            )
         except (NotFoundError, ForbiddenError):
             return CIStatus("unknown", branch)
         if not data.get("total_count") and not data.get("statuses"):
@@ -120,6 +152,41 @@ class GiteaForge(Forge):
             )
             for i in items
         ]
+
+    async def find_pr(self, repo: ForgeRepo, head: str) -> PullRequestInfo | None:
+        # API nemá filtr podle větve – projdeme nejnovější stránky a vybereme nejvyšší číslo
+        items = await self.client.paginate(
+            f"/repos/{repo.full_name}/pulls",
+            params={"state": "all", "limit": 50},
+            max_pages=3,
+            ttl=0,
+        )
+        found = [_pr(i) for i in items if (i.get("head") or {}).get("ref") == head]
+        return max(found, key=lambda pr: pr.number) if found else None
+
+    async def get_pr(self, repo: ForgeRepo, number: int) -> PullRequestInfo:
+        return _pr(await self.client.get_json(f"/repos/{repo.full_name}/pulls/{number}", ttl=0))
+
+    async def create_pr(
+        self, repo: ForgeRepo, *, head: str, base: str, title: str, body: str
+    ) -> PullRequestInfo:
+        data = await self.client.post_json(
+            f"/repos/{repo.full_name}/pulls",
+            {"title": title, "head": head, "base": base, "body": body},
+            ttl=0,
+        )
+        return _pr(data)
+
+    async def pr_ci(self, repo: ForgeRepo, pr: PullRequestInfo) -> CIStatus:
+        return await self.latest_ci_status(repo, pr.head_branch, pr.head_sha or None, ttl=0)
+
+    async def merge_pr(self, repo: ForgeRepo, pr: PullRequestInfo, method: str | None) -> None:
+        await self.client.request_json(
+            "POST",
+            f"/repos/{repo.full_name}/pulls/{pr.number}/merge",
+            json_body={"Do": method or "merge", "head_commit_id": pr.head_sha},
+            ttl=0,
+        )
 
     async def _fetch_noreply(self) -> str | None:
         if not self.authenticated:
@@ -156,8 +223,9 @@ class GiteaForge(Forge):
             return ConnectionReport(False, error=str(err))
         if self.authenticated:
             warnings.append(
-                "rozsah tokenu Gitea/Forgejo API neprozradí – ověř, že má jen read:repository, read:user "
-                "(a read:issue pro PR)"
+                "rozsah tokenu Gitea/Forgejo API neprozradí – pro sken stačí read:repository, read:user "
+                "(a read:issue pro PR); PR a merge z odeslání oprav potřebují write:repository "
+                "a write:issue"
             )
         if not self.config.verify_tls and not self.config.ca_bundle:
             warnings.append(
