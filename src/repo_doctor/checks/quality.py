@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import posixpath
 import re
+from collections.abc import Iterator
 from urllib.parse import unquote
 
 from repo_doctor.checks.base import Check, RepoContext, register
@@ -347,8 +348,12 @@ class DependencyBotMissing(Check):
         ]
 
 
-_MD_LINK = re.compile(r"!?\[[^\]]*\]\(\s*<?([^)\s>]+)>?(?:\s+\"[^\"]*\")?\s*\)")
-_FENCE = re.compile(r"^(```|~~~).*?^\1", re.MULTILINE | re.DOTALL)
+# README je cizí vstup: všechno je omezené (délka štítku, cíle, řádku, souboru, počtu odkazů),
+# aby žádný vzor nemohl projít celý soubor znovu pro každou závorku.
+README_MAX_KB = 256
+README_MAX_LINE = 1000
+README_MAX_CANDIDATES = 500
+_MD_LINK = re.compile(r'!?\[[^\]\n]{0,500}\]\(\s*<?([^)\s>]{1,2048})>?(?:\s+"[^"\n]{0,500}")?\s*\)')
 _SCHEME = re.compile(r"^([a-zA-Z][a-zA-Z0-9+.-]*:|//|#)")
 
 
@@ -369,11 +374,13 @@ class ReadmeLinksBroken(Check):
         ]
         findings: list[Finding] = []
         for readme in readmes:
-            text = repo.read_text(readme)
+            text = repo.read_text(readme, limit_kb=README_MAX_KB)
             if not text:
                 continue
             seen: set[str] = set()
-            for raw in _MD_LINK.findall(_FENCE.sub("", text)):
+            for raw in self._links(text):
+                if len(seen) >= README_MAX_CANDIDATES:
+                    break
                 target = self._local_target(raw)
                 if target is None or target in seen:
                     continue
@@ -391,6 +398,18 @@ class ReadmeLinksBroken(Check):
                     if len(findings) >= MAX_LINKS:
                         return findings
         return findings
+
+    @staticmethod
+    def _links(text: str) -> Iterator[str]:
+        """Cíle odkazů po řádcích, mimo bloky kódu (``` a ~~~); řádky jsou zpracované jen jednou."""
+        fence: str | None = None
+        for line in text.splitlines():
+            marker = line.lstrip()[:3]
+            if marker in ("```", "~~~"):
+                fence = marker if fence is None else (None if marker == fence else fence)
+                continue
+            if fence is None and len(line) <= README_MAX_LINE:
+                yield from _MD_LINK.findall(line)
 
     @staticmethod
     def _local_target(raw: str) -> str | None:

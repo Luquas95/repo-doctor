@@ -181,3 +181,18 @@ def test_readme_links_broken(tmp_path: Path) -> None:
     (f,) = run("readme-links-broken", rb.path)
     assert f.location.path == "README.md" and "docs/missing.md" in f.message
     assert f.key == "link:README.md:docs/missing.md"
+
+
+def test_readme_links_survive_hostile_input(tmp_path: Path) -> None:
+    import time
+
+    rb = RepoBuilder.create(tmp_path / "r")
+    hostile = "[" * 100_000 + "\n```\n" * 2000 + "[a](" * 30_000 + "\n" + "[x](" + "y" * 20_000
+    assert len(hostile) < 250 * 1024  # pod limitem, ať se opravdu zpracuje
+    rb.write("README.md", hostile).commit()
+    started = time.monotonic()
+    run("readme-links-broken", rb.path)
+    assert time.monotonic() - started < 5
+    big = RepoBuilder.create(tmp_path / "big")
+    big.write("README.md", "[gone](missing.md)\n" + "x" * (300 * 1024)).commit()
+    assert run("readme-links-broken", big.path) == []  # nad 256 KB se README nečte
