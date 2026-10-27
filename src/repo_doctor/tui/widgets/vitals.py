@@ -107,13 +107,8 @@ def vitals_text(
                 style=Style(color=p.muted),
             )
             t.append(f" · {dur:.0f} s", style=Style(color=p.dim))
-            t.append(" · ", style=Style(color=p.dim))
-            t.append(keys[0], style=Style(color=p.accent, bold=True))
-            t.append(_(" nový sken všech rep"), style=Style(color=p.muted))
         else:
-            t.append(_("zatím bez skenu – "), style=Style(color=p.muted))
-            t.append(keys[0], style=Style(color=p.accent, bold=True))
-            t.append(_(" zkontroluje všechna repa"), style=Style(color=p.muted))
+            t.append(_("zatím bez skenu"), style=Style(color=p.muted))
         if result.cancelled:
             t.append(_(" · přerušený"), style=Style(color=p.med))
         if result.warnings:
