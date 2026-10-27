@@ -5,8 +5,9 @@ from __future__ import annotations
 import re
 from datetime import datetime
 
+from repo_doctor.i18n import _
 from repo_doctor.models import RepoResult, ScanResult, Severity
-from repo_doctor.reports import local_time
+from repo_doctor.reports import local_time, visibility_label
 from repo_doctor.scoring import band, gauge, score_label, sort_score
 
 
@@ -33,27 +34,31 @@ def render(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None 
     lines = [
         "# repo-doctor – report",
         "",
-        f"Sken {when}{' (offline)' if result.offline else ''}{' – **přerušený**' if result.cancelled else ''}.",
+        _("Sken {when}{offline}{cancelled}.").format(
+            when=when,
+            offline=_(" (offline)") if result.offline else "",
+            cancelled=_(" – **přerušený**") if result.cancelled else "",
+        ),
         "",
-        "| repozitáře | ▲ HIGH | ◆ MED | ● LOW | zdraví |",
+        _("| repozitáře | ▲ HIGH | ◆ MED | ● LOW | zdraví |"),
         "|---:|---:|---:|---:|---:|",
         f"| {s.repos} | {s.by_severity[Severity.HIGH]} | {s.by_severity[Severity.MEDIUM]} | "
         f"{s.by_severity[Severity.LOW]} | {s.health}/100 |",
         "",
     ]
     if result.warnings:
-        lines += ["> **Upozornění**", ">"]
+        lines += [_("> **Upozornění**"), ">"]
         lines += [f"> - {_cell(w)}" for w in result.warnings]
         lines.append("")
     lines += [
-        "## Přehled",
+        _("## Přehled"),
         "",
-        "| skóre | repozitář | pásmo | nálezy | hosting |",
+        _("| skóre | repozitář | pásmo | nálezy | hosting |"),
         "|---:|---|---|---|---|",
     ]
     ordered = sorted(result.repos, key=lambda r: (sort_score(r.score), r.name))
     for r in ordered:
-        vis = {"public": "◉ veřejné", "private": "○ privátní"}.get(r.visibility, "")
+        vis = visibility_label(r.visibility)
         host = f"{r.forge or '—'} {vis}".strip()
         lines.append(
             f"| {score_label(r.score)} {gauge(r.score)} | `{_cell(r.name)}` | {band(r, no_pulse_days, now).label} | "
@@ -66,9 +71,9 @@ def render(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None 
             continue
         lines += [f"## {_cell(r.name)} – {score_label(r.score)}/100", "", f"`{_cell(r.path)}`", ""]
         if not r.findings:
-            lines += ["Bez nálezů. ✓", ""]
+            lines += [_("Bez nálezů. ✓"), ""]
         else:
-            lines += ["| severity | kontrola | nález | kde |", "|---|---|---|---|"]
+            lines += [_("| severity | kontrola | nález | kde |"), "|---|---|---|---|"]
             for f in sorted(r.findings, key=lambda f: (-f.severity.rank, f.check_id)):
                 where = f.location.render()
                 if f.snippet:
@@ -80,18 +85,18 @@ def render(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None 
             lines.append("")
         if r.skipped:
             lines.append(
-                "Přeskočeno: "
+                _("Přeskočeno: ")
                 + ", ".join(f"`{k}` ({_cell(v)})" for k, v in sorted(r.skipped.items()))
             )
             lines.append("")
         if r.errors:
             lines.append(
-                "Chyby: " + ", ".join(f"`{k}`: {_cell(v)}" for k, v in sorted(r.errors.items()))
+                _("Chyby: ") + ", ".join(f"`{k}`: {_cell(v)}" for k, v in sorted(r.errors.items()))
             )
             lines.append("")
         if r.allowlisted:
-            lines += [f"Skryto allowlistem: {r.allowlisted}", ""]
+            lines += [_("Skryto allowlistem: {n}").format(n=r.allowlisted), ""]
     if clean:
-        lines += ["## Bez nálezů ✓", "", ", ".join(f"`{_cell(r.name)}`" for r in clean), ""]
-    lines += ["---", "✓ = opravitelné automaticky v TUI (`repo-doctor`, obrazovka Léčba).", ""]
+        lines += [_("## Bez nálezů ✓"), "", ", ".join(f"`{_cell(r.name)}`" for r in clean), ""]
+    lines += ["---", _("✓ = opravitelné automaticky v TUI (`repo-doctor`, obrazovka Léčba)."), ""]
     return "\n".join(lines)

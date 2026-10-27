@@ -20,6 +20,7 @@ import httpx
 
 from repo_doctor import czech, netpolicy, paths
 from repo_doctor.config import NotifyConfig
+from repo_doctor.i18n import _
 from repo_doctor.models import RepoResult, ScanResult, Severity
 
 SENSITIVE_PUBLIC = "public-sensitive"
@@ -43,19 +44,23 @@ class Changes:
         parts: list[str] = []
         if self.new_high:
             n = sum(self.new_high.values())
-            what = czech.plural(n, "nový HIGH nález", "nové HIGH nálezy", "nových HIGH nálezů")
+            what = czech.plural(
+                n, _("nový HIGH nález"), _("nové HIGH nálezy"), _("nových HIGH nálezů")
+            )
             parts.append(f"{n} {what} ({repos(sorted(self.new_high))})")
         if self.newly_public:
             parts.append(
-                f"nově veřejné repo s citlivým obsahem: {repos(sorted(self.newly_public))}"
+                _("nově veřejné repo s citlivým obsahem: {repos}").format(
+                    repos=repos(sorted(self.newly_public))
+                )
             )
         if self.new_vulns:
             n = sum(self.new_vulns.values())
             what = czech.plural(
                 n,
-                "nová zranitelná závislost",
-                "nové zranitelné závislosti",
-                "nových zranitelných závislostí",
+                _("nová zranitelná závislost"),
+                _("nové zranitelné závislosti"),
+                _("nových zranitelných závislostí"),
             )
             parts.append(f"{n} {what} ({repos(sorted(self.new_vulns))})")
         return "; ".join(parts)
@@ -112,7 +117,7 @@ def _graphical_session() -> bool:
 def send_desktop(title: str, text: str) -> Delivery:
     exe = shutil.which("notify-send")
     if not exe or not _graphical_session():
-        return Delivery("desktop", False, "notify-send nebo grafická relace nejsou k dispozici")
+        return Delivery("desktop", False, _("notify-send nebo grafická relace nejsou k dispozici"))
     try:
         subprocess.run(
             [exe, "--app-name=repo-doctor", "--", title, text],
@@ -137,7 +142,7 @@ def send_ntfy(
     if url.startswith("http://") and not netpolicy.policy().allows_http_url(url):
         return Delivery("ntfy", False, "http:// jen pro host z allow_http_hosts")
     if not url.startswith(("https://", "http://")):
-        return Delivery("ntfy", False, "neplatná URL")
+        return Delivery("ntfy", False, _("neplatná URL"))
     headers = {"Title": title, "Tags": "warning", "Priority": "high"}
     try:
         from repo_doctor.forges.tokens import TokenError, resolve_token
@@ -160,7 +165,7 @@ def send_email(address: str, title: str, text: str) -> Delivery:
         (p for p in ("/usr/sbin/sendmail", "/usr/lib/sendmail") if Path(p).is_file()), None
     )
     if not exe:
-        return Delivery("email", False, "sendmail není nainstalovaný")
+        return Delivery("email", False, _("sendmail není nainstalovaný"))
     message = (
         f"To: {address}\nSubject: {title}\nContent-Type: text/plain; charset=utf-8\n\n{text}\n"
     )

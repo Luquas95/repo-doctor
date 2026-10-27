@@ -29,6 +29,7 @@ import httpx
 from packaging.version import InvalidVersion, Version
 
 from repo_doctor import __version__, paths
+from repo_doctor.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -86,11 +87,11 @@ def install_kind(base: Path | None = None) -> InstallKind:
 
 def instructions(kind: InstallKind) -> str:
     return {
-        InstallKind.DEB: "přijde s aktualizací systému (sudo apt update && sudo apt upgrade)",
-        InstallKind.RPM: "přijde s aktualizací systému (sudo dnf upgrade)",
-        InstallKind.PACMAN: "aktualizuj přes AUR helper (např. yay -Syu)",
-        InstallKind.TARBALL: "spusť repo-doctor update",
-        InstallKind.SOURCE: "vývojová instalace – stáhni změny (git pull)",
+        InstallKind.DEB: _("přijde s aktualizací systému (sudo apt update && sudo apt upgrade)"),
+        InstallKind.RPM: _("přijde s aktualizací systému (sudo dnf upgrade)"),
+        InstallKind.PACMAN: _("aktualizuj přes AUR helper (např. yay -Syu)"),
+        InstallKind.TARBALL: _("spusť repo-doctor update"),
+        InstallKind.SOURCE: _("vývojová instalace – stáhni změny (git pull)"),
     }[kind]
 
 
@@ -111,14 +112,16 @@ def fetch_latest(client: httpx.Client | None = None) -> Release:
     try:
         resp = http.get(LATEST_API, headers={"Accept": "application/vnd.github+json"})
         if resp.status_code == 404:
-            raise UpdateError("Zatím není vydaná žádná verze.")
+            raise UpdateError(_("Zatím není vydaná žádná verze."))
         resp.raise_for_status()
         tag = str(resp.json().get("tag_name", ""))
         return Release(Version(tag.removeprefix("v")), tag)
     except httpx.HTTPError as err:
-        raise UpdateError(f"GitHub Releases nejsou dostupné: {type(err).__name__}") from None
+        raise UpdateError(
+            _("GitHub Releases nejsou dostupné: {error}").format(error=type(err).__name__)
+        ) from None
     except (InvalidVersion, ValueError, AttributeError):
-        raise UpdateError("GitHub vrátil nečekanou odpověď o vydáních.") from None
+        raise UpdateError(_("GitHub vrátil nečekanou odpověď o vydáních.")) from None
     finally:
         if own:
             http.close()
@@ -144,7 +147,7 @@ def latest_cached(
     try:
         release = fetch()
     except UpdateError as err:
-        log.debug("kontrola aktualizací: %s", err)
+        log.debug("update check failed: %s", err)
         return None
     with contextlib.suppress(OSError):
         paths.ensure_private_dir(file.parent)
@@ -164,7 +167,9 @@ def notice(
     if latest is None or latest <= current_version():
         return None
     how = instructions(kind or install_kind())
-    return f"Je dostupná verze {latest} (máš {__version__}) – {how}."
+    return _("Je dostupná verze {latest} (máš {current}) – {how}.").format(
+        latest=latest, current=__version__, how=how
+    )
 
 
 # ---------------------------------------------------------------------- ověření podpisu
@@ -174,7 +179,7 @@ def verify_signature(
     """Ověří odpojený OpenPGP podpis přes gpgv/gpg proti zabudovanému klíči (jen tomu)."""
     gpg = shutil.which("gpg")
     if gpg is None:
-        raise UpdateError("Ověření podpisu potřebuje GnuPG – nainstaluj balíček gnupg.")
+        raise UpdateError(_("Ověření podpisu potřebuje GnuPG – nainstaluj balíček gnupg."))
     if key is None:
         key = (Path(__file__).resolve().parent / "data" / "signing-key.asc").read_bytes()
     with tempfile.TemporaryDirectory(prefix="repo-doctor-gpg-") as tmp:
@@ -198,7 +203,7 @@ def verify_signature(
         valid = parts[:2] == ["[GNUPG:]", "VALIDSIG"] and want in (parts[2], parts[-1])
         if valid and proc.returncode == 0:
             return
-    raise UpdateError("Podpis aktualizace neplatí – stažené soubory nepoužiju.")
+    raise UpdateError(_("Podpis aktualizace neplatí – stažené soubory nepoužiju."))
 
 
 def _gpg_run(cmd: list[str], *, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -209,7 +214,7 @@ def _gpg_run(cmd: list[str], *, check: bool = True) -> subprocess.CompletedProce
     except (OSError, subprocess.SubprocessError) as err:
         raise UpdateError(f"GnuPG nejde spustit: {type(err).__name__}") from None
     if check and proc.returncode != 0:
-        raise UpdateError("GnuPG nezvládl načíst podpisový klíč.")
+        raise UpdateError(_("GnuPG nezvládl načíst podpisový klíč."))
     return proc
 
 
@@ -219,13 +224,15 @@ def _download(http: httpx.Client, url: str, target: Path) -> None:
     with http.stream("GET", url) as resp:
         if resp.status_code != 200:
             raise UpdateError(
-                f"Stažení {url.rsplit('/', 1)[-1]} selhalo (HTTP {resp.status_code})."
+                _("Stažení {name} selhalo (HTTP {status_code}).").format(
+                    name=url.rsplit("/", 1)[-1], status_code=resp.status_code
+                )
             )
         with target.open("wb") as out:
             for chunk in resp.iter_bytes():
                 size += len(chunk)
                 if size > MAX_DOWNLOAD:
-                    raise UpdateError("Stahovaný soubor je nečekaně velký – přerušeno.")
+                    raise UpdateError(_("Stahovaný soubor je nečekaně velký – přerušeno."))
                 out.write(chunk)
 
 
@@ -234,7 +241,7 @@ def _expected_sha(sums: Path, name: str) -> str:
         parts = line.split()
         if len(parts) == 2 and parts[1].lstrip("*") == name:
             return parts[0].lower()
-    raise UpdateError(f"{name} chybí v podepsaném seznamu kontrolních součtů.")
+    raise UpdateError(_("{name} chybí v podepsaném seznamu kontrolních součtů.").format(name=name))
 
 
 def _sha256(file: Path) -> str:
@@ -261,7 +268,11 @@ def self_update(
     """
     target = target or app_dir()
     if release.version <= current_version():
-        raise UpdateError(f"Verze {release.version} není novější než {__version__}.")
+        raise UpdateError(
+            _("Verze {version} není novější než {current}.").format(
+                version=release.version, current=__version__
+            )
+        )
     if install_kind(target) is not InstallKind.TARBALL:
         raise UpdateError("Samoaktualizace je jen pro instalaci z tarballu.")
     parent = target.parent
@@ -276,26 +287,32 @@ def self_update(
     try:
         with tempfile.TemporaryDirectory(prefix=".repo-doctor-update-", dir=parent) as tmp:
             work = Path(tmp)
-            progress("Stahuji seznam kontrolních součtů…")
+            progress(_("Stahuji seznam kontrolních součtů…"))
             _download(http, f"{base}/{SUMS}", work / SUMS)
             _download(http, f"{base}/{SUMS_SIG}", work / SUMS_SIG)
-            progress("Ověřuji podpis…")
+            progress(_("Ověřuji podpis…"))
             verify(work / SUMS, work / SUMS_SIG)
             expected = _expected_sha(work / SUMS, TARBALL)
             progress(f"Stahuji {TARBALL}…")
             _download(http, f"{base}/{TARBALL}", work / TARBALL)
             if _sha256(work / TARBALL) != expected:
-                raise UpdateError("Kontrolní součet staženého balíku nesedí.")
+                raise UpdateError(_("Kontrolní součet staženého balíku nesedí."))
             progress("Rozbaluji…")
             fresh = _extract(work / TARBALL, work / "new")
             # Verzi kryje podepsaný součet tarballu – podvržená odpověď API tak nemůže
             # vrátit starší (i když platně podepsané) vydání.
             packaged = _packaged_version(fresh)
             if packaged != release.version:
-                raise UpdateError(f"Balík obsahuje verzi {packaged}, ne {release.version}.")
+                raise UpdateError(
+                    _("Balík obsahuje verzi {packaged}, ne {version}.").format(
+                        packaged=packaged, version=release.version
+                    )
+                )
             _swap(target, fresh, old)
     except httpx.HTTPError as err:
-        raise UpdateError(f"Stahování selhalo: {type(err).__name__}") from None
+        raise UpdateError(
+            _("Stahování selhalo: {error}").format(error=type(err).__name__)
+        ) from None
     finally:
         if own:
             http.close()
@@ -307,11 +324,13 @@ def _extract(archive: Path, dest: Path) -> Path:
         with tarfile.open(archive, "r:gz") as tar:
             tar.extractall(dest, filter="data")
     except (tarfile.TarError, OSError) as err:
-        raise UpdateError(f"Balík nejde rozbalit: {type(err).__name__}") from None
+        raise UpdateError(
+            _("Balík nejde rozbalit: {error}").format(error=type(err).__name__)
+        ) from None
     fresh = dest / "repo-doctor"
     binary = fresh / "repo-doctor"
     if not binary.is_file() or install_kind(fresh) is not InstallKind.TARBALL:
-        raise UpdateError("Balík nemá očekávaný obsah.")
+        raise UpdateError(_("Balík nemá očekávaný obsah."))
     binary.chmod(0o755)
     return fresh
 

@@ -24,19 +24,19 @@ class JLocation(BaseModel):
 
 
 class JFinding(BaseModel):
-    id: str = Field(description="ID kontroly, např. secrets-history")
-    fingerprint: str = Field(description="Stabilní hash nálezu pro allowlist")
+    id: str = Field(description="Check ID, e.g. secrets-history")
+    fingerprint: str = Field(description="Stable finding hash for the allowlist")
     severity: Severity
     category: str
     title: str
     message: str
     location: JLocation
-    snippet: str | None = Field(default=None, description="Vždy maskovaná ukázka (AKIA…(20 znaků))")
+    snippet: str | None = Field(default=None, description="Always-masked sample (AKIA…(20 chars))")
     kind: str | None = None
     fixable: bool
     data: dict[str, str | int | list[str]] = Field(
         default_factory=dict,
-        description="Podrobnosti kontroly (např. chybějící položky, ID zranitelností)",
+        description="Check details (e.g. missing items, vulnerability IDs)",
     )
 
 
@@ -70,7 +70,7 @@ class JRepo(BaseModel):
     errors: dict[str, str]
     details: RepoDetails = Field(
         default_factory=RepoDetails,
-        description="Jazyky, velikost, závislosti, historie a data z hostingu (přidáno v 0.4)",
+        description="Languages, size, dependencies, history and hosting data (added in 0.4)",
     )
 
 

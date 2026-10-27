@@ -5,8 +5,10 @@ from __future__ import annotations
 from datetime import datetime
 from html import escape
 
+from repo_doctor.czech import repositories
+from repo_doctor.i18n import _, language
 from repo_doctor.models import Category, RepoResult, ScanResult, Severity
-from repo_doctor.reports import local_time
+from repo_doctor.reports import local_time, visibility_label
 from repo_doctor.scoring import band, gauge, score_label, sort_score
 
 CSS = """
@@ -84,7 +86,7 @@ def _count_span(sev: Severity, n: int) -> str:
 def _repo(r: RepoResult, no_pulse_days: int, now: datetime | None) -> str:
     counts = r.counts()
     cls = _score_class(r.score)
-    vis = {"public": "◉ veřejné", "private": "○ privátní"}.get(r.visibility, "")
+    vis = visibility_label(r.visibility)
     head = (
         f'<summary><span class="score {cls}">{score_label(r.score)} {gauge(r.score)}</span>'
         f"<h2>{escape(r.name)}</h2><span class=muted>{escape(band(r, no_pulse_days, now).label)}</span>"
@@ -103,22 +105,26 @@ def _repo(r: RepoResult, no_pulse_days: int, now: datetime | None) -> str:
             f"<td><code>{escape(f.check_id)}</code>{fix}</td><td>{escape(f.message)}</td><td>{where}</td></tr>"
         )
     body = (
-        "<table><thead><tr><th>severity</th><th>kontrola</th><th>nález</th><th>kde</th></tr></thead><tbody>"
+        "<table><thead><tr>"
+        + _("<th>severity</th><th>kontrola</th><th>nález</th><th>kde</th>")
+        + "</tr></thead><tbody>"
         + "".join(rows)
         + "</tbody></table>"
         if rows
-        else "<p class=muted>Bez nálezů ✓</p>"
+        else "<p class=muted>" + _("Bez nálezů ✓") + "</p>"
     )
     extra = ""
     if r.skipped:
         extra += (
-            "<p class=muted>Přeskočeno: "
+            "<p class=muted>"
+            + _("Přeskočeno: ")
             + escape(", ".join(f"{k} ({v})" for k, v in sorted(r.skipped.items())))
             + "</p>"
         )
     if r.errors:
         extra += (
-            "<p class=sev-high>Chyby: "
+            "<p class=sev-high>"
+            + _("Chyby: ")
             + escape(", ".join(f"{k}: {v}" for k, v in sorted(r.errors.items())))
             + "</p>"
         )
@@ -142,7 +148,7 @@ def render(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None 
     )
     warnings = "".join(f"<li>{escape(w)}</li>" for w in result.warnings)
     return f"""<!doctype html>
-<html lang="cs">
+<html lang="{language()}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -154,20 +160,20 @@ def render(result: ScanResult, *, no_pulse_days: int = 90, now: datetime | None 
 <header>
 <h1>repo-doctor · report</h1>
 <div class="panel vitals">
-<span>{s.repos} repozitářů</span>
+<span>{repositories(s.repos)}</span>
 {_count_span(Severity.HIGH, s.by_severity[Severity.HIGH])}
 {_count_span(Severity.MEDIUM, s.by_severity[Severity.MEDIUM])}
 {_count_span(Severity.LOW, s.by_severity[Severity.LOW])}
-<span>zdraví <b class="{_score_class(s.health)}">{s.health}</b></span>
-<span class=muted>sken {escape(when)}{" · offline" if result.offline else ""}{" · přerušený" if result.cancelled else ""}</span>
-<button id=theme type=button title="Přepnout světlý/tmavý režim">◐ téma</button>
+<span>{escape(_("zdraví"))} <b class="{_score_class(s.health)}">{s.health}</b></span>
+<span class=muted>{escape(_("sken"))} {escape(when)}{escape(_(" · offline")) if result.offline else ""}{escape(_(" · přerušený")) if result.cancelled else ""}</span>
+<button id=theme type=button title="{escape(_("Přepnout světlý/tmavý režim"))}">{escape(_("◐ téma"))}</button>
 </div>
-{f'<div class="panel"><b>Upozornění</b><ul>{warnings}</ul></div>' if warnings else ""}
+{f'<div class="panel"><b>{escape(_("Upozornění"))}</b><ul>{warnings}</ul></div>' if warnings else ""}
 <div class="panel filters">
 {sev_boxes}
-<label>repo <select id=f-repo><option value="">všechna</option>{repo_options}</select></label>
-<label>kategorie <select id=f-cat><option value="">všechny</option>{cat_options}</select></label>
-<label>hledat <input id=f-q type=search placeholder="text nálezu"></label>
+<label>{escape(_("repo"))} <select id=f-repo><option value="">{escape(_("všechna"))}</option>{repo_options}</select></label>
+<label>{escape(_("kategorie"))} <select id=f-cat><option value="">{escape(_("všechny"))}</option>{cat_options}</select></label>
+<label>{escape(_("hledat"))} <input id=f-q type=search placeholder="{escape(_("text nálezu"))}"></label>
 </div>
 </header>
 <main>

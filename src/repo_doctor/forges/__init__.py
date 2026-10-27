@@ -12,6 +12,7 @@ from repo_doctor.forges import gitea, github, gitlab
 from repo_doctor.forges.base import ConnectionReport, Forge, ForgeRepo, ForgeSnapshot
 from repo_doctor.forges.tokens import TokenError, resolve_token
 from repo_doctor.httpclient import HttpClient, ResponseCache, build_verify
+from repo_doctor.i18n import N_, _
 
 __all__ = [
     "HTTP_NOTE",
@@ -27,7 +28,7 @@ __all__ = [
 ]
 
 
-HTTP_NOTE = "nešifrované spojení, povoleno v allow_http_hosts"
+HTTP_NOTE = N_("nešifrované spojení, povoleno v allow_http_hosts")
 
 
 def insecure_reason(config: ForgeConfig) -> str | None:
@@ -37,7 +38,7 @@ def insecure_reason(config: ForgeConfig) -> str | None:
     url = config.base_url
     if not netpolicy.is_http(url) or netpolicy.policy().allows_http_url(url):
         return None
-    return (
+    return _(
         "URL instance používá nešifrovaný http:// – token by šel po síti v otevřené podobě. "
         "Pokud je server v důvěryhodné síti (Tailscale), přidej jeho host do allow_http_hosts "
         "(Nastavení, 7)."

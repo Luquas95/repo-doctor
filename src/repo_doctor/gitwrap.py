@@ -22,6 +22,7 @@ from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from repo_doctor.i18n import _
 from repo_doctor.masking import redact, redact_url_credentials
 
 DEFAULT_TIMEOUT = 30.0
@@ -118,18 +119,20 @@ class GitError(RuntimeError):
 
 class GitTimeout(GitError):
     def __init__(self, args: Sequence[str], timeout: float) -> None:
-        super().__init__(args, -1, f"překročen časový limit {timeout:g} s")
+        super().__init__(
+            args, -1, _("překročen časový limit {timeout:g} s").format(timeout=timeout)
+        )
         self.timeout = timeout
 
 
 class GitNotFound(GitError):
     def __init__(self) -> None:
-        super().__init__(["git"], 127, "příkaz git nebyl nalezen v PATH")
+        super().__init__(["git"], 127, _("příkaz git nebyl nalezen v PATH"))
 
 
 class GitAborted(GitError):
     def __init__(self, args: Sequence[str]) -> None:
-        super().__init__(args, -1, "přerušeno – aplikace se ukončuje")
+        super().__init__(args, -1, _("přerušeno – aplikace se ukončuje"))
 
 
 # ---------------------------------------------------------------------- přerušení
@@ -579,7 +582,7 @@ class Git:
         timer.daemon = True
         timer.start()
         if proc.stdout is None or proc.stderr is None:  # pragma: no cover - PIPE je vždy nastavený
-            raise GitError(args, -1, "chybí výstupní roura")
+            raise GitError(args, -1, _("chybí výstupní roura"))
         try:
             for raw in proc.stdout:
                 if timed_out.is_set():
@@ -964,7 +967,7 @@ class Git:
 
     def create_branch(self, name: str, commit: str) -> None:
         if not self.check_branch_name(name):
-            raise GitError(["branch", name], 1, "neplatný název branche")
+            raise GitError(["branch", name], 1, _("neplatný název branche"))
         # `git branch` bez --force nikdy existující branch nepřepíše.
         self.run("branch", "--no-track", "--end-of-options", name, commit)
 
@@ -1021,9 +1024,9 @@ class Git:
         voláním. Non-fast-forward git odmítne; `--receive-pack` přebíjí `remote.*.receivepack`.
         """
         if remote.startswith("-") or remote not in self.remotes():
-            raise GitError(["push", remote], 1, "neznámý remote")
+            raise GitError(["push", remote], 1, _("neznámý remote"))
         if not self.check_branch_name(branch):
-            raise GitError(["push", branch], 1, "neplatný název branche")
+            raise GitError(["push", branch], 1, _("neplatný název branche"))
         opts, env = network_options(self.push_urls(remote))
         ref = f"refs/heads/{branch}"
         self.run(
@@ -1044,7 +1047,7 @@ class Git:
     def move_branch(self, branch: str, new: str, old: str) -> None:
         """Posune lokální větev z `old` na `new` jen když stále ukazuje na `old` (bez pracovního stromu)."""
         if not self.check_branch_name(branch):
-            raise GitError(["update-ref", branch], 1, "neplatný název branche")
+            raise GitError(["update-ref", branch], 1, _("neplatný název branche"))
         self.run("update-ref", "-m", "repo-doctor: fast-forward", f"refs/heads/{branch}", new, old)
 
     # ------------------------------------------------------------------ síť (jen na výslovný pokyn)
@@ -1137,9 +1140,9 @@ class Git:
     def clone(url: str, dest: Path, timeout: float = 600.0) -> None:
         """`git clone` do neexistující cesty. Existující cíl nikdy nepřepisuje."""
         if dest.exists():
-            raise FileExistsError(f"cíl {dest} už existuje, klon by ho přepsal")
+            raise FileExistsError(_("cíl {dest} už existuje, klon by ho přepsal").format(dest=dest))
         if url.startswith("-"):
-            raise GitError(["clone"], 1, "neplatná URL")
+            raise GitError(["clone"], 1, _("neplatná URL"))
         dest.parent.mkdir(parents=True, exist_ok=True)
         Git._run_detached(
             ["clone", "--quiet", UPLOAD_PACK, "--", url, str(dest)],
@@ -1152,7 +1155,7 @@ class Git:
     def ls_remote(url: str, timeout: float = 20.0) -> None:
         """`git ls-remote --heads` – jen čte, slouží jako test SSH připojení."""
         if url.startswith("-"):
-            raise GitError(["ls-remote"], 1, "neplatná URL")
+            raise GitError(["ls-remote"], 1, _("neplatná URL"))
         Git._run_detached(
             ["ls-remote", "--heads", UPLOAD_PACK, "--", url],
             ["ls-remote", url],

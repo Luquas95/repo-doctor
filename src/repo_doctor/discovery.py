@@ -10,6 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 
 from repo_doctor.config import RootConfig
+from repo_doctor.i18n import _
 
 SKIP_DIRS = frozenset(
     {
@@ -139,11 +140,13 @@ def discover(
         base = root.expanded
         count = 0
         if not base.exists():
-            result.warnings.append(f"Složka {root.path} neexistuje – přeskočena.")
+            result.warnings.append(
+                _("Složka {path} neexistuje – přeskočena.").format(path=root.path)
+            )
             result.per_root[root.path] = 0
             continue
         if not base.is_dir():
-            result.warnings.append(f"{root.path} není složka – přeskočena.")
+            result.warnings.append(_("{path} není složka – přeskočena.").format(path=root.path))
             result.per_root[root.path] = 0
             continue
         visited_dirs: set[str] = set()
@@ -177,10 +180,16 @@ def discover(
             try:
                 entries = sorted(os.scandir(current), key=lambda e: e.name, reverse=True)
             except PermissionError:
-                result.warnings.append(f"Nedostatečná oprávnění: {current}")
+                result.warnings.append(
+                    _("Nedostatečná oprávnění: {current}").format(current=current)
+                )
                 continue
             except OSError as err:
-                result.warnings.append(f"Nelze číst {current}: {err.strerror}")
+                result.warnings.append(
+                    _("Nelze číst {current}: {strerror}").format(
+                        current=current, strerror=err.strerror
+                    )
+                )
                 continue
             for entry in entries:
                 if entry.name == ".git":

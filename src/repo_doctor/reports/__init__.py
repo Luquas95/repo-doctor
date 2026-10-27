@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Literal
 
+from repo_doctor.i18n import _
 from repo_doctor.masking import redact
 from repo_doctor.models import ScanResult
 
@@ -17,6 +18,15 @@ def local_time(when: datetime) -> str:
     local = when.astimezone()
     zone = local.strftime("%Z") or local.strftime("%z")
     return f"{local:%Y-%m-%d %H:%M} {zone}".strip()
+
+
+def visibility_label(visibility: str) -> str:
+    """`◉ veřejné` / `○ privátní` (prázdné, když hosting viditelnost neřekl)."""
+    if visibility == "public":
+        return _("◉ veřejné")
+    if visibility == "private":
+        return _("○ privátní")
+    return ""
 
 
 def render(

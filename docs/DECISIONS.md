@@ -408,8 +408,17 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   české zprávě, aby už povolené nálezy zůstaly povolené.
 - **Názvy kontrol** jsou v atributu třídy přes `N_()` (import modulu probíhá dřív, než se
   zpracuje `--lang`) a překládají se až při vytvoření nálezu a v Nastavení.
-- **Obsah zapisovaných souborů** (komentáře v `.gitignore`, název hooku v pre-commitu) se řídí
-  jazykem rozhraní; šablony README/CI/licencí (`templates.py`) zůstávají na fázi 3.
+- **Obsah zapisovaných souborů** (komentáře v `.gitignore`, název hooku v pre-commitu, šablony
+  README/CI/pre-commit/.dockerignore a hook `pre-push`) se řídí jazykem rozhraní. Šablony jsou
+  v konstantách přes `N_()` a překládá je `templates.load` (u pre-commitu se základ přeloží před
+  spojením s doplňky); licence (MIT, Apache…) zůstávají v anglickém originále.
+- **Fáze 3 (reporty a zbytek jádra):** Markdown a HTML report i texty hostingů, tokenů, sítě,
+  úklidu, synchronizace, aktualizací, plánování a oznámení jsou přeložené; test
+  `TRANSLATED` hlídá, že v nich nezůstal český text mimo `_()`. Popisy v JSON schématu
+  (`docs/report-schema.json`) jsou napevno anglicky – je to strojový kontrakt, který by se jinak
+  měnil podle jazyka při generování. Sdílený popisek viditelnosti je `reports.visibility_label`.
+- **Mimo překlad zůstává:** ladicí logy (`log.debug`, anglicky), `i18n_tools` (vývojářský nástroj)
+  a chyba `licenses` při parsování (interní), MCP server (už je anglicky).
 - **Množné číslo:** `czech.plural(n, one, few, many)` – anglicky jen `one`/`many`.
 
 ## Repo a proces

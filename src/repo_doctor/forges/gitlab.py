@@ -19,6 +19,7 @@ from repo_doctor.forges.base import (
     str_tuple,
 )
 from repo_doctor.httpclient import ForbiddenError, HttpClient, HttpError, NotFoundError
+from repo_doctor.i18n import _
 
 BROAD_SCOPES = {
     "api",
@@ -256,15 +257,15 @@ class GitLabForge(Forge):
                     scopes = [str(s) for s in token_info.get("scopes", [])]
                 except HttpError:
                     warnings.append(
-                        "rozsah tokenu nejde ověřit (starší GitLab nebo jiný typ tokenu)"
+                        _("rozsah tokenu nejde ověřit (starší GitLab nebo jiný typ tokenu)")
                     )
             elif self.config.user:
                 users = await self.client.get_json("/users", params={"username": self.config.user})
                 user = users[0] if users else {}
-                warnings.append("bez tokenu: jen veřejné projekty")
+                warnings.append(_("bez tokenu: jen veřejné projekty"))
             else:
                 return ConnectionReport(
-                    False, error="bez tokenu je potřeba vyplnit uživatele nebo skupinu"
+                    False, error=_("bez tokenu je potřeba vyplnit uživatele nebo skupinu")
                 )
             repos = await self.list_repos()
         except HttpError as err:
@@ -272,9 +273,10 @@ class GitLabForge(Forge):
         broad = sorted(set(scopes) & BROAD_SCOPES)
         if broad:
             warnings.append(
-                "token má zbytečně široká práva ("
-                + ", ".join(broad)
-                + "); pro sken stačí read_api (PR a merge z odeslání oprav potřebují api)"
+                _(
+                    "token má zbytečně široká práva ({scopes}); pro sken stačí read_api "
+                    "(PR a merge z odeslání oprav potřebují api)"
+                ).format(scopes=", ".join(broad))
             )
         return ConnectionReport(
             True,

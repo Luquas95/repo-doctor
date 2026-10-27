@@ -6,6 +6,7 @@ from pathlib import Path
 from string import Template
 
 from repo_doctor.ecosystem import Ecosystem
+from repo_doctor.i18n import N_, _
 from repo_doctor.paths import expand_path
 
 LICENSES: dict[str, str] = {
@@ -86,7 +87,8 @@ For more information, please refer to <https://unlicense.org>
 """,
 }
 
-README = """\
+README = N_(
+    """\
 # $name
 
 Krátký popis projektu.
@@ -103,6 +105,7 @@ TODO
 
 Viz soubor LICENSE.
 """
+)
 
 INSTALL = {
     Ecosystem.PYTHON: "```sh\nuv sync\n```",
@@ -111,7 +114,8 @@ INSTALL = {
     Ecosystem.GO: "```sh\ngo build ./...\n```",
 }
 
-PRECOMMIT_BASE = """\
+PRECOMMIT_BASE = N_(
+    """\
 # Vygenerováno repo-doctorem – uprav podle potřeby, pak `pre-commit install`.
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -128,6 +132,7 @@ repos:
     hooks:
       - id: gitleaks
 """
+)
 PRECOMMIT_PYTHON = """\
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.8.0
@@ -222,7 +227,8 @@ jobs:
       - run: go vet ./...
       - run: go test ./...
 """,
-    "generic": """\
+    "generic": N_(
+        """\
 name: CI
 on:
   push:
@@ -236,10 +242,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: echo "Doplň lint a testy projektu."
-""",
+"""
+    ),
 }
 
-DOCKERIGNORE = """\
+DOCKERIGNORE = N_(
+    """\
 # Vygenerováno repo-doctorem
 .git
 .gitignore
@@ -255,6 +263,7 @@ build
 *.log
 .DS_Store
 """
+)
 
 
 def load(name: str, default: str, templates_dir: str | None) -> Template:
@@ -266,7 +275,7 @@ def load(name: str, default: str, templates_dir: str | None) -> Template:
                 return Template(custom.read_text("utf-8"))
         except OSError:
             pass
-    return Template(default)
+    return Template(_(default))
 
 
 def render(template: str, default: str, templates_dir: str | None, **values: str) -> str:

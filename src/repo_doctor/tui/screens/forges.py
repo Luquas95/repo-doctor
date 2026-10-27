@@ -170,7 +170,7 @@ class ForgesScreen(BaseScreen):
             if netpolicy.is_http(f.base_url):
                 reason = insecure_reason(f)
                 text.append(
-                    f"! {HTTP_NOTE}\n" if reason is None else f"✗ {reason}\n",
+                    f"! {_(HTTP_NOTE)}\n" if reason is None else f"✗ {reason}\n",
                     style=Style(color=p.med if reason is None else p.high),
                 )
             rep = self.reports.get(f.name)

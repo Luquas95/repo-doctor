@@ -149,7 +149,7 @@ class SyncScreen(BaseScreen):
                 if s.can_fast_forward
                 else Text(" · ", style=Style(color=p.dim))
             )
-            state = Text(STATE_LABELS[s.state], style=Style(color=colors.get(s.state, p.muted)))
+            state = Text(_(STATE_LABELS[s.state]), style=Style(color=colors.get(s.state, p.muted)))
             if s.can_fast_forward:
                 state.append(
                     f" → {czech.commits(s.behind)}, {czech.files(len(s.files))}",

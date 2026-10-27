@@ -143,7 +143,7 @@ class PrepushGuard(Check):
                         LocalAction(
                             kind="hook",
                             key="pre-push",
-                            value=HOOK_SCRIPT,
+                            value=_(HOOK_SCRIPT),
                             description="hook .git/hooks/pre-push → repo-doctor guard",
                         )
                     ],

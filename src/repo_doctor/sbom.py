@@ -16,6 +16,7 @@ from repo_doctor import __version__, paths
 from repo_doctor.deps import Dependency, DepsData, collect
 from repo_doctor.gitwrap import Git
 from repo_doctor.httpclient import ResponseCache
+from repo_doctor.i18n import _
 from repo_doctor.licenses import cached_license, normalize, project_license
 
 FORMATS = ("cyclonedx-json",)
@@ -110,7 +111,7 @@ def sbom_for_repo(path: Path, *, now: datetime | None = None) -> dict[str, Any]:
     """SBOM repa z pracovního stromu (sledované soubory). Nic nemění, nepoužívá síť."""
     git = Git(path)
     if git.dubious_ownership():
-        raise ValueError("repo patří jinému uživateli (safe.directory) – nelze číst")
+        raise ValueError(_("repo patří jinému uživateli (safe.directory) – nelze číst"))
     files = git.ls_files()
 
     def read(rel: str) -> str | None:

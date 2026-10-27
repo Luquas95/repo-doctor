@@ -21,6 +21,7 @@ from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
 from repo_doctor.gitwrap import Git, GitError
+from repo_doctor.i18n import _
 from repo_doctor.models import ScanResult
 
 DEFAULT_DIRS = (
@@ -127,7 +128,7 @@ def find_candidates(
     wanted = set(names)
     git = git or Git(repo)
     found: list[Path] = []
-    for root, dirs, _ in os.walk(repo, followlinks=False):
+    for root, dirs, _files in os.walk(repo, followlinks=False):
         depth = Path(root).relative_to(repo).parts
         keep: list[str] = []
         for d in dirs:
@@ -157,7 +158,7 @@ def inspect_repo(path: Path, names: Iterable[str] = DEFAULT_DIRS) -> RepoCleanup
     git = Git(repo)
     info = RepoCleanup(repo)
     if git.dubious_ownership():
-        info.error = "repo patří jinému uživateli – nic se nemění"
+        info.error = _("repo patří jinému uživateli – nic se nemění")
         return info
     try:
         info.dirty = git.status().dirty
@@ -208,17 +209,17 @@ def _check_own_dir(d: Path) -> None:
     """Koš na sdíleném svazku si mohl připravit někdo jiný (symlink, cizí vlastník)."""
     st = d.lstat()
     if stat.S_ISLNK(st.st_mode) or not stat.S_ISDIR(st.st_mode):
-        raise OSError(f"koš {d} není obyčejná složka – nepoužiju ho")
+        raise OSError(_("koš {d} není obyčejná složka – nepoužiju ho").format(d=d))
     if st.st_uid != os.getuid():
-        raise OSError(f"koš {d} patří jinému uživateli – nepoužiju ho")
+        raise OSError(_("koš {d} patří jinému uživateli – nepoužiju ho").format(d=d))
     if d.name.startswith(".Trash-") and st.st_mode & 0o077:
-        raise OSError(f"koš {d} je přístupný ostatním – nepoužiju ho")
+        raise OSError(_("koš {d} je přístupný ostatním – nepoužiju ho").format(d=d))
 
 
 def move_to_trash(path: Path) -> Path:
     """Přesune složku do koše (rename na stejném svazku) a zapíše `.trashinfo`."""
     if path.is_symlink():
-        raise OSError(f"{path} je symlink – nemažu")
+        raise OSError(_("{path} je symlink – nemažu").format(path=path))
     trash = trash_dir_for(path)
     files, info = trash / "files", trash / "info"
     if not trash.is_symlink():
@@ -249,12 +250,12 @@ def move_to_trash(path: Path) -> Path:
             info_file.unlink(missing_ok=True)
             raise
         return target
-    raise OSError("v koši už je příliš mnoho stejně pojmenovaných položek")
+    raise OSError(_("v koši už je příliš mnoho stejně pojmenovaných položek"))
 
 
 def delete_permanently(path: Path) -> None:
     if path.is_symlink():
-        raise OSError(f"{path} je symlink – nemažu")
+        raise OSError(_("{path} je symlink – nemažu").format(path=path))
     shutil.rmtree(path)
 
 
@@ -299,35 +300,35 @@ def apply_cleanup(
 
 def _verify(c: Candidate) -> str | None:
     if c.busy:
-        return "běží v ní proces"
+        return _("běží v ní proces")
     if c.path.is_symlink() or not c.path.is_dir():
-        return "už neexistuje nebo je to symlink"
+        return _("už neexistuje nebo je to symlink")
     repo = c.repo.resolve()
     real = c.path.resolve()
     if c.kind == "clone":
         if real != repo:
-            return "neplatná cesta klonu"
+            return _("neplatná cesta klonu")
         if (repo / ".git").is_file():
-            return "je to pracovní strom (git worktree), ne samostatný klon"
+            return _("je to pracovní strom (git worktree), ne samostatný klon")
         git = Git(repo)
         if git.dubious_ownership():
-            return "repo patří jinému uživateli"
+            return _("repo patří jinému uživateli")
         if not git.worktree_is_path():
-            return "pracovní strom repa je jinde (core.worktree)"
+            return _("pracovní strom repa je jinde (core.worktree)")
         if not git.remotes():
-            return "klon nemá remote – nepushnuté commity nejde ověřit"
+            return _("klon nemá remote – nepushnuté commity nejde ověřit")
         if git.run("worktree", "list", "--porcelain", check=False).count("worktree ") > 1:
-            return "klon má další pracovní stromy (git worktree)"
+            return _("klon má další pracovní stromy (git worktree)")
         if git.status().dirty:
-            return "klon má necommitnuté změny"
+            return _("klon má necommitnuté změny")
         for b in git.branches():
             pending = (
                 b.ahead if b.upstream and not b.upstream_gone else git.count_not_on_remotes(b.name)
             )
             if pending:
-                return "klon má nepushnuté commity"
+                return _("klon má nepushnuté commity")
         if git.run("stash", "list", check=False).strip():
-            return "klon má uložené stashe"
+            return _("klon má uložené stashe")
         skip = [f":(exclude,glob)**/{d}/**" for d in DEFAULT_DIRS]
         ignored = git.run(
             "ls-files", "-z", "--others", "--ignored", "--exclude-standard", "--", ".", *skip,
@@ -339,20 +340,22 @@ def _verify(c: Candidate) -> str | None:
             if p and not regenerable & set(PurePosixPath(p).parts)
         ]  # fmt: skip
         if own:
-            return f"klon má ignorované soubory, které jinde nejsou: {', '.join(own[:3])}"
+            return _("klon má ignorované soubory, které jinde nejsou: {files}").format(
+                files=", ".join(own[:3])
+            )
         return None
     if real == repo or repo not in real.parents:
-        return "mimo repozitář"
+        return _("mimo repozitář")
     git = Git(repo)
     if git.dubious_ownership():
-        return "repo patří jinému uživateli"
+        return _("repo patří jinému uživateli")
     if not git.worktree_is_path():
-        return "pracovní strom repa je jinde (core.worktree)"
+        return _("pracovní strom repa je jinde (core.worktree)")
     rel = str(real.relative_to(repo))
     if not git.ok("check-ignore", "-q", "--", rel + "/") or git.run(
         "ls-files", "-z", "--", rel, check=False
     ):
-        return "obsahuje sledované soubory"
+        return _("obsahuje sledované soubory")
     return None
 
 

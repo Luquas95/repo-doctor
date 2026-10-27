@@ -14,6 +14,7 @@ import subprocess
 from collections.abc import Callable
 from typing import Protocol
 
+from repo_doctor.i18n import _
 from repo_doctor.masking import Token
 
 KEYRING_SERVICE = "repo-doctor"
@@ -36,9 +37,9 @@ def _run_cmd(cmd: str, timeout: float) -> str:
     try:
         args = shlex.split(cmd)
     except ValueError as err:
-        raise TokenError(f"token_cmd nejde rozparsovat: {err}") from None
+        raise TokenError(_("token_cmd nejde rozparsovat: {err}").format(err=err)) from None
     if not args:
-        raise TokenError("token_cmd je prázdný")
+        raise TokenError(_("token_cmd je prázdný"))
     try:
         # vlastní skupina procesů: při timeoutu ukončíme i potomky, kteří by drželi rouru
         proc = subprocess.Popen(
@@ -52,18 +53,20 @@ def _run_cmd(cmd: str, timeout: float) -> str:
     except FileNotFoundError:
         raise TokenError(f"token_cmd: program {args[0]!r} nebyl nalezen") from None
     try:
-        stdout, _ = proc.communicate(timeout=timeout)
+        stdout, _stderr = proc.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
         _kill_group(proc)
-        raise TokenError(f"token_cmd nedoběhl do {timeout:g} s") from None
+        raise TokenError(_("token_cmd nedoběhl do {timeout:g} s").format(timeout=timeout)) from None
     if proc.returncode != 0:
         raise TokenError(
-            f"token_cmd skončil s kódem {proc.returncode} (výstup se z bezpečnostních důvodů nezobrazuje)"
+            _(
+                "token_cmd skončil s kódem {returncode} (výstup se z bezpečnostních důvodů nezobrazuje)"
+            ).format(returncode=proc.returncode)
         )
     for line in stdout.splitlines():
         if line.strip():
             return line.strip()
-    raise TokenError("token_cmd nevrátil žádný výstup")
+    raise TokenError(_("token_cmd nevrátil žádný výstup"))
 
 
 def _keyring_get(name: str) -> str | None:
@@ -73,9 +76,13 @@ def _keyring_get(name: str) -> str | None:
     try:
         value: str | None = keyring.get_password(KEYRING_SERVICE, name)
     except KeyringError as err:
-        raise TokenError(f"klíčenka není dostupná: {type(err).__name__}") from None
+        raise TokenError(
+            _("klíčenka není dostupná: {error}").format(error=type(err).__name__)
+        ) from None
     except Exception as err:  # backendy keyringu hází různé výjimky
-        raise TokenError(f"klíčenka není dostupná: {type(err).__name__}") from None
+        raise TokenError(
+            _("klíčenka není dostupná: {error}").format(error=type(err).__name__)
+        ) from None
     return value
 
 
@@ -85,7 +92,9 @@ def store_in_keyring(name: str, value: str) -> None:
     try:
         keyring.set_password(KEYRING_SERVICE, name, value)
     except Exception as err:
-        raise TokenError(f"token nelze uložit do klíčenky: {type(err).__name__}") from None
+        raise TokenError(
+            _("token nelze uložit do klíčenky: {error}").format(error=type(err).__name__)
+        ) from None
 
 
 def delete_from_keyring(name: str) -> None:
@@ -122,11 +131,11 @@ def resolve_token(
         name = forge.token_env or ""
         value = os.environ.get(name, "").strip()
         if not value:
-            raise TokenError(f"proměnná prostředí {name} není nastavená")
+            raise TokenError(_("proměnná prostředí {name} není nastavená").format(name=name))
         return Token(value)
     if source == "cmd":
         return Token(cmd_runner(forge.token_cmd or "", timeout))
     stored = keyring_get(forge.name)
     if not stored:
-        raise TokenError(f"v klíčence není token pro hosting {forge.name}")
+        raise TokenError(_("v klíčence není token pro hosting {name}").format(name=forge.name))
     return Token(stored.strip())

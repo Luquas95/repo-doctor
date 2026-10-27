@@ -23,6 +23,8 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
+from repo_doctor.i18n import _
+
 IPAddress = ipaddress.IPv4Address | ipaddress.IPv6Address
 IPNetwork = ipaddress.IPv4Network | ipaddress.IPv6Network
 
@@ -87,34 +89,44 @@ def parse_rule(entry: str) -> HostRule:
     """Ověří a převede položku `allow_http_hosts`. Chyba je česká věta pro uživatele."""
     text = entry.strip()
     if not text:
-        raise ValueError("prázdná položka")
+        raise ValueError(_("prázdná položka"))
     if "://" in text:
-        raise ValueError(f"{text!r}: uveď jen host, ne URL")
+        raise ValueError(_("{text!r}: uveď jen host, ne URL").format(text=text))
     if text in ("*", "*.", "*.*"):
-        raise ValueError(f"{text!r}: zástupný znak pro všechny hosty není povolený")
+        raise ValueError(
+            _("{text!r}: zástupný znak pro všechny hosty není povolený").format(text=text)
+        )
     if "/" in text:
         try:
             net = ipaddress.ip_network(text, strict=False)
         except ValueError as err:
-            raise ValueError(f"{text!r}: neplatná síť CIDR") from err
+            raise ValueError(_("{text!r}: neplatná síť CIDR").format(text=text)) from err
         if net.prefixlen == 0:
-            raise ValueError(f"{text!r}: síť pokrývající celý internet není povolená")
+            raise ValueError(
+                _("{text!r}: síť pokrývající celý internet není povolená").format(text=text)
+            )
         return HostRule("net", net, text)
     if "*" in text:
         if not text.startswith("*.") or "*" in text[2:]:
-            raise ValueError(f"{text!r}: zástupný znak jde použít jen jako prefix `*.`")
+            raise ValueError(
+                _("{text!r}: zástupný znak jde použít jen jako prefix `*.`").format(text=text)
+            )
         domain = normalize_host(text[2:])
         if not isinstance(domain, str):
-            raise ValueError(f"{text!r}: neplatná doména za `*.`")
+            raise ValueError(_("{text!r}: neplatná doména za `*.`").format(text=text))
         if "." not in domain:
-            raise ValueError(f"{text!r}: `*.` musí následovat doména, ne celé TLD")
+            raise ValueError(
+                _("{text!r}: `*.` musí následovat doména, ne celé TLD").format(text=text)
+            )
         return HostRule("suffix", domain, text)
     bare = text[1:-1] if text.startswith("[") and text.endswith("]") else text
     if re.fullmatch(r"[^:]+:\d+", bare) or re.fullmatch(r"\[.+\]:\d+", text):
-        raise ValueError(f"{text!r}: port se neuvádí (položka platí pro všechny porty)")
+        raise ValueError(
+            _("{text!r}: port se neuvádí (položka platí pro všechny porty)").format(text=text)
+        )
     host = normalize_host(text)
     if host is None:
-        raise ValueError(f"{text!r}: neplatný hostname nebo IP adresa")
+        raise ValueError(_("{text!r}: neplatný hostname nebo IP adresa").format(text=text))
     if isinstance(host, str):
         return HostRule("host", host, text)
     return HostRule("ip", host, text)
