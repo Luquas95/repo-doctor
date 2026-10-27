@@ -352,6 +352,10 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - **Při shodném skóre** se řadí podle počtu HIGH, MED a LOW nálezů.
 - **Popisek hostingu u IP adresy** (remote bez nastaveného hostingu) je celá adresa, ne
   první oktet (`100` u Tailscale adres `100.x.x.x`).
+- **Popisek známých služeb (#58):** `github.com`, `gitlab.com` a `codeberg.org` se bez
+  nastavení ukazují jako `GitHub`, `GitLab`, `Codeberg` (dřív `github`), aby se repa
+  nerozpadla do dvou skupin s připojeným hostingem. Self-hosted instanci (Forgejo, Gitea) bez
+  sítě nepoznáme, proto zůstává adresa; jméno jí dá až přidání v Hostingech (2).
 
 ## Správa nástrojů (#31)
 

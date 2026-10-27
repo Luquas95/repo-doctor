@@ -129,8 +129,13 @@ class SshConfig:
         return matched
 
 
+_KNOWN_HOSTS = {"github.com": "GitHub", "gitlab.com": "GitLab", "codeberg.org": "Codeberg"}
+
+
 def host_label(host: str) -> str:
-    """Krátký název hostingu pro přehled: první část jména, IP adresa celá (#37)."""
+    """Popisek hostingu bez nastavení: známé služby jménem, jinak první část jména, IP celá (#37, #58)."""
+    if host.lower() in _KNOWN_HOSTS:
+        return _KNOWN_HOSTS[host.lower()]
     try:
         ipaddress.ip_address(host.strip("[]"))
     except ValueError:
