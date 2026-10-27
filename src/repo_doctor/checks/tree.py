@@ -3,7 +3,6 @@ konce řádků, submoduly a soubory, které měly jít přes Git LFS."""
 
 from __future__ import annotations
 
-import os
 import posixpath
 import re
 from collections import defaultdict
@@ -163,18 +162,22 @@ class BrokenSymlinks(Check):
 
     @staticmethod
     def _exists(repo: RepoContext, inside: str) -> bool:
-        """Existence cíle uvnitř repa: nejdřív podle seznamu souborů, na disk se sahá až potom."""
+        """Existence cíle podle indexu (sledovaný soubor nebo adresář s nějakým souborem).
+
+        Na disk se nesahá: přes cizí symlinky v cestě by šlo vyjít z repa a symlink na soubor,
+        který klon nedostane (nesledovaný, ignorovaný), je pro ostatní stejně rozbitý.
+        """
         if inside == "." or inside in repo.tracked_set:
             return True
-        if any(f.startswith(inside + "/") for f in repo.tracked_files):
-            return True
-        return os.path.lexists(repo.path / inside)
+        prefix = inside + "/"
+        return any(f.startswith(prefix) for f in repo.tracked_files)
 
 
 def _inside_repo(link: str, target: str) -> str | None:
     """Cíl symlinku jako cesta uvnitř repa, spočítaná jen z textu (bez dotyku souborového
-    systému). `None`, když míří ven: absolutní cesta, UNC (`\\\\host`), písmeno disku, `..`."""
-    if target.startswith(("/", "\\")) or re.match(r"[A-Za-z]:", target):
+    systému). `None`, když míří ven nebo ho nejde jednoznačně vyložit: absolutní cesta,
+    zpětné lomítko (UNC, Windows cesty), písmeno disku, `..`."""
+    if target.startswith("/") or "\\" in target or re.match(r"[A-Za-z]:", target):
         return None
     joined = posixpath.normpath(posixpath.join(posixpath.dirname(link), target))
     if joined == ".." or joined.startswith("../"):

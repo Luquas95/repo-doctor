@@ -64,10 +64,15 @@ def test_broken_symlinks(tmp_path: Path) -> None:
     (rb.path / "good").symlink_to("real.txt")
     (rb.path / "sub" / "up").symlink_to("../real.txt")
     (rb.path / "bad").symlink_to("missing/file")
+    (rb.path / "dirlink").symlink_to("sub")
+    (rb.path / "generated").symlink_to("build.out")
+    rb.write(".gitignore", "build.out\n").write("build.out", "x")
     rb.commit()
-    (f,) = run("broken-symlinks", rb.path)
-    assert f.location.path == "bad" and "missing/file" in f.message
-    assert f.severity is Severity.LOW
+    found = {f.location.path: f for f in run("broken-symlinks", rb.path)}
+    # symlink na ignorovaný soubor je pro každého, kdo repo naklonuje, rozbitý
+    assert set(found) == {"bad", "generated"}
+    assert "missing/file" in found["bad"].message
+    assert found["bad"].severity is Severity.LOW
 
 
 def test_case_collisions(tmp_path: Path) -> None:
@@ -155,9 +160,15 @@ def test_symlinks_pointing_outside_are_not_touched(tmp_path: Path) -> None:
     (rb.path / "abs").symlink_to("/etc/passwd")
     (rb.path / "up").symlink_to("../../outside")
     (rb.path / "unc").symlink_to("\\\\host\\share\\f")
+    (rb.path / "win").symlink_to("sub\\..\\..\\x")
     (rb.path / "dir").mkdir()
     (rb.path / "dir" / "ok").symlink_to("../README.md")
     (rb.path / "root").symlink_to(".")
     rb.commit()
     found = {f.key for f in run("broken-symlinks", rb.path)}
-    assert found == {"symlink-outside:abs", "symlink-outside:up", "symlink-outside:unc"}
+    assert found == {
+        "symlink-outside:abs",
+        "symlink-outside:up",
+        "symlink-outside:unc",
+        "symlink-outside:win",
+    }

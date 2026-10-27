@@ -486,7 +486,7 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   lehká statická analýza, závislosti do hloubky). Spouštění testů se v tomto kole nedělá:
   znamenalo by spouštět cizí kód, což je proti zásadě, že sken jen čte.
 - **Kontroly čtou jen index a pracovní strom.** Cíl symlinku (data z cizího repa) se řeší jen
-  textově a na disk se sahá výhradně uvnitř repa; absolutní, UNC a `..` cíle se hlásí jako
+  textově a na disk se nesahá, existence se bere z indexu; absolutní, UNC a `..` cíle se hlásí jako
   „míří mimo repo“ bez ověřování (jinak by šlo přes cizí symlink sondovat cesty nebo na Windows
   spustit síťové připojení); `.gitmodules` se čte přes `git config --file`; LFS kontrola nestahuje nic
   (LFS pointer je pod 1 KB, takže větší blob s atributem `filter=lfs` pointer být nemůže).
