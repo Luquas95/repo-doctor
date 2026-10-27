@@ -424,6 +424,7 @@ async def test_folders_crud(tmp_path: Path) -> None:
         await pilot.press("enter")
         await pilot.pause(0.3)
         assert str(newdir) in app.store.path.read_text()
+        assert app.config.roots[-1].depth == 1  # návrh hloubky se propsal do pole (#28)
         assert "# testovací konfigurace" in app.store.path.read_text()  # komentáře zůstaly
         table = app.screen.query_one("#roots")
         table.move_cursor(row=3)  # type: ignore[attr-defined]

@@ -39,6 +39,7 @@ class RootDialog(ModalScreen[RootConfig | None]):
     def __init__(self, root: RootConfig | None = None) -> None:
         super().__init__()
         self.root = root
+        self._suggested: str | None = None  # hloubka, kterou do pole dosadil návrh (ne uživatel)
 
     def compose(self) -> ComposeResult:
         r = self.root
@@ -100,7 +101,15 @@ class RootDialog(ModalScreen[RootConfig | None]):
             if count
             else _("zatím žádné git repozitáře (do hloubky 5)")
         )
-        self.app.call_from_thread(self.query_one("#found", Static).update, text)
+        self.app.call_from_thread(self._probed, text, depth, count)
+
+    def _probed(self, text: str, depth: int, count: int) -> None:
+        self.query_one("#found", Static).update(text)
+        depth_in = self.query_one("#depth", Input)
+        # u nové složky pole předvyplníme návrhem, ale uživatelovu hodnotu nepřepisujeme
+        if self.root is None and count and depth_in.value in ("3", self._suggested):
+            self._suggested = str(depth)
+            depth_in.value = self._suggested
 
     def _build(self) -> RootConfig | None:
         error = self.query_one("#error", Static)
