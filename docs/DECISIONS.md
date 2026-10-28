@@ -480,3 +480,19 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
 - Modální `HelpScreen` si zkratky `help` a `help_all` (i přemapované) přidává sám, protože
   modální obrazovka aplikační zkratky nepouští.
 
+## Další metody analýzy, díl 1: hygiena stromu (#34)
+
+- **Issue #34 se dělí na čtyři samostatné PR** (hygiena stromu, kvalita a zdraví projektu,
+  lehká statická analýza, závislosti do hloubky). Spouštění testů se v tomto kole nedělá:
+  znamenalo by spouštět cizí kód, což je proti zásadě, že sken jen čte.
+- **Kontroly čtou jen index a pracovní strom.** Cíl symlinku (data z cizího repa) se řeší jen
+  textově a na disk se nesahá, existence se bere z indexu; absolutní, UNC a `..` cíle se hlásí jako
+  „míří mimo repo“ bez ověřování (jinak by šlo přes cizí symlink sondovat cesty nebo na Windows
+  spustit síťové připojení); `.gitmodules` se čte přes `git config --file`; LFS kontrola nestahuje nic
+  (LFS pointer je pod 1 KB, takže větší blob s atributem `filter=lfs` pointer být nemůže).
+- **Nálezy po souborech jsou omezené na 25** (`MAX_FILES`), aby jedno rozbité repo nezahltilo report.
+- **`dist/` a `build/` se mezi artefakty nehlásí:** bývá tam záměrně commitnutý výstup,
+  falešné poplachy by převážily užitek. `target/` se hlásí jen s `Cargo.toml` v kořeni.
+- **Konce řádků se berou z indexu** (`git ls-files --eol`), tedy z toho, co se commituje, ne
+  z pracovního stromu, který ovlivňuje `core.autocrlf`.
+

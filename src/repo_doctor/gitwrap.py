@@ -412,6 +412,20 @@ class TreeEntry:
 
 
 @dataclass
+class IndexEntry:
+    path: str
+    mode: str  # „100644“, „120000“ (symlink), „160000“ (submodule)
+    sha: str
+
+
+@dataclass
+class EolInfo:
+    path: str
+    index: str  # „lf“, „crlf“, „mixed“, „none“, „-text“
+    attr: str  # např. „text=auto“, prázdný řetězec bez atributu
+
+
+@dataclass
 class CommitRef:
     sha: str
     timestamp: int
@@ -903,6 +917,29 @@ class Git:
             args += ["--others", "--exclude-standard"]
         out = self.run_bytes(*args, check=False).stdout.decode("utf-8", "replace")
         return sorted({p for p in out.split("\0") if p})
+
+    def ls_files_stage(self) -> list[IndexEntry]:
+        """Sledované položky i s režimem (symlinky a submoduly poznáš podle režimu)."""
+        proc = self.run_bytes("ls-files", "-s", "-z", check=False)
+        result = []
+        for item in proc.stdout.decode("utf-8", "replace").split("\0"):
+            meta, _sep, path = item.partition("\t")
+            parts = meta.split()
+            if len(parts) == 3 and path and parts[2] == "0":
+                result.append(IndexEntry(path=path, mode=parts[0], sha=parts[1]))
+        return result
+
+    def ls_files_eol(self) -> list[EolInfo]:
+        """Konce řádků ve sledovaných souborech podle indexu (`git ls-files --eol`)."""
+        proc = self.run_bytes("ls-files", "--eol", "-z", check=False)
+        result = []
+        for item in proc.stdout.decode("utf-8", "replace").split("\0"):
+            meta, _sep, path = item.partition("\t")
+            parts = meta.split()
+            if len(parts) >= 2 and parts[0].startswith("i/") and path:
+                attr = parts[2].removeprefix("attr/") if len(parts) > 2 else ""
+                result.append(EolInfo(path=path, index=parts[0][2:], attr=attr))
+        return result
 
     def ls_tree_sizes(self, ref: str = "HEAD") -> list[TreeEntry]:
         proc = self.run_bytes("ls-tree", "-r", "-l", "-z", "--end-of-options", ref, check=False)

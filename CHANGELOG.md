@@ -5,6 +5,14 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
 ## [Nevydáno]
 
 ### Přidáno
+- **Hygiena stromu a historie (#34, 1/4):** sedm nových kontrol, které nepotřebují síť
+  a nespouštějí žádný kód z repa: `conflict-markers` (nevyřešené značky konfliktu),
+  `committed-artifacts` (`node_modules`, `__pycache__`, `.venv`, `*.pyc`, `.DS_Store`…
+  v gitu), `broken-symlinks` (existence cíle se bere z indexu, symlinky mířící mimo repo se jen hlásí), `case-collisions` (cesty lišící se jen velikostí písmen),
+  `line-endings` (smíšené LF/CRLF a chybějící pravidlo v `.gitattributes`),
+  `submodule-state` (submodul bez záznamu v `.gitmodules`, zbylý záznam, nestažený submodul,
+  `http://` / `git://` adresa) a `lfs-not-applied` (soubor určený pro Git LFS uložený celý v gitu).
+  Do `gitwrap.Git` přibyly `ls_files_stage()` a `ls_files_eol()`.
 - **Nápověda v TUI (#30):** dva druhy v jedné obrazovce se dvěma záložkami (přepíná `Tab`).
   `?` otevře nápovědu k aktuální obrazovce (k čemu slouží, jak se s ní pracuje, její zkratky,
   pohyb a globální zkratky), nová `H` (akce `help_all`, jde přemapovat) rovnou úplnou nápovědu:
