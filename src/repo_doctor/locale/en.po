@@ -1003,6 +1003,10 @@ msgstr "The package does not have the expected contents."
 msgid "Balík obsahuje verzi {packaged}, ne {version}."
 msgstr "The package contains version {packaged}, not {version}."
 
+#: repo_doctor/checks/quality.py:327
+msgid "Bez automatických aktualizací závislostí"
+msgstr "No automated dependency updates"
+
 #: repo_doctor/cli.py:783
 msgid "Bez dotazu na potvrzení."
 msgstr "Do not ask for confirmation."
@@ -1067,7 +1071,7 @@ msgstr "Path (tab completes the suggestion)"
 msgid "Cesta k repozitáři."
 msgstr "Path to the repository."
 
-#: repo_doctor/checks/tree.py:188
+#: repo_doctor/checks/tree.py:191
 msgid "Cesty lišící se jen velikostí písmen"
 msgstr "Paths that differ only by letter case"
 
@@ -1095,6 +1099,10 @@ msgstr "No CI"
 msgid "Chybí README"
 msgstr "No README"
 
+#: repo_doctor/checks/quality.py:168
+msgid "Chybí konfigurace linteru nebo formátovače"
+msgstr "Linter or formatter configuration missing"
+
 #: repo_doctor/checks/hygiene.py:66
 msgid "Chybí licence"
 msgstr "No license"
@@ -1115,6 +1123,10 @@ msgstr "Token permissions not restricted"
 msgid "Chybí pre-commit"
 msgstr "No pre-commit"
 
+#: repo_doctor/checks/quality.py:264
+msgid "Chybí projektové dokumenty"
+msgstr "Project documents missing"
+
 #: repo_doctor/tools.py:347
 msgid "Chybí sudo – spusť příkaz jako root: "
 msgstr "sudo is missing – run the command as root: "
@@ -1131,7 +1143,7 @@ msgstr "What repo-doctor is"
 msgid "Co kontrola hledá"
 msgstr "What the check looks for"
 
-#: repo_doctor/checks/tree.py:94
+#: repo_doctor/checks/tree.py:93
 msgid "Commitnuté build artefakty a cache"
 msgstr "Committed build artifacts and caches"
 
@@ -1174,6 +1186,10 @@ msgstr "Detached HEAD"
 #: repo_doctor/tui/screens/cleanup.py:281
 msgid "Do koše"
 msgstr "To trash"
+
+#: repo_doctor/checks/quality.py:296
+msgid "Do repa přispívá {people}, ale chybí CONTRIBUTING."
+msgstr "{people} contribute to the repo, but there is no CONTRIBUTING."
 
 #: repo_doctor/tui/screens/sync.py:245
 msgid "Dohnat"
@@ -1463,6 +1479,10 @@ msgstr "Version {latest} is available (you have {current}) – {how}."
 msgid "Je dostupná verze {version} (máš {version2})."
 msgstr "Version {version} is available (you have {version2})."
 
+#: repo_doctor/checks/quality.py:86
+msgid "Je tu {files}, ale žádné testy (adresář tests/, test_*.py, *.test.ts…)."
+msgstr "There are {files} but no tests (a tests/ directory, test_*.py, *.test.ts…)."
+
 #: repo_doctor/checks/prepush.py:150
 msgid "Jednorázové obejití: git push --no-verify. Odinstalace: smaž hook."
 msgstr "One-off bypass: git push --no-verify. To uninstall, delete the hook."
@@ -1669,7 +1689,7 @@ msgstr "CANNOT BE CHECKED"
 msgid "Na hostingu zapni skrývání e-mailu (GitHub: Settings → Emails → Keep my email addresses private)."
 msgstr "Turn on e-mail privacy on the hosting (GitHub: Settings → Emails → Keep my email addresses private)."
 
-#: repo_doctor/checks/tree.py:208
+#: repo_doctor/checks/tree.py:211
 msgid "Na macOS a Windows se tyto cesty srazí do jedné: {names}."
 msgstr "On macOS and Windows these paths collapse into one: {names}."
 
@@ -1755,7 +1775,7 @@ msgstr "Move to the allowlist table first (tab)."
 msgid "Nejdřív vyber repo."
 msgstr "Select a repo first."
 
-#: repo_doctor/checks/tree.py:226
+#: repo_doctor/checks/tree.py:229
 msgid "Nejednotné konce řádků"
 msgstr "Inconsistent line endings"
 
@@ -1775,7 +1795,7 @@ msgstr "No folders are configured. Give a path or start the TUI (wizard). Config
 msgid "Nejsou nastavené žádné složky. Zadej cestu."
 msgstr "No folders are configured. Give a path."
 
-#: repo_doctor/checks/base.py:164 repo_doctor/checks/meta.py:15
+#: repo_doctor/checks/base.py:168 repo_doctor/checks/meta.py:15
 msgid "Nekompletní sken"
 msgstr "Incomplete scan"
 
@@ -1815,6 +1835,14 @@ msgstr "No channel is configured ([notify] in config.toml)."
 msgid "Není připojený žádný hosting – přidej ho na obrazovce Hostingy ({key})."
 msgstr "No hosting is connected – add one on the Hostings screen ({key})."
 
+#: repo_doctor/checks/quality.py:230
+msgid "Není určená podporovaná verze Pythonu (requires-python, .python-version nebo .tool-versions)."
+msgstr "No supported Python version is declared (requires-python, .python-version or .tool-versions)."
+
+#: repo_doctor/checks/quality.py:242
+msgid "Není určená verze Node.js (engines v package.json, .nvmrc nebo .tool-versions)."
+msgstr "No Node.js version is declared (engines in package.json, .nvmrc or .tool-versions)."
+
 #: repo_doctor/tui/app.py:418
 msgid "Není vybrané žádné repo."
 msgstr "No repo is selected."
@@ -1844,6 +1872,10 @@ msgstr "Invalid {file}: {err}"
 #: repo_doctor/checks/git_state.py:73
 msgid "Nepushnuté commity"
 msgstr "Unpushed commits"
+
+#: repo_doctor/checks/quality.py:213
+msgid "Nepřipnutá verze jazyka"
+msgstr "Language version not pinned"
 
 #: repo_doctor/cli.py:126
 msgid "Nepřipojovat se k hostingům."
@@ -1900,6 +1932,10 @@ msgstr "Nothing will be pushed."
 #: repo_doctor/tui/helptext.py:137
 msgid "Nic se nepushuje – odeslání je samostatný krok na kartě repa."
 msgstr "Nothing is pushed – sending is a separate step on the repo card."
+
+#: repo_doctor/checks/quality.py:197
+msgid "Node projekt bez konfigurace linteru či formátovače (eslint, prettier, biome)."
+msgstr "Node project without a linter or formatter configuration (eslint, prettier, biome)."
 
 #: repo_doctor/tui/app.py:217
 msgid "Nová verze"
@@ -2024,6 +2060,10 @@ msgstr "Sending failed"
 #: repo_doctor/tui/screens/publish.py:97 repo_doctor/tui/screens/publish.py:125
 msgid "Odeslání selhalo"
 msgstr "Sending failed"
+
+#: repo_doctor/checks/quality.py:384
+msgid "Odkaz na „{target}“ vede na soubor, který v repu není."
+msgstr "The link to "{target}" points to a file that is not in the repository."
 
 #: repo_doctor/tui/helptext.py:69
 msgid "Offline režim (O) vypne síťové kontroly (OSV, registry, API hostingů); nový sken spustí R."
@@ -2217,7 +2257,7 @@ msgstr "Scheduled scan: {v} · {describe}"
 msgid "Po checkoutu větve spusť `pre-commit install`."
 msgstr "After checking out the branch, run `pre-commit install`."
 
-#: repo_doctor/checks/tree.py:371
+#: repo_doctor/checks/tree.py:374
 msgid "Podle .gitattributes patří do Git LFS, ale v gitu je celý ({human})."
 msgstr ".gitattributes says this belongs in Git LFS, but the whole file ({human}) is stored in git."
 
@@ -2323,6 +2363,10 @@ msgstr "Private key"
 msgid "Pro větev {branch} není žádný PR – nejdřív ho vytvoř."
 msgstr "There is no PR for branch {branch} – create it first."
 
+#: repo_doctor/checks/quality.py:75
+msgid "Projekt bez testů"
+msgstr "Project without tests"
+
 #: repo_doctor/tui/screens/forms.py:281
 msgid "Protokol pro klonování"
 msgstr "Clone protocol"
@@ -2366,6 +2410,10 @@ msgstr "Push failed: {why}"
 #: repo_doctor/cli.py:515
 msgid "Push {branch} → {remote} ({url}), {commits}:"
 msgstr "Push {branch} → {remote} ({url}), {commits}:"
+
+#: repo_doctor/checks/quality.py:184
+msgid "Python projekt bez konfigurace linteru či formátovače (ruff, flake8, black…)."
+msgstr "Python project without a linter or formatter configuration (ruff, flake8, black…)."
 
 #: repo_doctor/tui/screens/dashboard.py:193
 msgid "PŘEHLED · {v}"
@@ -2519,6 +2567,14 @@ msgstr "The repo has uncommitted changes – file fixes will not run."
 msgid "Repo má nevyřešené konflikty – nejdřív je vyřeš."
 msgstr "The repo has unresolved conflicts – resolve them first."
 
+#: repo_doctor/checks/quality.py:277
+msgid "Repo má tagy (poslední {tag}), ale žádný CHANGELOG ani poznámky k vydání."
+msgstr "The repo has tags (latest {tag}) but no CHANGELOG or release notes."
+
+#: repo_doctor/checks/quality.py:139
+msgid "Repo má testy, ale v CI konfiguraci není žádný příkaz, který je spouští."
+msgstr "The repo has tests, but no command in the CI configuration runs them."
+
 #: repo_doctor/publish.py:543
 msgid "Repo má vlastní filtry/drivery v .git/config – mergni ručně (git merge --ff-only)."
 msgstr "The repo has its own filters/drivers in .git/config – merge manually (git merge --ff-only)."
@@ -2526,6 +2582,10 @@ msgstr "The repo has its own filters/drivers in .git/config – merge manually (
 #: repo_doctor/publish.py:131
 msgid "Repo má víc remotů ({names}) – vyber jeden v nastavení [publish] remote."
 msgstr "The repo has several remotes ({names}) – pick one in the [publish] remote setting."
+
+#: repo_doctor/checks/quality.py:341
+msgid "Repo má závislosti, ale žádný Dependabot ani Renovate, takže aktualizace a bezpečnostní opravy hlídá jen člověk."
+msgstr "The repo has dependencies but neither Dependabot nor Renovate, so updates and security fixes depend on a human remembering."
 
 #: repo_doctor/tui/screens/detail.py:510
 msgid "Repo nemá webovou adresu hostingu."
@@ -2587,11 +2647,15 @@ msgstr "Repositories on the hosting service that you do not have locally, and th
 msgid "Rizikové nastavení CI workflow"
 msgstr "Risky CI workflow settings"
 
-#: repo_doctor/checks/tree.py:276
+#: repo_doctor/checks/tree.py:279
 msgid "Rozbité nebo nezabezpečené submoduly"
 msgstr "Broken or insecure submodules"
 
-#: repo_doctor/checks/tree.py:123
+#: repo_doctor/checks/quality.py:358
+msgid "Rozbité odkazy v README"
+msgstr "Broken links in README"
+
+#: repo_doctor/checks/tree.py:122
 msgid "Rozbité symlinky"
 msgstr "Broken symlinks"
 
@@ -2747,11 +2811,11 @@ msgstr "Folders where repo-doctor looks for repositories."
 msgid "Soubor (jinak stdout). Nepřepisuje."
 msgstr "File (otherwise stdout). Never overwrites."
 
-#: repo_doctor/checks/tree.py:242
+#: repo_doctor/checks/tree.py:245
 msgid "Soubor má v gitu smíšené konce řádků (LF i CRLF)."
 msgstr "The file has mixed line endings in git (both LF and CRLF)."
 
-#: repo_doctor/checks/tree.py:49
+#: repo_doctor/checks/tree.py:48
 msgid "Soubor obsahuje nevyřešené značky konfliktu (<<<<<<<, =======, >>>>>>>)."
 msgstr "The file contains unresolved conflict markers (<<<<<<<, =======, >>>>>>>)."
 
@@ -2763,7 +2827,7 @@ msgstr "Report file (otherwise stdout)."
 msgid "Soubor {rel} v pracovním stromu neexistuje (je jen v historii)."
 msgstr "File {rel} does not exist in the working tree (it is only in the history)."
 
-#: repo_doctor/checks/tree.py:354
+#: repo_doctor/checks/tree.py:357
 msgid "Soubory určené pro Git LFS uložené přímo v gitu"
 msgstr "Git LFS files stored directly in git"
 
@@ -2849,23 +2913,23 @@ msgstr "Downloading {name} failed: {name2}"
 msgid "Stáhne {name} {version} z GitHubu do {tools_dir} (ověří SHA-256 zapsaný v repo-doctoru)"
 msgstr "Downloads {name} {version} from GitHub to {tools_dir} (verifies the SHA-256 pinned in repo-doctor)"
 
-#: repo_doctor/checks/tree.py:309
+#: repo_doctor/checks/tree.py:312
 msgid "Submodul není stažený (git submodule update --init)."
 msgstr "The submodule is not checked out (git submodule update --init)."
 
-#: repo_doctor/checks/tree.py:287
+#: repo_doctor/checks/tree.py:290
 msgid "Submodul není v .gitmodules, klon repa proto hlásí chybu (no submodule mapping)."
 msgstr "The submodule is missing from .gitmodules, so cloning the repo fails (no submodule mapping)."
 
-#: repo_doctor/checks/tree.py:318
+#: repo_doctor/checks/tree.py:321
 msgid "Submodul se stahuje nešifrovaně ({scheme}), obsah jde podvrhnout."
 msgstr "The submodule is fetched unencrypted ({scheme}); its content can be tampered with."
 
-#: repo_doctor/checks/tree.py:142
+#: repo_doctor/checks/tree.py:141
 msgid "Symlink ukazuje mimo repozitář („{target}“), na jiném počítači nebude fungovat."
 msgstr "The symlink points outside the repository (\"{target}\"); it will not work on another machine."
 
-#: repo_doctor/checks/tree.py:153
+#: repo_doctor/checks/tree.py:152
 msgid "Symlink ukazuje na „{target}“, což neexistuje."
 msgstr "The symlink points to "
 
@@ -2932,6 +2996,10 @@ msgstr "The terminal cannot be suspended – run manually: {join}"
 #: repo_doctor/tui/screens/settings.py:84
 msgid "Test upozornění"
 msgstr "Test notification"
+
+#: repo_doctor/checks/quality.py:119
+msgid "Testy existují, ale CI je nespouští"
+msgstr "Tests exist but CI does not run them"
 
 #: repo_doctor/tui/app.py:203
 msgid "Tip"
@@ -3062,6 +3130,10 @@ msgstr "Large files outside Git LFS"
 #: repo_doctor/update.py:272
 msgid "Verze {version} není novější než {current}."
 msgstr "Version {version} is not newer than {current}."
+
+#: repo_doctor/checks/quality.py:286
+msgid "Veřejné repo bez SECURITY.md: nahlašovatelé zranitelností nevědí, kam psát."
+msgstr "Public repo without SECURITY.md: people who find a vulnerability do not know where to report it."
 
 #: repo_doctor/checks/public_sensitive.py:77
 msgid "Veřejné repo obsahuje konfiguraci infrastruktury"
@@ -3333,7 +3405,7 @@ msgstr "No version has been released yet."
 msgid "Zatím žádný sken – stiskni {key} a repo-doctor zkontroluje všechna repa ve sledovaných složkách."
 msgstr "No scan yet – press {key} and repo-doctor checks all repos in the watched folders."
 
-#: repo_doctor/checks/tree.py:30
+#: repo_doctor/checks/tree.py:29
 msgid "Zbytky po konfliktu při mergi"
 msgstr "Leftover merge-conflict markers"
 
@@ -3407,7 +3479,7 @@ msgstr "DEPENDENCIES"
 msgid "Základní pre-commit"
 msgstr "Basic pre-commit"
 
-#: repo_doctor/checks/tree.py:299
+#: repo_doctor/checks/tree.py:302
 msgid "Záznam v .gitmodules už nemá odpovídající submodul."
 msgstr "The .gitmodules entry no longer has a matching submodule."
 
@@ -3723,7 +3795,7 @@ msgstr "down"
 msgid "doplnit"
 msgstr "complete"
 
-#: repo_doctor/checks/base.py:179
+#: repo_doctor/checks/base.py:183
 msgid "duplicitní id kontroly: {id}"
 msgstr "duplicate check id: {id}"
 
@@ -4062,6 +4134,14 @@ msgstr "license "
 #: repo_doctor/checks/licenses_check.py:24
 msgid "licence závislostí nejsou zjištěné (offline)"
 msgstr "dependency licenses are not known (offline)"
+
+#: repo_doctor/checks/quality.py:297
+msgid "lidé"
+msgstr "people"
+
+#: repo_doctor/checks/quality.py:297
+msgid "lidí"
+msgstr "people"
 
 #: repo_doctor/tui/screens/settings.py:41
 msgid "limit příkazu git (s)"
@@ -4937,15 +5017,15 @@ msgstr "folders"
 msgid "složky s repy"
 msgstr "repo folders"
 
-#: repo_doctor/checks/hygiene.py:326 repo_doctor/checks/tree.py:110 repo_doctor/checks/tree.py:262
+#: repo_doctor/checks/hygiene.py:326 repo_doctor/checks/tree.py:109 repo_doctor/checks/tree.py:265
 msgid "soubor"
 msgstr "file"
 
-#: repo_doctor/checks/tree.py:110 repo_doctor/checks/tree.py:262 repo_doctor/czech.py:43
+#: repo_doctor/checks/tree.py:109 repo_doctor/checks/tree.py:265 repo_doctor/czech.py:43
 msgid "soubory"
 msgstr "files"
 
-#: repo_doctor/checks/tree.py:110 repo_doctor/checks/tree.py:262 repo_doctor/czech.py:43
+#: repo_doctor/checks/tree.py:109 repo_doctor/checks/tree.py:265 repo_doctor/czech.py:43
 msgid "souborů"
 msgstr "files"
 
@@ -5439,6 +5519,18 @@ msgstr "health"
 msgid "zdraví "
 msgstr "health "
 
+#: repo_doctor/checks/quality.py:88
+msgid "zdrojové soubory"
+msgstr "source files"
+
+#: repo_doctor/checks/quality.py:88
+msgid "zdrojový soubor"
+msgstr "source file"
+
+#: repo_doctor/checks/quality.py:88
+msgid "zdrojových souborů"
+msgstr "source files"
+
 #: repo_doctor/tui/screens/wizard.py:119
 msgid "zjišťuji repozitáře…"
 msgstr "looking for repositories…"
@@ -5511,11 +5603,11 @@ msgstr "{err}. Prefer token_env or token_cmd."
 msgid "{event} spouští kód z PR (checkout {what}) s právy repa · job {job}"
 msgstr "{event} runs PR code (checkout {what}) with the repo's permissions · job {job}"
 
-#: repo_doctor/checks/tree.py:258
+#: repo_doctor/checks/tree.py:261
 msgid "{files} má v gitu CRLF, ostatní LF, a žádné pravidlo v .gitattributes to nesjednocuje (např. {example})."
 msgstr "{files} use CRLF in git, the rest LF, and no rule in .gitattributes unifies them (e.g. {example})."
 
-#: repo_doctor/checks/tree.py:109
+#: repo_doctor/checks/tree.py:108
 msgid "{files} v gitu, ale patří do .gitignore (vygenerované nebo lokální)"
 msgstr "{files} in git, but they belong in .gitignore (generated or local)"
 
@@ -5842,6 +5934,10 @@ msgstr "čeština"
 #: repo_doctor/tui/util.py:53 repo_doctor/tui/widgets/triage.py:83
 msgid "čisté"
 msgstr "clean"
+
+#: repo_doctor/checks/quality.py:297
+msgid "člověk"
+msgstr "person"
 
 #: repo_doctor/keymap.py:104
 msgid "řadit podle sloupce"

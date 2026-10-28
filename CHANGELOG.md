@@ -13,6 +13,13 @@ Formát podle [Keep a Changelog](https://keepachangelog.com/cs/1.1.0/), verze po
   `submodule-state` (submodul bez záznamu v `.gitmodules`, zbylý záznam, nestažený submodul,
   `http://` / `git://` adresa) a `lfs-not-applied` (soubor určený pro Git LFS uložený celý v gitu).
   Do `gitwrap.Git` přibyly `ls_files_stage()` a `ls_files_eol()`.
+- **Kvalita a zdraví projektu (#34, 2/4):** sedm dalších kontrol čistě ze souborů, nic se
+  nespouští: `tests-missing` (kód bez testů), `tests-not-in-ci` (testy existují, ale CI je
+  nespouští), `lint-config-missing` (Python a Node bez linteru či formátovače),
+  `runtime-unpinned` (nepřipnutá verze Pythonu či Node), `project-docs-missing` (CHANGELOG u repa
+  s tagy, SECURITY.md u veřejného repa, CONTRIBUTING od tří autorů), `dependency-bot-missing`
+  (Dependabot či Renovate) a `readme-links-broken` (relativní odkazy v README na neexistující
+  soubory). Kontroly kódu mlčí u repí s méně než 5 zdrojovými soubory.
 - **Nápověda v TUI (#30):** dva druhy v jedné obrazovce se dvěma záložkami (přepíná `Tab`).
   `?` otevře nápovědu k aktuální obrazovce (k čemu slouží, jak se s ní pracuje, její zkratky,
   pohyb a globální zkratky), nová `H` (akce `help_all`, jde přemapovat) rovnou úplnou nápovědu:
