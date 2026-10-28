@@ -1613,6 +1613,10 @@ msgstr "Dependency license may not be compatible"
 msgid "Limity"
 msgstr "Limits"
 
+#: repo_doctor/checks/deps_deep.py:112
+msgid "Lockfile nesedí s manifestem"
+msgstr "Lockfile out of sync with the manifest"
+
 #: repo_doctor/tui/screens/publish.py:257
 msgid "Lokální merge"
 msgstr "Local merge"
@@ -1897,6 +1901,10 @@ msgstr "Unpushed commits"
 msgid "Nepřipnutá verze jazyka"
 msgstr "Language version not pinned"
 
+#: repo_doctor/checks/deps_deep.py:262
+msgid "Nepřipnuté verze závislostí"
+msgstr "Unpinned dependency versions"
+
 #: repo_doctor/cli.py:126
 msgid "Nepřipojovat se k hostingům."
 msgstr "Do not connect to hostings."
@@ -2013,7 +2021,7 @@ msgstr "Folder name"
 msgid "OD VČEREJŠKA"
 msgstr "SINCE YESTERDAY"
 
-#: repo_doctor/scanner.py:457
+#: repo_doctor/scanner.py:464
 msgid "OSV.dev nedostupné"
 msgstr "OSV.dev unavailable"
 
@@ -2124,6 +2132,10 @@ msgstr "The fix branch is also the default branch – nothing to merge."
 #: repo_doctor/tui/screens/fix.py:162
 msgid "Opravy nejde připravit: {err}"
 msgstr "Cannot prepare the fixes: {err}"
+
+#: repo_doctor/checks/deps_deep.py:366
+msgid "Opuštěné nebo zastaralé balíčky"
+msgstr "Abandoned or deprecated packages"
 
 #: repo_doctor/checks/privacy.py:82
 msgid "Osobní e-mail v historii veřejného repa"
@@ -2671,7 +2683,7 @@ msgstr "Repositories on the hosting service that you do not have locally, and th
 msgid "Rizikové nastavení CI workflow"
 msgstr "Risky CI workflow settings"
 
-#: repo_doctor/checks/static_code.py:408
+#: repo_doctor/checks/static_code.py:426
 msgid "Rizikové nastavení Docker Compose"
 msgstr "Risky Docker Compose settings"
 
@@ -2851,7 +2863,7 @@ msgstr "Folders with repos (without them, folders from the configuration)."
 msgid "Složky, ve kterých repo-doctor hledá repozitáře."
 msgstr "Folders where repo-doctor looks for repositories."
 
-#: repo_doctor/checks/static_code.py:429
+#: repo_doctor/checks/static_code.py:454
 msgid "Služba {service}: "
 msgstr "Service {service}: "
 
@@ -3547,6 +3559,10 @@ msgstr "DEPENDENCIES"
 msgid "Základní pre-commit"
 msgstr "Basic pre-commit"
 
+#: repo_doctor/checks/deps_deep.py:316
+msgid "Závislosti spouštějící skripty při instalaci"
+msgstr "Dependencies running install scripts"
+
 #: repo_doctor/checks/tree.py:302
 msgid "Záznam v .gitmodules už nemá odpovídající submodul."
 msgstr "The .gitmodules entry no longer has a matching submodule."
@@ -3642,6 +3658,10 @@ msgstr "automatic (system language)"
 #: repo_doctor/tui/screens/detail.py:216
 msgid "autoři {authors}"
 msgstr "authors {authors}"
+
+#: repo_doctor/checks/deps_deep.py:382
+msgid "balíček je označený jako deprecated: {note}"
+msgstr "the package is marked as deprecated: {note}"
 
 #: repo_doctor/checks/duplicates.py:54 repo_doctor/tui/util.py:21
 msgid "bez commitu"
@@ -4781,6 +4801,10 @@ msgstr "private IPv6 (ULA)"
 msgid "problém"
 msgstr "problem"
 
+#: repo_doctor/checks/deps_deep.py:380
+msgid "projekt je na PyPI označený jako neaktivní (Development Status: Inactive)."
+msgstr "the project is marked inactive on PyPI (Development Status: Inactive)."
+
 #: repo_doctor/tui/screens/forges.py:39
 msgid "proměnná"
 msgstr "variable"
@@ -5699,6 +5723,18 @@ msgstr "cancel running scan"
 msgid "zrušit hledání"
 msgstr "cancel search"
 
+#: repo_doctor/checks/deps_deep.py:297 repo_doctor/checks/deps_deep.py:348
+msgid "závislost"
+msgstr "dependency"
+
+#: repo_doctor/checks/deps_deep.py:297 repo_doctor/checks/deps_deep.py:348
+msgid "závislosti"
+msgstr "dependencies"
+
+#: repo_doctor/checks/deps_deep.py:297 repo_doctor/checks/deps_deep.py:348
+msgid "závislostí"
+msgstr "dependencies"
+
 #: repo_doctor/publish.py:237
 msgid "{action}: {err}"
 msgstr "{action}: {err}"
@@ -5722,6 +5758,14 @@ msgstr "{commits_year} in a year"
 #: repo_doctor/checks/forge.py:166
 msgid "{count} ({kind})"
 msgstr "{count} ({kind})"
+
+#: repo_doctor/checks/deps_deep.py:293
+msgid "{count} bez pevné verze ({names}): při každé instalaci se může stáhnout jiný kód."
+msgstr "{count} without a fixed version ({names}): a different code may be downloaded on every install."
+
+#: repo_doctor/checks/deps_deep.py:343
+msgid "{count} spouští při instalaci vlastní skripty ({names}). Zkompromitovaný balíček tak získá kód na tvém stroji už při npm install."
+msgstr "{count} run their own scripts on install ({names}). A compromised package thus gets code execution on your machine already at npm install."
 
 #: repo_doctor/checks/git_state.py:217
 msgid "{default} je {commits} za {upstream} (podle posledního fetch; pro aktuální stav spusť sken s --fetch)."
@@ -5807,6 +5851,10 @@ msgstr "{kind} in file {path}"
 msgid "{kind} {human} v aktuálním stromu"
 msgstr "{kind} {human} in the current tree"
 
+#: repo_doctor/checks/deps_deep.py:399
+msgid "{label}: poslední vydání je {date}, tedy před {years} lety."
+msgstr "{label}: the latest release is from {date}, {years} years ago."
+
 #: repo_doctor/tui/screens/remote.py:182
 msgid "{len} lokálních rep bez zálohy nebo s remote, který hosting nezná · v přepne pohled"
 msgstr "{len} local repos without a backup or with a remote the hosting does not know · v switches the view"
@@ -5818,6 +5866,10 @@ msgstr "{len} repositories without a local clone · c clones the selected one ·
 #: repo_doctor/checks/deps.py:97
 msgid "{manifest} deklaruje závislosti, ale chybí {lock} – verze nejsou připnuté a zranitelnosti nejde ověřit"
 msgstr "{manifest} declares dependencies, but {lock} is missing – versions are not pinned and vulnerabilities cannot be checked"
+
+#: repo_doctor/checks/deps_deep.py:125
+msgid "{manifest} deklaruje {names}, ale v {lock} nejsou: lockfile je zastaralý a instalace z něj tyto balíčky nezíská."
+msgstr "{manifest} declares {names}, but they are missing from {lock}: the lockfile is stale and installing from it will not get these packages."
 
 #: repo_doctor/tui/screens/dashboard.py:160
 msgid "{mode} · sken {astimezone:%H:%M}"

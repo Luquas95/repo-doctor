@@ -526,3 +526,20 @@ Záznam rozhodnutí, která zadání nechalo otevřená. Nejnovější nahoře v
   skript s konstantou), MED by bylo hlučné.
 - **Compose nemá čísla řádků:** `yaml.safe_load` je nenese, nález se váže na službu (`compose:<pravidlo>:<soubor>:<služba>`).
 
+## Další metody analýzy, díl 4: závislosti do hloubky (#34)
+
+- **Tři kontroly jsou čistě souborové** (`deps-lock-drift`, `deps-unpinned`, `deps-install-scripts`)
+  a nepotřebují `RepoContext.deps`, takže běží i offline. Jen `deps-unmaintained` je síťová.
+- **Žádné další dotazy na registry:** `deps.registry_info()` nahradila `latest_version()` (ta zůstala
+  jako tenký obal). Z téže odpovědi PyPI/npm se bere nejnovější verze, `deprecated`, klasifikátor
+  „Inactive“ a datum nahrání souborů poslední verze. Do `DepsData.registry` se ukládá jen
+  s `want_registry`, tedy když je zapnutá `deps-unmaintained`.
+- **Lock drift jen tam, kde je porovnání jednoznačné:** workspace (npm/pnpm `workspaces`,
+  `[tool.uv.workspace]`, Cargo `[workspace]`) se přeskakuje, protože zámek je v kořeni a členové
+  mají lokální balíčky. Rozbitý nebo nečitelný manifest či lockfile znamená „přeskočit“, ne pád.
+- **Opuštěný = PyPI a 3 roky bez vydání** (konstanta `ABANDONED_YEARS`, ne konfigurace: nová volba
+  by zasáhla obrazovku Nastavení). U npm datum vydání registr v `/latest` nevrací a plný
+  dokument balíčku je těžký, proto jen `deprecated`.
+- **`deps-install-scripts` je informativní (LOW):** část balíčků (esbuild, sharp) skripty potřebuje.
+  Mlčí, když `.npmrc` obsahuje `ignore-scripts=true`.
+

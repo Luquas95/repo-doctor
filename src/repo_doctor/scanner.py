@@ -441,10 +441,16 @@ class Scanner:
                 res.visibility = vis  # type: ignore[assignment]
         if "ci-security" in ids:
             await self._resolve_actions(ctx, net)
-        if ids & {"deps-vulnerable", "deps-outdated", "deps-lockfile-missing", "license-compat"}:
+        if ids & {
+            "deps-vulnerable",
+            "deps-outdated",
+            "deps-lockfile-missing",
+            "deps-unmaintained",
+            "license-compat",
+        }:
             data: DepsData = await asyncio.to_thread(collect, ctx.tracked_files, ctx.read_text)
             ctx.deps = data
-            if ids & {"deps-vulnerable", "deps-outdated", "license-compat"}:
+            if ids & {"deps-vulnerable", "deps-outdated", "deps-unmaintained", "license-compat"}:
                 await enrich(
                     net.public,
                     data,
@@ -452,6 +458,7 @@ class Scanner:
                     want_vulns="deps-vulnerable" in ids,
                     want_outdated="deps-outdated" in ids,
                     want_licenses="license-compat" in ids,
+                    want_registry="deps-unmaintained" in ids,
                 )
                 if data.errors and not data.vulns and any(e.startswith("OSV") for e in data.errors):
                     ctx.deps_status = _("OSV.dev nedostupné")

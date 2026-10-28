@@ -209,7 +209,9 @@ async def test_network_enrichment_with_forge(
     respx.get("https://api.osv.dev/v1/vulns/GHSA-x").respond(
         json={"database_specific": {"severity": "HIGH"}}
     )
-    respx.get("https://pypi.org/pypi/requests/json").respond(json={"info": {"version": "2.32.0"}})
+    respx.get("https://pypi.org/pypi/requests/json").respond(
+        json={"info": {"version": "2.32.0", "classifiers": ["Development Status :: 7 - Inactive"]}}
+    )
     respx.get("https://pypi.org/pypi/requests/2.19.0/json").respond(
         json={"info": {"license": "Apache 2.0"}}
     )
@@ -230,6 +232,7 @@ async def test_network_enrichment_with_forge(
     assert ids["forge-security-alerts"].data["count"] == 1
     assert ids["deps-vulnerable"].severity is Severity.HIGH
     assert "deps-outdated" in ids
+    assert "Inactive" in ids["deps-unmaintained"].message  # data z registru bez dalšího dotazu
     assert res.forge_info["ci"] == "failure"
     assert "forge-mirror-drift" not in ids
     d = res.details

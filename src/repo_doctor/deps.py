@@ -8,6 +8,7 @@ import re
 import tomllib
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import PurePosixPath
 from typing import Any, Literal
 
@@ -51,6 +52,15 @@ class Outdated:
 
 
 @dataclass
+class RegistryInfo:
+    """Co o balíčku řekl registr (stejná odpověď jako pro zastaralé verze, žádný další dotaz)."""
+
+    latest: str | None = None
+    deprecated: str | None = None  # text z npm `deprecated`, nebo „Inactive“ z PyPI klasifikátorů
+    last_release: datetime | None = None  # PyPI: nahrání souborů poslední verze
+
+
+@dataclass
 class DepsData:
     dependencies: list[Dependency] = field(default_factory=list)
     manifests: list[str] = field(default_factory=list)
@@ -64,6 +74,7 @@ class DepsData:
     # requirements-dev.txt) – licence se u nich nekontroluje, do distribuce nejdou
     dev_only: set[tuple[str, str]] = field(default_factory=set)
     license_errors: set[Dependency] = field(default_factory=set)  # registr neodpověděl
+    registry: dict[Dependency, RegistryInfo] = field(default_factory=dict)  # přímé PyPI a npm
     errors: list[str] = field(default_factory=list)
     network_done: bool = False
 
@@ -553,15 +564,44 @@ def compare_versions(current: str, latest: str) -> Literal["major", "minor", "pa
     return "patch"
 
 
-async def latest_version(client: HttpClient, dep: Dependency, *, ttl: float) -> str | None:
+def _parse_time(value: object) -> datetime | None:
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+
+
+async def registry_info(client: HttpClient, dep: Dependency, *, ttl: float) -> RegistryInfo | None:
     if dep.ecosystem == "PyPI":
         body = await client.get_json(PYPI_URL.format(name=dep.name), ttl=ttl)
-        return str(body.get("info", {}).get("version") or "") or None
+        info = body.get("info", {})
+        classifiers = info.get("classifiers") or []
+        inactive = any(str(c).startswith("Development Status :: 7") for c in classifiers)
+        times = [
+            t
+            for t in (_parse_time(u.get("upload_time_iso_8601")) for u in body.get("urls") or [])
+            if t
+        ]
+        return RegistryInfo(
+            latest=str(info.get("version") or "") or None,
+            deprecated="Inactive" if inactive else None,
+            last_release=max(times, default=None),
+        )
     if dep.ecosystem == "npm":
         name = dep.name.replace("/", "%2F")
         body = await client.get_json(NPM_URL.format(name=name), ttl=ttl)
-        return str(body.get("version") or "") or None
+        deprecated = body.get("deprecated")
+        return RegistryInfo(
+            latest=str(body.get("version") or "") or None,
+            deprecated=str(deprecated)[:300] if deprecated else None,
+        )
     return None
+
+
+async def latest_version(client: HttpClient, dep: Dependency, *, ttl: float) -> str | None:
+    info = await registry_info(client, dep, ttl=ttl)
+    return info.latest if info else None
 
 
 async def enrich(
@@ -572,6 +612,7 @@ async def enrich(
     want_vulns: bool = True,
     want_outdated: bool = True,
     want_licenses: bool = False,
+    want_registry: bool = False,
     max_details: int = 50,
 ) -> None:
     """Doplní zranitelnosti (OSV batch) a zastaralé přímé závislosti. Chyby jen zaznamená."""
@@ -590,18 +631,22 @@ async def enrich(
                 data.vulns[dep] = [details.get(i) or Vuln(i, Severity.MEDIUM) for i in vids]
         except HttpError as err:
             data.errors.append(f"OSV: {err}")
-    if want_outdated:
+    if want_outdated or want_registry:
         direct = [d for d in data.dependencies if d.direct and d.ecosystem in ("PyPI", "npm")]
 
         async def one(dep: Dependency) -> None:
             try:
-                latest = await latest_version(client, dep, ttl=ttl)
+                info = await registry_info(client, dep, ttl=ttl)
             except HttpError as err:
                 data.errors.append(f"{dep.ecosystem} {dep.name}: {err}")
                 return
-            level = compare_versions(dep.version, latest) if latest else None
-            if latest and level:
-                data.outdated.append(Outdated(dep, latest, level))
+            if info is None:
+                return
+            if want_registry:
+                data.registry[dep] = info
+            level = compare_versions(dep.version, info.latest) if info.latest else None
+            if want_outdated and info.latest and level:
+                data.outdated.append(Outdated(dep, info.latest, level))
 
         await asyncio.gather(*(one(d) for d in direct[:200]))
         data.outdated.sort(key=lambda o: (o.dep.ecosystem, o.dep.name))
